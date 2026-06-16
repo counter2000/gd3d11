@@ -105,7 +105,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float3 sceneClean = TX_Scene.Sample(SS_Linear, lerp(distUV, screenUV, pow(1.0f-shallowDepth, 20.0f))).rgb;
 	
 	// Fresnel from waves
-	float fresnel = min(0.5f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 10.0f)));
+	float fresnel = min(0.7f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 6.0f)));
 	
 	// Reflection
 	float3 reflect_vec = reflect(-viewDirection, wavesFres);	
@@ -199,8 +199,8 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	scene = lerp(sceneAbsorbed, scene, isWaterfall);
 	
 	float pxDistance = Input.vTexcoord2.y;
-	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
-	scene.rgb += reflection * 1.0f * fresnel * lerp(1.0f, diffuse, 0.6f);
+	scene = lerp(scene, diffuse, 0.35f * max(pow(fresnel,8.0f), 0.5f));
+	scene.rgb += reflection * 1.8f * fresnel;
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
 	
 	color.rgb = ApplyAtmosphericScatteringGround(Input.vWorldPosition, color.rgb);
