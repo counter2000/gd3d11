@@ -1,4 +1,4 @@
-﻿#include "GSky.h"
+#include "GSky.h"
 
 #include "BaseGraphicsEngine.h"
 #include "D3D11Texture.h"
@@ -299,8 +299,6 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_RainFXWeight = Engine::GAPI->GetRainFXWeight();
     AtmosphereCB.AC_EnableSSR = Engine::GAPI->GetRendererState().RendererSettings.EnableSSR ? 1.0f : 0.0f;
     AtmosphereCB.AC_EnableSSS = Engine::GAPI->GetRendererState().RendererSettings.EnableSSS ? 1.0f : 0.0f;
-
-    ConstantBuffer->UpdateBuffer( &AtmosphereCB );
 
     //Engine::GraphicsEngine->DrawSky();
 
