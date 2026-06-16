@@ -80,7 +80,7 @@ PS_INPUT DSMain(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, c
 										normalWS).a * 2 - 1;
 										
 	float3 vHeight = 40.0f * tex * MI_DisplacementFactor;
-	worldPosition += normalWS * vHeight * (1 - pow(1 - texCoord2.x, 8.0f));
+	worldPosition += normalWS * vHeight;
 	
 		
 	//Output.vPosition = float4(Input.vPosition, 1);

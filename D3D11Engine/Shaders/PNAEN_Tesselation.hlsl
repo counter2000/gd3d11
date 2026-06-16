@@ -8,20 +8,14 @@
  
 #define FAST_PROJECTION_XFORM 1 
  
-// Constant buffer 
-cbuffer cbPNTriangles : register( b0 ) 
-{ 
-    float4x4    M_Projection;           // Projection matrix 
-    float4      g_f4Eye;                    // Eye 
-    float4      g_f4TessFactors;            // Tessellation factors 
-                                            // x=Edge  
-    float4      g_f4ViewportScale;          // The X and Y half  
-                                            // resolution, 0, 0 
-    bool4       g_adaptive;                 // Should use adaptive  
-                                            // tessellation 
-    bool4       g_clipping;                 // Should run clipping  
-                                            // tests. 
-} 
+cbuffer Matrices_PerFrame : register( b0 )
+{
+	matrix M_View;
+	matrix M_Proj;
+	matrix M_ViewProj;	
+};
+static const float4x4 M_Projection = M_Proj;
+static const bool4 g_clipping = bool4(false, false, false, false);
 
 cbuffer MI_MaterialInfo : register( b2 )
 {
@@ -476,15 +470,12 @@ DS_Output DSMain( HS_ConstantOutput cdata,
 	//O.vTexCoord2 = displaceCoord;
 	O.vTexCoord2.y = 0;
 	
-	float dispFactor = 1-pow(O.vTexCoord2.x, 16);
-    dispFactor = dispFactor > 0.5f ? 1.0f : 0.0f;
+	float dispFactor = 1.0f;
     
 	O.vTexCoord2.x = dispFactor;
 	//O.vTexCoord2 = displaceCoord;
 	
-	f3EyePosition = lerp(f3BaseEyePosition, 
-						 f3EyePosition + f3Normal * GetDisplacement(displaceCoord) * 30.0f * MI_DisplacementFactor,
-						 dispFactor);
+	f3EyePosition = f3EyePosition + f3Normal * GetDisplacement(displaceCoord) * 30.0f * MI_DisplacementFactor;
   
 	
   

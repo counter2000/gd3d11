@@ -396,6 +396,11 @@ XRESULT D3D11ShaderManager::Init() {
     Shaders.push_back( ShaderInfo( "PS_PortalDiffuse", "PS_PortalDiffuse.hlsl", "p" ) ); //forest portals, doors, etc.
     Shaders.push_back( ShaderInfo( "PS_WaterfallFoam", "PS_WaterfallFoam.hlsl", "p" ) );     //foam on at the base of waterfalls
 
+    ShaderInfo pnaenTess( "PNAEN_Tesselation", "PNAEN_Tesselation.hlsl", "hd" );
+    pnaenTess.cBufferSizes.push_back( sizeof( VS_ExConstantBuffer_PerFrame ) );
+    pnaenTess.cBufferSizes.push_back( sizeof( MaterialInfo::Buffer ) );
+    Shaders.push_back( pnaenTess );
+
     makros.clear();
 
     m.Name = "APPLY_RAIN_EFFECTS";

@@ -98,10 +98,8 @@ void MaterialInfo::LoadFromFile( const std::string& name ) {
     ZeroMemory( &buffer, sizeof( MaterialInfo::Buffer ) );
     memcpy( &buffer, ReadBuffer + sizeof( int ), sizeof( MaterialInfo::Buffer ) );
 
-    if ( version < 2 ) {
-        if ( buffer.DisplacementFactor == 0.0f ) {
-            buffer.DisplacementFactor = 0.7f;
-        }
+    if ( buffer.DisplacementFactor == 0.0f ) {
+        buffer.DisplacementFactor = 0.7f;
     }
 
     fclose( f );

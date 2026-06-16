@@ -116,7 +116,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
     // --- Screen Space Reflections (SSR) ---
     if (AC_EnableSSR > 0.5f) {
         float3 rayPos = Input.vWorldPosition;
-        float3 rayDir = normalize(reflect_vec);
+        float3 rayDir = reflect(viewDirection, wavesFres);
         float stepSize = 40.0f;
         int maxSteps = 40;
         

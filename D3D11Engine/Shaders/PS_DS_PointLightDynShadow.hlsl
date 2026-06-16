@@ -195,7 +195,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float3 H = normalize(lightDir + V);
 	float spec = CalcBlinnPhongLighting(normal, H);
 	float specMod = pow(dot(float3(0.333f,0.333f,0.333f), diffuse.rgb), 2);
-	float3 specBare = pow(spec, specPower) * specIntensity * PL_Color.rgb * falloff;
+	float3 specBare = pow(spec, specPower * 1.5f) * (specIntensity * 0.5f) * PL_Color.rgb * falloff * saturate(ndl * 5.0f);
 	float3 specColored = lerp(specBare, specBare * diffuse.rgb, specMod);
 	
 	float3 color = falloff * ndl * PL_Color.rgb;

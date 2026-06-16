@@ -2096,6 +2096,8 @@ bool D3D11GraphicsEngine::BindTextureNRFX( zCTexture* tex, bool bindShader ) {
     }
 
     info->Constantbuffer->BindToPixelShader( 2 );
+    info->Constantbuffer->BindToDomainShader( 2 );
+    info->Constantbuffer->BindToHullShader( 2 );
 
     // Bind a default normalmap in case the scene is wet and we currently have none
     if ( !tex->GetSurface()->GetNormalmap() ) {
@@ -3155,6 +3157,8 @@ XRESULT D3D11GraphicsEngine::DrawMeshInfoListAlphablended(
             if ( !info->Constantbuffer ) info->UpdateConstantbuffer();
 
             info->Constantbuffer->BindToPixelShader( 2 );
+            info->Constantbuffer->BindToDomainShader( 2 );
+            info->Constantbuffer->BindToHullShader( 2 );
 
             // Don't let the game unload the texture after some time
             texture->CacheIn( 0.6f );
@@ -3390,6 +3394,8 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh_Indirect( bool noTextures ) {
                 if ( !info->Constantbuffer ) info->UpdateConstantbuffer();
 
                 info->Constantbuffer->BindToPixelShader( 2 );
+                info->Constantbuffer->BindToDomainShader( 2 );
+                info->Constantbuffer->BindToHullShader( 2 );
             }
             bound = tex;
         }
@@ -3457,6 +3463,8 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh_Indirect( bool noTextures ) {
                 if ( !info->Constantbuffer ) info->UpdateConstantbuffer();
 
                 info->Constantbuffer->BindToPixelShader( 2 );
+                info->Constantbuffer->BindToDomainShader( 2 );
+                info->Constantbuffer->BindToHullShader( 2 );
             }
         }
 
@@ -3642,6 +3650,8 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
                 if ( !info->Constantbuffer ) info->UpdateConstantbuffer();
 
                 info->Constantbuffer->BindToPixelShader( 2 );
+                info->Constantbuffer->BindToDomainShader( 2 );
+                info->Constantbuffer->BindToHullShader( 2 );
 
                 // Don't let the game unload the texture after some time
                 //mesh.first.Texture->CacheIn( 0.6f );
@@ -5120,6 +5130,8 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
                                 if ( !info->Constantbuffer ) info->UpdateConstantbuffer();
 
                                 info->Constantbuffer->BindToPixelShader( 2 );
+                                info->Constantbuffer->BindToDomainShader( 2 );
+                                info->Constantbuffer->BindToHullShader( 2 );
                             }
                         }
 
@@ -5257,6 +5269,8 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
                 if ( !info->Constantbuffer ) info->UpdateConstantbuffer();
 
                 info->Constantbuffer->BindToPixelShader( 2 );
+                info->Constantbuffer->BindToDomainShader( 2 );
+                info->Constantbuffer->BindToHullShader( 2 );
             }
 
             g_windBuffer.minHeight = vi->BBox.Min.y;
@@ -5395,6 +5409,8 @@ XRESULT D3D11GraphicsEngine::DrawPolyStrips( bool noTextures ) {
                 info->UpdateConstantbuffer();
 
             info->Constantbuffer->BindToPixelShader( 2 );
+            info->Constantbuffer->BindToDomainShader( 2 );
+            info->Constantbuffer->BindToHullShader( 2 );
 
         } else {
             //Don't draw if texture is not yet cached (I have no idea how can I preload it in advance)

@@ -560,7 +560,7 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
     float vertAO = lerp(pow(saturate(vertLighting * 2), 2), 1.0f, 0.5f);
     float sun = saturate(dot(normalize(SQ_LightDirectionVS), normal) * shadow) * 1.0f;
 
-    spec = pow(spec, specPower) * specIntensity;
+    spec = pow(spec, specPower * 1.5f) * (specIntensity * 0.5f);
     float3 specBare = spec * lightColor.rgb * sun + specWet * lightColor.rgb;
     float3 specColored = saturate(lerp(specBare, specBare * diffuse.rgb, specMod));
 	
@@ -573,9 +573,10 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 	
     // SSS (Subsurface Scattering) for vegetation
     if (AC_EnableSSS > 0.5f && gb2.w > 0.1f && gb2.w < 0.9f) {
-        float backlight = saturate(dot(normalize(SQ_LightDirectionVS), -V)) * shadow;
-        float sss = pow(backlight, 4.0f) * 2.0f;
-        litPixel += diffuse.rgb * lightColor.rgb * sss;
+        float backlight = saturate(dot(normalize(SQ_LightDirectionVS), -V));
+        float sssShadow = lerp(0.4f, 1.0f, shadow);
+        float sss = pow(backlight, 2.0f) * 1.8f * sssShadow;
+        litPixel += diffuse.rgb * lightColor.rgb * sss * vertLighting;
     }
 	
     float fresnel = pow(1.0f - saturate(dot(normal, V)), 10.0f);
