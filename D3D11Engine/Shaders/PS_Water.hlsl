@@ -102,13 +102,13 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	// Scene color
 	float3 scene = TX_Scene.Sample(SS_Linear, distUV).rgb;
-	float3 sceneClean = TX_Scene.Sample(SS_Linear, lerp(distUV, screenUV, pow(1.0f-shallowDepth, 4.0f))).rgb;
+	float3 sceneClean = TX_Scene.Sample(SS_Linear, lerp(distUV, screenUV, pow(1.0f-shallowDepth, 20.0f))).rgb;
 	
 	// Fresnel from waves
 	float fresnel = min(0.5f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 10.0f)));
 	
 	// Reflection
-	float3 reflect_vec = reflect(viewDirection, wavesFres);	
+	float3 reflect_vec = reflect(-viewDirection, wavesFres);	
 	
 	// sample reflection cube
 	float3 reflection = TX_ReflectionCube.Sample(SS_Linear, reflect_vec).xyz;
@@ -145,19 +145,31 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
             float depthDiff = rayZ - sampleZ;
             
             // Intersection condition (behind surface, but not too far behind)
-            if (depthDiff > 0.0f && depthDiff < 300.0f) {
-                // Refine step
-                rayPos -= rayDir * (stepSize / 2.0f);
-                float4 projPosRefine = mul(float4(rayPos, 1.0f), RI_ViewProj);
-                projPosRefine.xyz /= projPosRefine.w;
-                float2 uvRefine = projPosRefine.xy * float2(0.5f, -0.5f) + 0.5f;
-                float depthSampleRefine = TX_Depth.SampleLevel(SS_Linear, uvRefine, 0).r;
-                float sampleZRefine = RI_Projection._43 / (depthSampleRefine - RI_Projection._33);
-                float rayZRefine = projPosRefine.w;
+            if (depthDiff > 0.0f && depthDiff < (stepSize * 2.0f)) {
+                // Binary search to find exact intersection
+                float3 minPos = rayPos - rayDir * stepSize;
+                float3 maxPos = rayPos;
+                float3 midPos = rayPos;
                 
-                if (rayZRefine - sampleZRefine > 0.0f) {
-                    uv = uvRefine;
+                [unroll]
+                for (int j = 0; j < 5; j++) {
+                    midPos = (minPos + maxPos) * 0.5f;
+                    float4 projMid = mul(float4(midPos, 1.0f), RI_ViewProj);
+                    projMid.xyz /= projMid.w;
+                    float2 uvMid = projMid.xy * float2(0.5f, -0.5f) + 0.5f;
+                    float dMid = TX_Depth.SampleLevel(SS_Linear, uvMid, 0).r;
+                    float zMid = RI_Projection._43 / (dMid - RI_Projection._33);
+                    
+                    if (projMid.w - zMid > 0.0f) {
+                        maxPos = midPos;
+                    } else {
+                        minPos = midPos;
+                    }
                 }
+                
+                float4 projFinal = mul(float4(midPos, 1.0f), RI_ViewProj);
+                projFinal.xyz /= projFinal.w;
+                uv = projFinal.xy * float2(0.5f, -0.5f) + 0.5f;
                 
                 // Hit! Sample scene texture
                 float3 ssrColor = TX_Scene.SampleLevel(SS_Linear, uv, 0).xyz;

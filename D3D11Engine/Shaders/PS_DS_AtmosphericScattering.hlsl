@@ -573,7 +573,7 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 	
     // SSS (Subsurface Scattering) for vegetation
     if (AC_EnableSSS > 0.5f && gb2.w > 0.1f && gb2.w < 0.9f) {
-        float backlight = saturate(dot(normalize(SQ_LightDirectionVS), V));
+        float backlight = saturate(dot(normalize(SQ_LightDirectionVS), -V));
         float sssShadow = lerp(0.4f, 1.0f, shadow);
         float sss = pow(backlight, 2.0f) * 1.8f * sssShadow;
         litPixel += diffuse.rgb * lightColor.rgb * sss * vertLighting;

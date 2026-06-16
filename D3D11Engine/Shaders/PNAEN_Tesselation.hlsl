@@ -26,6 +26,9 @@ cbuffer MI_MaterialInfo : register( b2 )
 	float4 MI_Color;
 }
 
+static const float4 g_f4ViewportScale = float4(960.0f, 540.0f, 0.0f, 0.0f);
+static const float4 g_f4TessFactors = float4(1.0f, 1.0f, 16.0f, 1.0f);
+
 // Some global lighting constants 
 static float4 g_f4MaterialDiffuseColor  = float4( 1.0f, 1.0f, 1.0f, 
 1.0f );
@@ -470,12 +473,15 @@ DS_Output DSMain( HS_ConstantOutput cdata,
 	//O.vTexCoord2 = displaceCoord;
 	O.vTexCoord2.y = 0;
 	
-	float dispFactor = 1.0f;
+	float dispFactor = 1.0f - pow(O.vTexCoord2.x, 16.0f);
+	dispFactor = dispFactor > 0.5f ? 1.0f : 0.0f;
     
 	O.vTexCoord2.x = dispFactor;
 	//O.vTexCoord2 = displaceCoord;
 	
-	f3EyePosition = f3EyePosition + f3Normal * GetDisplacement(displaceCoord) * 30.0f * MI_DisplacementFactor;
+	f3EyePosition = lerp(f3BaseEyePosition, 
+						 f3EyePosition + f3Normal * GetDisplacement(displaceCoord) * 30.0f * MI_DisplacementFactor,
+						 dispFactor);
   
 	
   
