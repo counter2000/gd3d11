@@ -184,9 +184,9 @@ void MyDirectDrawSurface7::LoadAdditionalResources( zCTexture* ownedTexture ) {
     D3D11Texture* dispMapTexture = nullptr;
     if (Engine::GAPI->GetRendererState().RendererSettings.AllowDisplacement) {
         j = 0;
-        replacementsFolder = "system\\\\GD3D11\\\\textures\\\\replacements\\\\Displacementmaps_" + std::to_string( j );
+        replacementsFolder = "system\\GD3D11\\textures\\replacements\\Displacementmaps_" + std::to_string( j );
         while ( Toolbox::FolderExists( replacementsFolder ) ) {
-            std::string dispMap = replacementsFolder + "\\\\" + TextureName + "_disp.dds";
+            std::string dispMap = replacementsFolder + "\\" + TextureName + "_disp.dds";
             if ( Toolbox::FileExists( dispMap ) ) {
                 Engine::GraphicsEngine->CreateTexture( &dispMapTexture );
                 if ( XR_SUCCESS != dispMapTexture->Init( dispMap ) ) {
@@ -196,9 +196,9 @@ void MyDirectDrawSurface7::LoadAdditionalResources( zCTexture* ownedTexture ) {
                 break;
             }
             j++;
-            replacementsFolder = "system\\\\GD3D11\\\\textures\\\\replacements\\\\Displacementmaps_" + std::to_string( j );
+            replacementsFolder = "system\\GD3D11\\textures\\replacements\\Displacementmaps_" + std::to_string( j );
         }
-        std::string dispMap = "system\\\\GD3D11\\\\textures\\\\replacements\\\\Displacementmaps_" + Engine::GAPI->GetGameName() + "\\\\" + TextureName + "_disp.dds";
+        std::string dispMap = "system\\GD3D11\\textures\\replacements\\Displacementmaps_" + Engine::GAPI->GetGameName() + "\\" + TextureName + "_disp.dds";
         if ( !dispMapTexture && Toolbox::FileExists( dispMap ) ) {
             Engine::GraphicsEngine->CreateTexture( &dispMapTexture );
             if ( XR_SUCCESS != dispMapTexture->Init( dispMap ) ) {

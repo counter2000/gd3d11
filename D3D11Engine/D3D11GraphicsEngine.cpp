@@ -1313,6 +1313,7 @@ XRESULT D3D11GraphicsEngine::OnBeginFrame() {
 
     GetContext()->HSSetShader( nullptr, nullptr, 0 );
     GetContext()->DSSetShader( nullptr, nullptr, 0 );
+    GetContext()->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
     ActiveHDS = nullptr;
 
     SetActivePixelShader( "PS_Simple" );
@@ -3684,6 +3685,7 @@ void D3D11GraphicsEngine::DrawWaterSurfaces() {
 
     GetContext()->HSSetShader( nullptr, nullptr, 0 );
     GetContext()->DSSetShader( nullptr, nullptr, 0 );
+    GetContext()->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
     ActiveHDS = nullptr;
 
     SetDefaultStates();

@@ -140,7 +140,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
             
             // Reconstruct view Z of sample
             float sampleZ = RI_Projection._43 / (depthSample - RI_Projection._33);
-            float rayZ = RI_Projection._43 / (projPos.z - RI_Projection._33);
+            float rayZ = projPos.w;
             
             float depthDiff = rayZ - sampleZ;
             
