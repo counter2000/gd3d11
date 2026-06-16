@@ -1311,6 +1311,10 @@ XRESULT D3D11GraphicsEngine::OnBeginFrame() {
     // Reset Render States for HUD
     Engine::GAPI->ResetRenderStates();
 
+    GetContext()->HSSetShader( nullptr, nullptr, 0 );
+    GetContext()->DSSetShader( nullptr, nullptr, 0 );
+    ActiveHDS = nullptr;
+
     SetActivePixelShader( "PS_Simple" );
     SetActiveVertexShader( "VS_Ex" );
 
@@ -3677,6 +3681,10 @@ void D3D11GraphicsEngine::DrawWaterSurfaces() {
     if ( FrameWaterSurfaces.empty() ) {
         return;
     }
+
+    GetContext()->HSSetShader( nullptr, nullptr, 0 );
+    GetContext()->DSSetShader( nullptr, nullptr, 0 );
+    ActiveHDS = nullptr;
 
     SetDefaultStates();
 
