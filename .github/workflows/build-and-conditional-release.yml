@@ -94,6 +94,8 @@ jobs:
     if: github.event_name == 'push' && (github.ref_name == 'master' || github.ref_type == 'tag')
     needs: package-artifacts
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout only composite actions
