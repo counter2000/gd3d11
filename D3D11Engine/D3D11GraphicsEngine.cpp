@@ -3674,6 +3674,14 @@ void D3D11GraphicsEngine::DrawWaterSurfaces() {
         ActivePS->Apply();
     }
 
+    ActivePS->GetConstantBuffer()[0]->UpdateBuffer(
+        &Engine::GAPI->GetRendererState().GraphicsState );
+    ActivePS->GetConstantBuffer()[0]->BindToPixelShader( 0 );
+
+    GSky* sky = Engine::GAPI->GetSky();
+    ActivePS->GetConstantBuffer()[1]->UpdateBuffer( &sky->GetAtmosphereCB() );
+    ActivePS->GetConstantBuffer()[1]->BindToPixelShader( 1 );
+
     // Bind distortion texture
     DistortionTexture->BindToPixelShader( 4 );
 

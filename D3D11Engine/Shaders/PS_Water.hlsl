@@ -116,16 +116,20 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float ssrWeight = 0.0f;
 
 	if (AC_EnableSSR > 0.5f) {
-		float3 rayPos = Input.vWorldPosition;
-		float3 rayDir = reflect(viewDirection, wavesFres);
-		float stepSize = 40.0f;
-		int maxSteps = 40;
+		float3 rayDir = normalize(reflect(viewDirection, wavesFres));
+		float travel = 20.0f;
+		float stepSize = 25.0f;
+		int maxSteps = 72;
 
 		for (int i = 1; i <= maxSteps; i++) {
-			rayPos += rayDir * stepSize;
-			stepSize *= 1.1f;
+			float3 rayPos = Input.vWorldPosition + rayDir * travel;
+			travel += stepSize;
+			stepSize *= 1.06f;
 
 			float4 projPos = mul(float4(rayPos, 1.0f), RI_ViewProj);
+			if (projPos.w <= 0.0f)
+				break;
+
 			projPos.xyz /= projPos.w;
 
 			float2 uv = projPos.xy * float2(0.5f, -0.5f) + 0.5f;
@@ -133,12 +137,16 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 				break;
 
 			float depthSample = TX_Depth.SampleLevel(SS_Linear, uv, 0).r;
+			if (depthSample >= 0.99999f)
+				continue;
+
 			float sampleZ = RI_Projection._43 / (depthSample - RI_Projection._33);
 			float rayZ = projPos.w;
-			float depthDiff = rayZ - sampleZ;
+			float depthDiff = abs(rayZ - sampleZ);
+			float thickness = max(80.0f, stepSize * 3.0f);
 
-			if (depthDiff > 0.0f && depthDiff < (stepSize * 2.0f)) {
-				float3 minPos = rayPos - rayDir * stepSize;
+			if (depthDiff < thickness) {
+				float3 minPos = Input.vWorldPosition + rayDir * max(0.0f, travel - stepSize * 2.0f);
 				float3 maxPos = rayPos;
 				float3 midPos = rayPos;
 
@@ -151,7 +159,10 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 					float dMid = TX_Depth.SampleLevel(SS_Linear, uvMid, 0).r;
 					float zMid = RI_Projection._43 / (dMid - RI_Projection._33);
 
-					if (projMid.w - zMid > 0.0f) {
+					if (abs(projMid.w - zMid) < depthDiff) {
+						depthDiff = abs(projMid.w - zMid);
+						maxPos = midPos;
+					} else if (projMid.w > zMid) {
 						maxPos = midPos;
 					} else {
 						minPos = midPos;
@@ -165,6 +176,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 				reflectionSSR = TX_Scene.SampleLevel(SS_Linear, uv, 0).xyz;
 				float2 edgeFade = saturate(abs(uv - 0.5f) * 2.0f);
 				ssrWeight = saturate(pow(1.0f - max(edgeFade.x, edgeFade.y), 2.0f));
+				ssrWeight *= saturate(1.0f - depthDiff / thickness);
 				break;
 			}
 		}
@@ -178,9 +190,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	float pxDistance = Input.vTexcoord2.y;
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
-	scene.rgb += reflection * 1.0f * fresnel * lerp(1.0f, diffuse, 0.6f);
+	scene.rgb += reflection * (1.0f - ssrWeight * 0.75f) * fresnel * lerp(1.0f, diffuse, 0.6f);
 	float ssrFresnel = lerp(0.5f, 1.0f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 1.5f)));
-	scene.rgb += reflectionSSR * ssrWeight * ssrFresnel * 2.4f;
+	float ssrAmount = ssrWeight * ssrFresnel;
+	scene.rgb = lerp(scene.rgb, reflectionSSR, ssrAmount * 0.55f);
+	scene.rgb += reflectionSSR * ssrAmount * 0.9f;
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
 	color = lerp(color, sceneWet, (1-shallowDepth));
 	
