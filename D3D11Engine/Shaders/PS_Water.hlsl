@@ -212,11 +212,16 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 			float range = max(WR_LightPositionRange[l].w, 1.0f);
 			float3 toLight = lightPos - Input.vWorldPosition;
 			float distToLight = length(toLight);
+			float2 toLightXZ = lightPos.xz - Input.vWorldPosition.xz;
+			float horizontalDist = length(toLightXZ);
 			float attenuation = saturate(1.0f - distToLight / range);
 			attenuation *= attenuation;
+			float surfaceGlow = saturate(1.0f - horizontalDist / max(range * 0.85f, 1.0f));
+			surfaceGlow *= surfaceGlow;
+			float heightFalloff = saturate(1.0f - abs(toLight.y) / max(range * 0.85f, 1.0f));
 
 			float3 lightDir = toLight / max(distToLight, 0.001f);
-			float specGlint = pow(saturate(dot(reflectedView, lightDir)), 52.0f) * attenuation;
+			float specGlint = pow(saturate(dot(reflectedView, lightDir)), 28.0f) * attenuation;
 
 			float4 lightClip = mul(float4(lightPos, 1.0f), RI_ViewProj);
 			float screenStreak = 0.0f;
@@ -231,10 +236,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 			}
 
 			float ripple = 0.70f + 0.30f * saturate(distortionSmall.y * 0.5f + 0.5f);
-			waterLight += WR_LightColorIntensity[l].rgb * (specGlint * 1.4f + screenStreak * 0.42f) * ripple * activeLight;
+			float visiblePool = surfaceGlow * heightFalloff * (0.40f + 0.60f * ssrFresnel);
+			waterLight += WR_LightColorIntensity[l].rgb * (visiblePool * 0.65f + specGlint * 2.2f + screenStreak * 0.95f) * ripple * activeLight;
 		}
 
-		scene.rgb += waterLight * nightWeight * WR_LightReflectionStrength * ssrFresnel * saturate(shallowDepth + 0.35f);
+		scene.rgb += waterLight * nightWeight * WR_LightReflectionStrength * saturate(shallowDepth + 0.45f);
 	}
 
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
@@ -243,10 +249,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	if (WR_EnableShoreBlend > 0.5f) {
 		float shore = 1.0f - shallowDepth;
 		float shoreMask = smoothstep(0.05f, 0.95f, shore) * saturate(WR_ShoreBlendStrength);
-		float shoreRipple = smoothstep(0.55f, 0.95f, shore) * (0.5f + 0.5f * saturate(distortionSmall.y * 0.5f + 0.5f));
-		float3 shoreTint = lerp(color, sceneClean * lerp(float3(0.78f, 0.90f, 0.88f), waterTint, 0.35f), 0.45f);
-		color = lerp(color, shoreTint, shoreMask * 0.35f);
-		color += shoreRipple * shoreMask * float3(0.035f, 0.045f, 0.040f);
+		float shoreEdge = smoothstep(0.10f, 0.38f, shallowDepth) * (1.0f - smoothstep(0.42f, 0.82f, shallowDepth));
+		float shoreRipple = (0.45f + 0.55f * saturate(distortionSmall.y * 0.5f + 0.5f));
+		float3 shallowColor = lerp(sceneClean, sceneClean * float3(0.72f, 0.88f, 0.82f) + diffuse * 0.22f, 0.65f);
+		color = lerp(color, shallowColor, shoreMask * 0.68f);
+		color += shoreEdge * shoreRipple * shoreMask * float3(0.16f, 0.19f, 0.17f);
 	}
 	
 	color.rgb = ApplyAtmosphericScatteringGround(Input.vWorldPosition, color.rgb);

@@ -3717,8 +3717,14 @@ void D3D11GraphicsEngine::DrawWaterSurfaces() {
     waterReflection.WR_LightReflectionStrength = Engine::GAPI->GetRendererState().RendererSettings.WaterLightReflectionStrength;
 
     if ( Engine::GAPI->GetRendererState().RendererSettings.EnableWaterLightReflections ) {
+        std::vector<VobInfo*> waterVobs;
+        std::vector<VobLightInfo*> waterLights;
+        std::vector<SkeletalVobInfo*> waterMobs;
+        Engine::GAPI->CollectVisibleVobs( waterVobs, waterLights, waterMobs );
+
         float lightScores[8] = {};
-        for ( const auto& [vob, lightInfo] : Engine::GAPI->GetVobLightMap() ) {
+        for ( const auto& lightInfo : waterLights ) {
+            zCVobLight* vob = lightInfo ? lightInfo->Vob : nullptr;
             if ( !vob || !vob->IsEnabled() ) {
                 continue;
             }
@@ -3762,6 +3768,22 @@ void D3D11GraphicsEngine::DrawWaterSurfaces() {
             waterReflection.WR_LightPositionRange[slot] = float4( lightPosition.x, lightPosition.y, lightPosition.z, range );
             waterReflection.WR_LightColorIntensity[slot] = color;
             waterReflection.WR_LightCount = std::min( waterReflection.WR_LightCount + 1.0f, 8.0f );
+        }
+
+        for ( auto* vob : waterVobs ) {
+            if ( vob ) {
+                vob->VisibleInRenderPass = false;
+            }
+        }
+        for ( auto* light : waterLights ) {
+            if ( light ) {
+                light->VisibleInRenderPass = false;
+            }
+        }
+        for ( auto* mob : waterMobs ) {
+            if ( mob ) {
+                mob->VisibleInRenderPass = false;
+            }
         }
     }
 
