@@ -95,7 +95,7 @@ jobs:
         uses: ./.github/actions/package-artifacts
 
   create-release:
-    if: github.event_name == 'push' && (github.ref_name == 'master' || github.ref_type == 'tag')
+    if: github.event_name == 'push' && (github.ref_name == 'master' || github.ref_name == 'codex/ssr-sss-from-17.9.7' || github.ref_type == 'tag')
     needs: package-artifacts
     runs-on: ubuntu-latest
 

@@ -3614,6 +3614,11 @@ void D3D11GraphicsEngine::DrawWaterSurfaces() {
         return;
     }
 
+    GetContext()->HSSetShader( nullptr, nullptr, 0 );
+    GetContext()->DSSetShader( nullptr, nullptr, 0 );
+    GetContext()->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+    ActiveHDS = nullptr;
+
     SetDefaultStates();
 
     auto tempBuffer = PfxRenderer->GetTempBuffer();
