@@ -571,11 +571,12 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 							diffuse.rgb * lightColor.rgb * lightColor.a * worldAO, sun)
 				  + specColored;
 
-	if (AC_EnableSSS > 0.5f && gb2.w > 0.1f && gb2.w < 0.9f) {
+	float sssDayWeight = saturate((AC_LightPos.y - 0.03f) * 4.0f);
+	if (AC_EnableSSS > 0.5f && sssDayWeight > 0.001f && gb2.w > 0.1f && gb2.w < 0.9f) {
 		float backlight = saturate(dot(normalize(SQ_LightDirectionVS), -V));
 		float sssShadow = lerp(0.4f, 1.0f, shadow);
 		float sss = pow(backlight, 2.0f) * 1.8f * sssShadow;
-		litPixel += diffuse.rgb * lightColor.rgb * sss * vertLighting;
+		litPixel += diffuse.rgb * lightColor.rgb * sss * vertLighting * sssDayWeight;
 	}
 	
     float fresnel = pow(1.0f - saturate(dot(normal, V)), 10.0f);

@@ -179,11 +179,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	float pxDistance = Input.vTexcoord2.y;
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
-	float cubeWeight = (AC_EnableSSR > 0.5f) ? lerp(0.50f, 1.35f, nightAmount) : 1.0f;
-	scene.rgb += reflection * cubeWeight * (1.0f - ssrWeight * lerp(0.55f, 0.30f, nightAmount)) * fresnel * lerp(1.0f, diffuse, 0.6f);
+	float cubeWeight = (AC_EnableSSR > 0.5f) ? lerp(0.45f, 0.95f, nightAmount) : 1.0f;
+	scene.rgb += reflection * cubeWeight * (1.0f - ssrWeight * lerp(0.35f, 0.18f, nightAmount)) * fresnel * lerp(1.0f, diffuse, 0.6f);
 	float ssrFresnel = lerp(0.20f, 0.75f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
 	float3 reflectionSSRClamped = min(reflectionSSR, float3(1.25f, 1.25f, 1.25f));
-	scene.rgb += reflectionSSRClamped * ssrWeight * ssrFresnel * max(0.0f, AC_SSRStrength) * lerp(0.90f, 2.15f, nightAmount);
+	scene.rgb += reflectionSSRClamped * ssrWeight * ssrFresnel * max(0.0f, AC_SSRStrength) * lerp(1.10f, 2.75f, nightAmount);
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
 	color = lerp(color, sceneWet, (1-shallowDepth));
 
@@ -213,7 +213,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	//darken / lighten water based on the day / night cycle
 	float darknessFactor = 2.0f;
 	darknessFactor -= AC_LightPos.y;
-	darknessFactor = lerp(darknessFactor, max(1.30f, darknessFactor * 0.62f), nightAmount);
+	darknessFactor = lerp(darknessFactor, max(1.22f, darknessFactor * 0.58f), nightAmount);
 
 	return float4(color / darknessFactor, 1);
 }

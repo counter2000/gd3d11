@@ -3,6 +3,15 @@
 //--------------------------------------------------------------------------------------
 #include <GaussBlur.h>
 
+cbuffer B_BlurSettings : register(b0)
+{
+	float2 B_PixelSize;
+	float B_BlurSize;
+	float B_Threshold;
+
+	float4 B_ColorMod;
+};
+
 //--------------------------------------------------------------------------------------
 // Textures and Samplers
 //--------------------------------------------------------------------------------------
@@ -26,11 +35,10 @@ struct PS_INPUT
 //--------------------------------------------------------------------------------------
 float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
-	float4 depth = TX_Depth.Sample(SS_Linear, Input.vTexcoord);
+	float depth = TX_Depth.Sample(SS_Linear, Input.vTexcoord).r;
+	float blurMask = smoothstep(B_Threshold, 0.92f, saturate(depth)) * B_ColorMod.x;
 
-	float2 ps = float2(1.0f / 1920.0f, 1.0f / 1080.0f);
-	ps = lerp(float2(0,0), ps, pow(abs((float)depth), 300));
-	
+	float2 ps = B_PixelSize * B_BlurSize * blurMask;
 	float4 blur = DoBlurPassSingle(ps, Input.vTexcoord, TX_Texture0, TX_Depth, SS_Linear, 1.0f);
 	
 	float4 scene = TX_Texture0.Sample(SS_Linear, Input.vTexcoord);
@@ -38,6 +46,5 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	blur.a = 1.0f;
 	scene.a = 1.0f;
 
-	return blur;
+	return lerp(scene, blur, blurMask);
 }
-

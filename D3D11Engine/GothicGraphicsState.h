@@ -664,6 +664,7 @@ struct GothicRendererSettings {
         EnableSSR = false;
         SSRStrength = 1.0f;
         EnableSSS = false;
+        EnableDistanceBlur = false;
 
         WindQuality = WIND_QUALITY_ADVANCED;
         HeroAffectsObjects = true;
@@ -803,6 +804,7 @@ struct GothicRendererSettings {
     bool EnableSSR;
     float SSRStrength;
     bool EnableSSS;
+    bool EnableDistanceBlur;
     bool EnableOcclusionCulling;
     bool SortRenderQueue;
     bool DrawThreaded;

@@ -34,7 +34,7 @@ XRESULT D3D11PFX_DistanceBlur::Render( RenderToTextureBuffer* fxbuffer ) {
     auto tempBuffer = FxRenderer->GetTempBuffer();
 
 	engine->GetContext()->ClearRenderTargetView( tempBuffer->GetRenderTargetView().Get(), reinterpret_cast<float*>(&float4( 0, 0, 0, 0 )) );
-    FxRenderer->CopyTextureToRTV( engine->GetGBuffer0().GetShaderResView(), tempBuffer->GetRenderTargetView(), Engine::GraphicsEngine->GetResolution() );
+    FxRenderer->CopyTextureToRTV( engine->GetHDRBackBuffer().GetShaderResView(), tempBuffer->GetRenderTargetView(), Engine::GraphicsEngine->GetResolution() );
 
 	engine->GetContext()->OMSetRenderTargets( 1, oldRTV.GetAddressOf(), nullptr );
 
@@ -43,9 +43,18 @@ XRESULT D3D11PFX_DistanceBlur::Render( RenderToTextureBuffer* fxbuffer ) {
 	engine->GetDepthBuffer()->BindToPixelShader( engine->GetContext().Get(), 1 );
 
 	// Blur/Copy
+	BlurConstantBuffer bcb;
+	bcb.B_PixelSize = float2( 1.0f / Engine::GraphicsEngine->GetResolution().x, 1.0f / Engine::GraphicsEngine->GetResolution().y );
+	bcb.B_BlurSize = 1.35f;
+	bcb.B_Threshold = 0.42f;
+	bcb.B_ColorMod = float4( 0.82f, 0, 0, 0 );
+	ps->GetConstantBuffer()[0]->UpdateBuffer( &bcb );
+	ps->GetConstantBuffer()[0]->BindToPixelShader( 0 );
 	ps->Apply();
 
 	FxRenderer->DrawFullScreenQuad();
+
+	FxRenderer->UnbindPSResources( 2 );
 
 	// Restore rendertargets
 	engine->GetContext()->OMSetRenderTargets( 1, oldRTV.GetAddressOf(), oldDSV.Get() );

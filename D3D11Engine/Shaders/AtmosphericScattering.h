@@ -151,6 +151,10 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 		outColor = dayColor + in_color * nightColor * nightWeight + moonColor;
 	else
 		outColor = dayColor + nightColor * nightWeight + moonColor;
+
+	float nightDistanceFade = smoothstep(7000.0f, 36000.0f, fFar) * nightWeight;
+	float3 farNightColor = float3(0.004f, 0.006f, 0.016f);
+	outColor = lerp(outColor, farNightColor, nightDistanceFade * 0.82f);
 		
 	return outColor;
 }

@@ -582,6 +582,8 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::SetItemTooltip( "Adds real-time screen-space reflections to water." );
             ImGui::Checkbox( "Backlit Vegetation", &settings.EnableSSS );
             ImGui::SetItemTooltip( "Adds soft light transmission to grass, leaves, and alpha-tested vegetation." );
+            ImGui::Checkbox( "Distance Blur", &settings.EnableDistanceBlur );
+            ImGui::SetItemTooltip( "Softens distant scenery while keeping the near field and interface sharp." );
             static std::vector<std::pair<const char*, GothicRendererSettings::E_AntiAliasingMode>> antiAliasing = {
                 {"Disabled", GothicRendererSettings::E_AntiAliasingMode::AA_NONE},
                 {"SMAA", GothicRendererSettings::E_AntiAliasingMode::AA_SMAA},

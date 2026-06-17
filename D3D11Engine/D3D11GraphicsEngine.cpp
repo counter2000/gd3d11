@@ -2833,6 +2833,12 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         GetContext()->PSSetSamplers( 0, 1, DefaultSamplerState.GetAddressOf() );
     }
 
+    if ( Engine::GAPI->GetRendererState().RendererSettings.EnableDistanceBlur ) {
+        auto _ = RecordGraphicsEvent( L"RenderDistanceBlur" );
+        PfxRenderer->RenderDistanceBlur();
+        GetContext()->PSSetSamplers( 0, 1, DefaultSamplerState.GetAddressOf() );
+    }
+
     PresentPending = true;
 
     // Set viewport for gothics rendering
