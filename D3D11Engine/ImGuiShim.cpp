@@ -576,6 +576,36 @@ void ImGuiShim::RenderSettingsWindow()
 
             ImGui::Checkbox( "HBAO+", &settings.HbaoSettings.Enabled );
             ImGui::SetItemTooltip( "Enable Screen-Space ambient occlusion." );
+            if ( ImGui::TreeNode( "HBAO+ tuning" ) ) {
+                ImGui::PushItemWidth( 180 );
+
+                if ( ImGui::Button( "Anti-Halo preset" ) ) {
+                    settings.HbaoSettings.Radius = 0.55f;
+                    settings.HbaoSettings.Bias = 0.50f;
+                    settings.HbaoSettings.PowerExponent = 1.65f;
+                    settings.HbaoSettings.EnableBlur = true;
+                    settings.HbaoSettings.SsaoBlurRadius = 0;
+                    settings.HbaoSettings.BlurSharpness = 10.0f;
+                }
+                ImGui::SetItemTooltip( "Reduces HBAO+ haloing around characters in dense grass." );
+
+                ImGui::SliderFloat( "Radius##HBAOQuick", &settings.HbaoSettings.Radius, 0.10f, 4.00f, "%.2f" );
+                ImGui::SliderFloat( "Power##HBAOQuick", &settings.HbaoSettings.PowerExponent, 1.00f, 4.00f, "%.2f" );
+                ImGui::SliderFloat( "Bias##HBAOQuick", &settings.HbaoSettings.Bias, 0.00f, 0.50f, "%.2f" );
+                ImGui::Checkbox( "Blur##HBAOQuick", &settings.HbaoSettings.EnableBlur );
+                ImGui::SliderFloat( "Blur sharpness##HBAOQuick", &settings.HbaoSettings.BlurSharpness, 0.00f, 16.00f, "%.2f" );
+                static std::vector<std::pair<const char*, int>> hbaoBlurRadii = { {"2", 0}, {"4", 1} };
+                if ( ImComboBox( "Blur radius##HBAOQuick", hbaoBlurRadii, &settings.HbaoSettings.SsaoBlurRadius ) ) {
+                    ImGui::EndCombo();
+                }
+                static std::vector<std::pair<const char*, int>> hbaoStepCounts = { {"4", 0}, {"8", 1} };
+                if ( ImComboBox( "Steps##HBAOQuick", hbaoStepCounts, &settings.HbaoSettings.SsaoStepCount ) ) {
+                    ImGui::EndCombo();
+                }
+
+                ImGui::PopItemWidth();
+                ImGui::TreePop();
+            }
 
             ImGui::Checkbox( "Godrays", &settings.EnableGodRays );
             ImGui::Checkbox( "Screen Space Reflections (SSR)", &settings.EnableSSR );
