@@ -35,7 +35,7 @@ cbuffer Atmosphere : register( b1 )
 
 	float AC_EnableSSR;
 	float AC_EnableSSS;
-	float AC_AtmospherePad1;
+	float AC_SSRStrength;
 	float AC_AtmospherePad2;
 };
 

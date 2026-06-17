@@ -662,6 +662,7 @@ struct GothicRendererSettings {
         SortRenderQueue = true;
         DrawThreaded = true;
         EnableSSR = false;
+        SSRStrength = 1.0f;
         EnableSSS = false;
 
         WindQuality = WIND_QUALITY_ADVANCED;
@@ -800,6 +801,7 @@ struct GothicRendererSettings {
     bool DoZPrepass;
     bool EnableAutoupdates;
     bool EnableSSR;
+    float SSRStrength;
     bool EnableSSS;
     bool EnableOcclusionCulling;
     bool SortRenderQueue;

@@ -180,8 +180,9 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
 	float cubeWeight = (AC_EnableSSR > 0.5f) ? 0.0f : 1.0f;
 	scene.rgb += reflection * cubeWeight * (1.0f - ssrWeight) * fresnel * lerp(1.0f, diffuse, 0.6f);
-	float ssrFresnel = lerp(0.5f, 1.0f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 1.5f)));
-	scene.rgb += reflectionSSR * ssrWeight * ssrFresnel * 2.4f;
+	float ssrFresnel = lerp(0.20f, 0.75f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
+	float3 reflectionSSRClamped = min(reflectionSSR, float3(1.25f, 1.25f, 1.25f));
+	scene.rgb += reflectionSSRClamped * ssrWeight * ssrFresnel * max(0.0f, AC_SSRStrength);
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
 	color = lerp(color, sceneWet, (1-shallowDepth));
 	

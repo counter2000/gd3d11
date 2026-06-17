@@ -299,6 +299,7 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_RainFXWeight = Engine::GAPI->GetRainFXWeight();
     AtmosphereCB.AC_EnableSSR = Engine::GAPI->GetRendererState().RendererSettings.EnableSSR ? 1.0f : 0.0f;
     AtmosphereCB.AC_EnableSSS = Engine::GAPI->GetRendererState().RendererSettings.EnableSSS ? 1.0f : 0.0f;
+    AtmosphereCB.AC_SSRStrength = Engine::GAPI->GetRendererState().RendererSettings.SSRStrength;
 
     //Engine::GraphicsEngine->DrawSky();
 

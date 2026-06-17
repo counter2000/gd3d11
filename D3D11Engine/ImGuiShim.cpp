@@ -610,6 +610,11 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::Checkbox( "Godrays", &settings.EnableGodRays );
             ImGui::Checkbox( "Screen Space Reflections (SSR)", &settings.EnableSSR );
             ImGui::SetItemTooltip( "Enable screen-space reflections on water surfaces." );
+            if ( settings.EnableSSR ) {
+                ImGui::PushItemWidth( 180 );
+                ImGui::SliderFloat( "SSR strength", &settings.SSRStrength, 0.0f, 2.0f, "%.2f" );
+                ImGui::PopItemWidth();
+            }
             ImGui::Checkbox( "Subsurface Scattering (SSS)", &settings.EnableSSS );
             ImGui::SetItemTooltip( "Enable backlit translucency for alpha-tested vegetation and grass." );
             static std::vector<std::pair<const char*, GothicRendererSettings::E_AntiAliasingMode>> antiAliasing = {
