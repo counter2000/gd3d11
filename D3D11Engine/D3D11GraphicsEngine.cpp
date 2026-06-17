@@ -3725,10 +3725,11 @@ void D3D11GraphicsEngine::DrawWaterSurfaces() {
                 continue;
             }
 
-            const float range = vob->GetLightRange();
-            if ( range <= 1.0f ) {
+            const float sourceRange = vob->GetLightRange();
+            if ( sourceRange <= 1.0f ) {
                 continue;
             }
+            const float range = sourceRange * 1.8f;
 
             float lightDistance;
             XMStoreFloat( &lightDistance, XMVector3Length( vob->GetPositionWorldXM() - Engine::GAPI->GetCameraPositionXM() ) );
@@ -3737,6 +3738,9 @@ void D3D11GraphicsEngine::DrawWaterSurfaces() {
             }
 
             float4 color = float4( vob->GetLightColor() );
+            color.x *= 2.2f;
+            color.y *= 2.2f;
+            color.z *= 2.2f;
             const float luminance = color.x * 0.299f + color.y * 0.587f + color.z * 0.114f;
             const float score = luminance * range / std::max( lightDistance, 1.0f );
 

@@ -128,7 +128,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float3 reflection = TX_ReflectionCube.Sample(SS_Linear, reflect_vec).xyz;
 	float3 reflectionSSR = float3(0.0f, 0.0f, 0.0f);
 	float ssrWeight = 0.0f;
-	float ssrValidWeight = 0.0f;
+	float ssrLuma = 0.0f;
 
 	if (AC_EnableSSR > 0.5f) {
 		float3 rayPos = Input.vWorldPosition;
@@ -180,8 +180,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 				reflectionSSR = TX_Scene.SampleLevel(SS_Linear, uv, 0).xyz;
 				float2 edgeFade = saturate(abs(uv - 0.5f) * 2.0f);
 				ssrWeight = saturate(pow(1.0f - max(edgeFade.x, edgeFade.y), 2.0f));
-				float ssrLuma = dot(reflectionSSR, float3(0.299f, 0.587f, 0.114f));
-				ssrValidWeight = ssrWeight * saturate((ssrLuma - 0.015f) * 8.0f);
+				ssrLuma = dot(reflectionSSR, float3(0.299f, 0.587f, 0.114f));
 				break;
 			}
 		}
@@ -200,6 +199,10 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float diffuseMix = lerp(0.73f, 0.48f, nightAmount);
 	scene = lerp(scene, diffuse, diffuseMix * max(pow(fresnel,8.0f), 0.5f));
 	float3 cubeReflection = reflection * lerp(float3(1.0f, 1.0f, 1.0f), waterTint, 0.25f);
+	float cubeLuma = dot(cubeReflection, float3(0.299f, 0.587f, 0.114f));
+	float daySSRWeight = ssrWeight * saturate((ssrLuma - 0.015f) * 8.0f);
+	float nightSSRWeight = ssrWeight * saturate((ssrLuma - max(0.055f, cubeLuma * 0.55f)) * 10.0f);
+	float ssrValidWeight = lerp(daySSRWeight, nightSSRWeight, nightAmount);
 	scene.rgb += cubeReflection * (1.0f - ssrValidWeight) * fresnel * lerp(1.0f, diffuse, 0.6f);
 	float3 reflectionSSRClamped = min(reflectionSSR, float3(0.95f, 1.00f, 1.05f));
 	reflectionSSRClamped *= lerp(waterTint, float3(1.0f, 1.0f, 1.0f), 0.35f);
@@ -241,6 +244,22 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 			float ripple = 0.70f + 0.30f * saturate(distortionSmall.y * 0.5f + 0.5f);
 			waterLightReflection += WR_LightColorIntensity[l].rgb * (specGlint * 1.8f + screenStreak * 0.85f + surfaceGlow * 0.45f) * ripple * nightWeight * activeLight;
 		}
+
+		float3 screenLightReflection = 0.0f;
+		[unroll]
+		for (int s = 0; s < 12; s++) {
+			float yOffset = 0.035f + (float)s * 0.035f;
+			float xOffset = ((float)(s % 3) - 1.0f) * 0.020f + distortionSmall.x * 0.055f;
+			float2 lightSampleUV = screenUV + float2(xOffset, -yOffset);
+			float inScreen = step(0.0f, lightSampleUV.x) * step(lightSampleUV.x, 1.0f) * step(0.0f, lightSampleUV.y) * step(lightSampleUV.y, 1.0f);
+			float3 lightSample = TX_Scene.SampleLevel(SS_Linear, saturate(lightSampleUV), 0).rgb;
+			float lightMax = max(lightSample.r, max(lightSample.g, lightSample.b));
+			float bright = saturate((lightMax - 0.08f) * 7.0f);
+			float warmOrBright = saturate((lightSample.r - lightSample.b * 0.65f) * 3.5f + bright * 0.35f);
+			float falloff = saturate(1.0f - (float)s / 12.0f);
+			screenLightReflection += min(lightSample, float3(2.0f, 1.6f, 1.2f)) * bright * warmOrBright * falloff * inScreen;
+		}
+		waterLightReflection += screenLightReflection * nightWeight * saturate(1.0f - shallowDepth * 0.35f) * 0.55f;
 	}
 
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
@@ -249,13 +268,14 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	if (WR_EnableShoreBlend > 0.5f) {
 		float shore = 1.0f - shallowDepth;
 		float shoreMask = smoothstep(0.02f, 0.85f, shore) * saturate(WR_ShoreBlendStrength);
-		float shoreRipple = smoothstep(0.55f, 0.95f, shore) * (0.5f + 0.5f * saturate(distortionSmall.y * 0.5f + 0.5f));
+		float shoreRipple = smoothstep(0.58f, 0.94f, shore) * (0.5f + 0.5f * saturate(distortionSmall.y * 0.5f + 0.5f));
 		float3 shoreTint = lerp(sceneClean, color, 0.45f);
-		color = lerp(color, shoreTint, shoreMask * lerp(0.45f, 0.65f, nightAmount));
+		color = lerp(color, shoreTint, shoreMask * lerp(0.32f, 0.48f, nightAmount));
 		float foamNoise = saturate(distortionSmall.y * 0.45f + distortionBig.y * 0.35f + 0.55f);
-		float foamMask = shoreMask * smoothstep(0.55f, 0.92f, shore) * smoothstep(0.42f, 0.82f, foamNoise);
-		color = lerp(color, float3(0.78f, 0.88f, 0.82f), foamMask * 0.32f);
-		color += shoreRipple * shoreMask * float3(0.055f, 0.070f, 0.060f);
+		float foamBand = smoothstep(0.76f, 0.94f, shore) * (1.0f - smoothstep(0.97f, 1.0f, shore));
+		float foamMask = shoreMask * foamBand * smoothstep(0.56f, 0.86f, foamNoise);
+		color = lerp(color, sceneClean * 0.62f + float3(0.16f, 0.19f, 0.18f), foamMask * 0.16f);
+		color += shoreRipple * shoreMask * float3(0.025f, 0.033f, 0.030f);
 	}
 
 	float transparencyLift = nightAmount * (1.0f - shallowDepth) * 0.72f;
