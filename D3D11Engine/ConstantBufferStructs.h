@@ -283,19 +283,6 @@ struct RefractionInfoConstantBuffer {
     XMFLOAT4X4 RI_ViewProj;
 };
 
-struct WaterReflectionInfoConstantBuffer {
-    float4 WR_LightPositionRange[8];
-    float4 WR_LightColorIntensity[8];
-
-    float WR_LightCount;
-    float WR_EnableLightReflections;
-    float WR_EnableShoreBlend;
-    float WR_ShoreBlendStrength;
-
-    float WR_LightReflectionStrength;
-    float3 WR_Pad;
-};
-
 struct AtmosphereConstantBuffer {
     float AC_Kr4PI;
     float AC_Km4PI;

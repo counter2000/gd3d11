@@ -3712,68 +3712,6 @@ void D3D11GraphicsEngine::DrawWaterSurfaces() {
     ActivePS->GetConstantBuffer()[2]->UpdateBuffer( &ricb );
     ActivePS->GetConstantBuffer()[2]->BindToPixelShader( 2 );
 
-    WaterReflectionInfoConstantBuffer waterReflection = {};
-    waterReflection.WR_EnableLightReflections = Engine::GAPI->GetRendererState().RendererSettings.EnableWaterLightReflections ? 1.0f : 0.0f;
-    waterReflection.WR_EnableShoreBlend = Engine::GAPI->GetRendererState().RendererSettings.EnableWaterShoreBlend ? 1.0f : 0.0f;
-    waterReflection.WR_ShoreBlendStrength = Engine::GAPI->GetRendererState().RendererSettings.WaterShoreBlendStrength;
-    waterReflection.WR_LightReflectionStrength = Engine::GAPI->GetRendererState().RendererSettings.WaterLightReflectionStrength;
-
-    if ( Engine::GAPI->GetRendererState().RendererSettings.EnableWaterLightReflections ) {
-        float lightScores[8] = {};
-        for ( const auto& [vob, lightInfo] : Engine::GAPI->GetVobLightMap() ) {
-            if ( !vob || !vob->IsEnabled() ) {
-                continue;
-            }
-
-            const float sourceRange = vob->GetLightRange();
-            if ( sourceRange <= 1.0f ) {
-                continue;
-            }
-            const float range = sourceRange * 1.8f;
-
-            float lightDistance;
-            XMStoreFloat( &lightDistance, XMVector3Length( vob->GetPositionWorldXM() - Engine::GAPI->GetCameraPositionXM() ) );
-            if ( lightDistance > Engine::GAPI->GetRendererState().RendererSettings.VisualFXDrawRadius + range ) {
-                continue;
-            }
-
-            float4 color = float4( vob->GetLightColor() );
-            color.x *= 2.2f;
-            color.y *= 2.2f;
-            color.z *= 2.2f;
-            const float luminance = color.x * 0.299f + color.y * 0.587f + color.z * 0.114f;
-            const float score = luminance * range / std::max( lightDistance, 1.0f );
-
-            int slot = -1;
-            float weakestScore = score;
-            for ( int i = 0; i < 8; i++ ) {
-                if ( i >= static_cast<int>(waterReflection.WR_LightCount) ) {
-                    slot = i;
-                    break;
-                }
-
-                if ( lightScores[i] < weakestScore ) {
-                    weakestScore = lightScores[i];
-                    slot = i;
-                }
-            }
-
-            if ( slot < 0 ) {
-                continue;
-            }
-
-            lightScores[slot] = score;
-            color.w = 1.0f;
-            XMFLOAT3 lightPosition = vob->GetPositionWorld();
-            waterReflection.WR_LightPositionRange[slot] = float4( lightPosition.x, lightPosition.y, lightPosition.z, range );
-            waterReflection.WR_LightColorIntensity[slot] = color;
-            waterReflection.WR_LightCount = std::min( waterReflection.WR_LightCount + 1.0f, 8.0f );
-        }
-    }
-
-    ActivePS->GetConstantBuffer()[3]->UpdateBuffer( &waterReflection );
-    ActivePS->GetConstantBuffer()[3]->BindToPixelShader( 3 );
-
     // Bind reflection cube
     GetContext()->PSSetShaderResources( 3, 1, ReflectionCube.GetAddressOf() );
     for ( const auto& [texture, meshes] : FrameWaterSurfaces ) {

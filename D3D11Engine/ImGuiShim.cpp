@@ -610,10 +610,6 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::Checkbox( "Godrays", &settings.EnableGodRays );
             ImGui::Checkbox( "Water Reflections", &settings.EnableSSR );
             ImGui::SetItemTooltip( "Adds real-time screen-space reflections to water." );
-            ImGui::Checkbox( "Water Light Reflections", &settings.EnableWaterLightReflections );
-            ImGui::SetItemTooltip( "Mirrors nearby Gothic point lights on water." );
-            ImGui::Checkbox( "Shoreline Water Blend", &settings.EnableWaterShoreBlend );
-            ImGui::SetItemTooltip( "Softens shallow water transitions near shorelines." );
             ImGui::Checkbox( "Backlit Vegetation", &settings.EnableSSS );
             ImGui::SetItemTooltip( "Adds soft light transmission to grass, leaves, and alpha-tested vegetation." );
             static std::vector<std::pair<const char*, GothicRendererSettings::E_AntiAliasingMode>> antiAliasing = {
@@ -1294,20 +1290,6 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
                 ImGui::DragFloat( "Strength", &settings.SSRStrength, 0.01f, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
                 ImGui::EndDisabled();
             }
-
-            ImGui::Checkbox( "Light Reflections", &settings.EnableWaterLightReflections );
-            ImGui::BeginDisabled( !settings.EnableWaterLightReflections );
-            {
-                ImGui::DragFloat( "Light Strength", &settings.WaterLightReflectionStrength, 0.01f, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
-            }
-            ImGui::EndDisabled();
-
-            ImGui::Checkbox( "Shoreline Blend", &settings.EnableWaterShoreBlend );
-            ImGui::BeginDisabled( !settings.EnableWaterShoreBlend );
-            {
-                ImGui::DragFloat( "Shore Strength", &settings.WaterShoreBlendStrength, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
-            }
-            ImGui::EndDisabled();
             ImGui::PopID();
         }
 

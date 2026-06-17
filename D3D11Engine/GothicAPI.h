@@ -357,8 +357,6 @@ public:
     /** Returns wether the camera is underwater or not */
     bool IsUnderWater();
 
-    const std::unordered_map<zCVobLight*, VobLightInfo*>& GetVobLightMap() const { return VobLightMap; }
-
     /** Returns the quadmark info for the given mark. Creates a new one if needed. */
     QuadMarkInfo* GetQuadMarkInfo( zCQuadMark* mark );
 
