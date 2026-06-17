@@ -1104,5 +1104,8 @@
     <None Include="Shaders\PS_PFX_Velocity.hlsl">
       <Filter>Engine\Shaders</Filter>
     </None>
+    <None Include="Shaders\PS_PFX_ScreenSpaceLighting.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

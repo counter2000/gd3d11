@@ -664,6 +664,14 @@ struct GothicRendererSettings {
         EnableSSR = false;
         SSRStrength = 1.0f;
         EnableSSS = false;
+        EnableSoftParticles = false;
+        EnableUnderwaterVolumeFog = false;
+        EnableContactShadows = false;
+        ContactShadowStrength = 0.35f;
+        EnableSimpleSSGI = false;
+        SimpleSSGIStrength = 0.25f;
+        EnableWetSurfaceReflections = false;
+        EnableWaterLightReflections = false;
 
         WindQuality = WIND_QUALITY_ADVANCED;
         HeroAffectsObjects = true;
@@ -803,6 +811,14 @@ struct GothicRendererSettings {
     bool EnableSSR;
     float SSRStrength;
     bool EnableSSS;
+    bool EnableSoftParticles;
+    bool EnableUnderwaterVolumeFog;
+    bool EnableContactShadows;
+    float ContactShadowStrength;
+    bool EnableSimpleSSGI;
+    float SimpleSSGIStrength;
+    bool EnableWetSurfaceReflections;
+    bool EnableWaterLightReflections;
     bool EnableOcclusionCulling;
     bool SortRenderQueue;
     bool DrawThreaded;

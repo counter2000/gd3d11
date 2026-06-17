@@ -300,6 +300,8 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_EnableSSR = Engine::GAPI->GetRendererState().RendererSettings.EnableSSR ? 1.0f : 0.0f;
     AtmosphereCB.AC_EnableSSS = Engine::GAPI->GetRendererState().RendererSettings.EnableSSS ? 1.0f : 0.0f;
     AtmosphereCB.AC_SSRStrength = Engine::GAPI->GetRendererState().RendererSettings.SSRStrength;
+    AtmosphereCB.AC_EnableWaterLightReflections = Engine::GAPI->GetRendererState().RendererSettings.EnableWaterLightReflections ? 1.0f : 0.0f;
+    AtmosphereCB.AC_EnableWetSurfaceReflections = Engine::GAPI->GetRendererState().RendererSettings.EnableWetSurfaceReflections ? 1.0f : 0.0f;
 
     //Engine::GraphicsEngine->DrawSky();
 

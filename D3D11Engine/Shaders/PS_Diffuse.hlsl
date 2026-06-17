@@ -88,5 +88,9 @@ DEFERRED_PS_OUTPUT PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	output.vSI_SP.x = MI_SpecularIntensity * fx.r;
 	output.vSI_SP.y = MI_SpecularPower * fx.g;
+
+	float wetReflection = (AC_EnableWetSurfaceReflections > 0.5f) ? saturate(AC_SceneWettness) : 0.0f;
+	output.vSI_SP.x = max(output.vSI_SP.x, wetReflection * 0.35f);
+	output.vSI_SP.y = max(output.vSI_SP.y, lerp(output.vSI_SP.y, 48.0f, wetReflection));
 	return output;
 }

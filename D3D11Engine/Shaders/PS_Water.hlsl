@@ -183,6 +183,25 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float ssrFresnel = lerp(0.20f, 0.75f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
 	float3 reflectionSSRClamped = min(reflectionSSR, float3(1.25f, 1.25f, 1.25f));
 	scene.rgb += reflectionSSRClamped * ssrWeight * ssrFresnel * max(0.0f, AC_SSRStrength);
+
+	if (AC_EnableWaterLightReflections > 0.5f) {
+		float nightWeight = saturate((0.32f - AC_LightPos.y) * 3.0f);
+		float3 waterLight = 0.0f;
+
+		[unroll]
+		for (int l = 1; l <= 8; l++) {
+			float stepWeight = (8.0f - l) / 8.0f;
+			float2 lightUV = screenUV + float2(
+				distortionSmall.x * 0.012f * l + distortionBig.x * 0.006f,
+				-0.025f * l);
+			float3 lightSample = TX_Scene.SampleLevel(SS_Linear, saturate(lightUV), 0).rgb;
+			float brightMask = saturate((dot(lightSample, float3(0.299f, 0.587f, 0.114f)) - 0.55f) * 2.5f);
+			waterLight += lightSample * brightMask * stepWeight;
+		}
+
+		scene.rgb += waterLight * nightWeight * saturate(shallowDepth + 0.25f) * 0.16f;
+	}
+
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
 	color = lerp(color, sceneWet, (1-shallowDepth));
 	

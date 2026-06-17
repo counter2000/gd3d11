@@ -308,6 +308,9 @@ XRESULT D3D11ShaderManager::Init() {
     Shaders.push_back( ShaderInfo( "PS_PFX_UnderwaterFinal", "PS_PFX_UnderwaterFinal.hlsl", "p" ) );
     Shaders.back().cBufferSizes.push_back( sizeof( RefractionInfoConstantBuffer ) );
 
+    Shaders.push_back( ShaderInfo( "PS_PFX_ScreenSpaceLighting", "PS_PFX_ScreenSpaceLighting.hlsl", "p" ) );
+    Shaders.back().cBufferSizes.push_back( sizeof( ScreenSpaceEffectsConstantBuffer ) );
+
     Shaders.push_back( ShaderInfo( "PS_PFX_Alpha_Blend", "PS_PFX_Alpha_Blend.hlsl", "p" ) );
     Shaders.back().cBufferSizes.push_back( sizeof( ScreenFadeConstantBuffer ) );
 

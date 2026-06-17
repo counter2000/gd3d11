@@ -2698,6 +2698,14 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         PfxRenderer->DrawHBAO( HDRBackBuffer->GetRenderTargetView() );
         GetContext()->PSSetSamplers( 0, 1, DefaultSamplerState.GetAddressOf() );
     }
+
+    if ( Engine::GAPI->GetRendererState().RendererSettings.EnableContactShadows ||
+        Engine::GAPI->GetRendererState().RendererSettings.EnableSimpleSSGI ) {
+        auto _ = RecordGraphicsEvent( L"RenderScreenSpaceLighting" );
+        CopyDepthStencil();
+        PfxRenderer->RenderScreenSpaceLighting();
+        GetContext()->PSSetSamplers( 0, 1, DefaultSamplerState.GetAddressOf() );
+    }
     
     // PfxRenderer->RenderDistanceBlur();
 
@@ -6128,6 +6136,7 @@ void D3D11GraphicsEngine::DrawUnderwaterEffects() {
     ricb.RI_ViewportSize = float2( Resolution.x, Resolution.y );
     ricb.RI_Time = Engine::GAPI->GetTimeSeconds();
     ricb.RI_CameraPosition = Engine::GAPI->GetCameraPosition();
+    ricb.RI_Far = Engine::GAPI->GetRendererState().RendererSettings.EnableUnderwaterVolumeFog ? 1.0f : 0.0f;
 
     // Set up water final copy
     SetActivePixelShader( "PS_PFX_UnderwaterFinal" );
@@ -6270,6 +6279,10 @@ void D3D11GraphicsEngine::DrawFrameParticles(
     auto Resolution = GetResolution();
     XMMATRIX view = Engine::GAPI->GetViewMatrixXM();
     Engine::GAPI->SetViewTransformXM( view );  // Update view transform
+    const bool softParticles = Engine::GAPI->GetRendererState().RendererSettings.EnableSoftParticles;
+    if ( softParticles ) {
+        CopyDepthStencil();
+    }
 
     // TODO: Maybe make particles draw at a lower res and bilinear upsample the result.
 
@@ -6283,11 +6296,15 @@ void D3D11GraphicsEngine::DrawFrameParticles(
     ricb.RI_Time = Engine::GAPI->GetTimeSeconds();
     ricb.RI_CameraPosition = Engine::GAPI->GetCameraPosition();
     ricb.RI_Far = Engine::GAPI->GetFarPlane();
+    ricb.RI_Pad2 = softParticles ? 1.0f : 0.0f;
 
     SetActivePixelShader( "PS_ParticleDistortion" );
     ActivePS->Apply();
     ActivePS->GetConstantBuffer()[0]->UpdateBuffer( &ricb );
     ActivePS->GetConstantBuffer()[0]->BindToPixelShader( 0 );
+    if ( softParticles ) {
+        DepthStencilBufferCopy->BindToPixelShader( GetContext(), 3 );
+    }
 
     GothicRendererState& state = Engine::GAPI->GetRendererState();
 
@@ -6415,6 +6432,11 @@ void D3D11GraphicsEngine::DrawFrameParticles(
     PfxRenderer->CopyTextureToRTV(
         tempBuffer->GetShaderResView(),
         HDRBackBuffer->GetRenderTargetView(), INT2( 0, 0 ), true );
+
+    if ( softParticles ) {
+        Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
+        Context->PSSetShaderResources( 3, 1, srv.GetAddressOf() );
+    }
 }
 
 /** Called when a vob was removed from the world */
