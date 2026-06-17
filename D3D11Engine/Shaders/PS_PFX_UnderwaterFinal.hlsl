@@ -7,7 +7,7 @@ cbuffer RefractionInfo : register( b3 )
 	float4x4 RI_Projection;
 	float2 RI_ViewportSize;
 	float RI_Time;
-	float RI_Far;
+	float RI_Pad1;
 	
 	float3 RI_CameraPosition;
 	float RI_Pad2;
@@ -38,8 +38,7 @@ struct PS_INPUT
 float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
 	float2 uv = Input.vTexcoord;
-	float depth = TX_Depth.Sample(SS_Linear, uv).r;
-	float viewDepth = RI_Projection._43 / (depth - RI_Projection._33);
+	float depth = TX_Distortion.Sample(SS_Linear, uv).r;
 	
 	// Sample two distortion vectors, modified by time and scaled by a sine-curve
 	uv += (TX_Distortion.Sample(SS_Linear, 0.2f * Input.vTexcoord + RI_Time * 0.005f) * 2 - 1 ) * 0.004f;
@@ -47,14 +46,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	uv = saturate(uv);
 	
-	uv = lerp(uv, Input.vTexcoord, saturate(viewDepth / 500.0f));
+	uv = lerp(uv, Input.vTexcoord, depth / 500.0f);
 	
 	float4 color = TX_Texture0.Sample(SS_Linear, uv);
-	if (RI_Far > 0.5f) {
-		float fog = saturate(viewDepth / 6000.0f);
-		color.rgb = lerp(color.rgb, float3(0.04f, 0.18f, 0.22f), fog * 0.55f);
-	}
 	//color *= float4(1,0,0,1);
 	
 	return color.rgba;
 }
+

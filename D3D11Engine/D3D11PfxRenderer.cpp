@@ -6,7 +6,6 @@
 #include "D3D11ShaderManager.h"
 #include "D3D11PShader.h"
 #include "D3D11VShader.h"
-#include "ConstantBufferStructs.h"
 #include "D3D11PFX_Blur.h"
 #include "D3D11PFX_HeightFog.h"
 #include "D3D11PFX_DistanceBlur.h"
@@ -93,42 +92,6 @@ XRESULT D3D11PfxRenderer::RenderTAA() {
         engine->GetDepthBuffer()->GetShaderResView(),
         FX_TAA->GetVelocityBufferSRV()
     );
-    return XR_SUCCESS;
-}
-
-XRESULT D3D11PfxRenderer::RenderScreenSpaceLighting() {
-    auto* engine = reinterpret_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
-    const auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
-
-    auto tempBuffer = GetTempBuffer();
-    CopyTextureToRTV( engine->GetHDRBackBuffer().GetShaderResView(), tempBuffer->GetRenderTargetView() );
-
-    auto screenSpaceLightingPS = engine->GetShaderManager().GetPShader( "PS_PFX_ScreenSpaceLighting" );
-    screenSpaceLightingPS->Apply();
-    engine->GetShaderManager().GetVShader( "VS_PFX" )->Apply();
-
-    ScreenSpaceEffectsConstantBuffer cb = {};
-    auto resolution = engine->GetResolution();
-    cb.SSE_ViewportSize = float2( resolution.x, resolution.y );
-    cb.SSE_EnableContactShadows = settings.EnableContactShadows ? 1.0f : 0.0f;
-    cb.SSE_EnableSSGI = settings.EnableSimpleSSGI ? 1.0f : 0.0f;
-    cb.SSE_ContactShadowStrength = settings.ContactShadowStrength;
-    cb.SSE_SSGIStrength = settings.SimpleSSGIStrength;
-
-    screenSpaceLightingPS->GetConstantBuffer()[0]->UpdateBuffer( &cb );
-    screenSpaceLightingPS->GetConstantBuffer()[0]->BindToPixelShader( 0 );
-
-    ID3D11ShaderResourceView* srvs[] = {
-        tempBuffer->GetShaderResView().Get(),
-        engine->GetDepthBufferCopy()->GetShaderResView().Get(),
-        engine->GetGBuffer1().GetShaderResView().Get()
-    };
-    engine->GetContext()->PSSetShaderResources( 0, 3, srvs );
-    engine->GetContext()->OMSetRenderTargets( 1, engine->GetHDRBackBuffer().GetRenderTargetView().GetAddressOf(), nullptr );
-
-    DrawFullScreenQuad();
-    UnbindPSResources( 3 );
-
     return XR_SUCCESS;
 }
 

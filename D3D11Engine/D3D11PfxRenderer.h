@@ -39,7 +39,6 @@ public:
     XRESULT RenderSMAA();
 
     XRESULT RenderTAA();
-    XRESULT RenderScreenSpaceLighting();
     XRESULT RenderCAS( const Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& input, INT2 inputSize, const Microsoft::WRL::ComPtr<ID3D11RenderTargetView>& output, INT2 outputSize, RenderToTextureBuffer& intermediateBuffer );
     XRESULT RenderSimpleSharpen( const Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& input, INT2 inputSize, const Microsoft::WRL::ComPtr<ID3D11RenderTargetView>& output, INT2 outputSize, RenderToTextureBuffer& intermediateBuffer );
 
@@ -89,3 +88,4 @@ private:
     std::unique_ptr<D3D11PFX_FSR1> PFX_FSR1;
     std::unique_ptr<TexturePool> m_texturePool;
 };
+

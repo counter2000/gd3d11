@@ -18,7 +18,6 @@ cbuffer RefractionInfo : register( b0 )
 //--------------------------------------------------------------------------------------
 SamplerState SS_Linear : register( s0 );
 Texture2D	TX_Texture0 : register( t0 );
-Texture2D	TX_Depth : register( t3 );
 
 //--------------------------------------------------------------------------------------
 // Input / Output structures
@@ -46,15 +45,6 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 {
 	float4 color = TX_Texture0.Sample(SS_Linear, Input.vTexcoord);
 	color *= Input.vDiffuse;
-
-	if (RI_Pad2 > 0.5f) {
-		float2 screenUV = Input.vPosition.xy / RI_ViewportSize;
-		float sceneDepth = TX_Depth.Sample(SS_Linear, screenUV).r;
-		sceneDepth = RI_Projection._43 / (sceneDepth - RI_Projection._33);
-		float softFade = saturate((sceneDepth - Input.vViewPosition.z) * 0.02f);
-		color.rgb *= softFade;
-		color.a *= softFade;
-	}
 	
 	PS_OUTPUT o;
 	// Store particle color
@@ -70,3 +60,4 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	o.gb1 = float4(uvCenter * float2(-1,1) * weight, 0, color.a);
 	return o;
 }
+

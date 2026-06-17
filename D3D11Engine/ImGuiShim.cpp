@@ -610,20 +610,12 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::Checkbox( "Godrays", &settings.EnableGodRays );
             ImGui::Checkbox( "Water Reflections", &settings.EnableSSR );
             ImGui::SetItemTooltip( "Adds real-time screen-space reflections to water." );
+            ImGui::Checkbox( "Water Light Reflections", &settings.EnableWaterLightReflections );
+            ImGui::SetItemTooltip( "Mirrors nearby Gothic point lights on water." );
+            ImGui::Checkbox( "Shoreline Water Blend", &settings.EnableWaterShoreBlend );
+            ImGui::SetItemTooltip( "Softens shallow water transitions near shorelines." );
             ImGui::Checkbox( "Backlit Vegetation", &settings.EnableSSS );
             ImGui::SetItemTooltip( "Adds soft light transmission to grass, leaves, and alpha-tested vegetation." );
-            ImGui::Checkbox( "Soft Particles", &settings.EnableSoftParticles );
-            ImGui::SetItemTooltip( "Softens particle intersections with nearby geometry." );
-            ImGui::Checkbox( "Underwater Volume Fog", &settings.EnableUnderwaterVolumeFog );
-            ImGui::SetItemTooltip( "Adds depth-based haze while the camera is underwater." );
-            ImGui::Checkbox( "Contact Shadows", &settings.EnableContactShadows );
-            ImGui::SetItemTooltip( "Adds subtle screen-space shadowing where objects touch the scene." );
-            ImGui::Checkbox( "Ambient Bounce Light", &settings.EnableSimpleSSGI );
-            ImGui::SetItemTooltip( "Adds a subtle screen-space indirect light approximation." );
-            ImGui::Checkbox( "Wet Surface Reflections", &settings.EnableWetSurfaceReflections );
-            ImGui::SetItemTooltip( "Makes rainy surfaces catch more specular reflection." );
-            ImGui::Checkbox( "Night Water Highlights", &settings.EnableWaterLightReflections );
-            ImGui::SetItemTooltip( "Reflects bright night-time screen lights, such as lanterns, across water." );
             static std::vector<std::pair<const char*, GothicRendererSettings::E_AntiAliasingMode>> antiAliasing = {
                 {"Disabled", GothicRendererSettings::E_AntiAliasingMode::AA_NONE},
                 {"SMAA", GothicRendererSettings::E_AntiAliasingMode::AA_SMAA},
@@ -1302,23 +1294,18 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
                 ImGui::DragFloat( "Strength", &settings.SSRStrength, 0.01f, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
                 ImGui::EndDisabled();
             }
-            ImGui::PopID();
-        }
 
-        ImGui::SeparatorText( "Screen Space Lighting" );
-        {
-            ImGui::PushID( "ScreenSpaceLightingSettings" );
-            ImGui::Checkbox( "Contact Shadows", &settings.EnableContactShadows );
-            ImGui::BeginDisabled( !settings.EnableContactShadows );
+            ImGui::Checkbox( "Light Reflections", &settings.EnableWaterLightReflections );
+            ImGui::BeginDisabled( !settings.EnableWaterLightReflections );
             {
-                ImGui::DragFloat( "Contact Strength", &settings.ContactShadowStrength, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
+                ImGui::DragFloat( "Light Strength", &settings.WaterLightReflectionStrength, 0.01f, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
             }
             ImGui::EndDisabled();
 
-            ImGui::Checkbox( "Ambient Bounce Light", &settings.EnableSimpleSSGI );
-            ImGui::BeginDisabled( !settings.EnableSimpleSSGI );
+            ImGui::Checkbox( "Shoreline Blend", &settings.EnableWaterShoreBlend );
+            ImGui::BeginDisabled( !settings.EnableWaterShoreBlend );
             {
-                ImGui::DragFloat( "Bounce Strength", &settings.SimpleSSGIStrength, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
+                ImGui::DragFloat( "Shore Strength", &settings.WaterShoreBlendStrength, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
             }
             ImGui::EndDisabled();
             ImGui::PopID();

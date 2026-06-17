@@ -223,16 +223,6 @@ struct ScreenFadeConstantBuffer {
     float3 GA_Pad;
 };
 
-struct ScreenSpaceEffectsConstantBuffer {
-    float2 SSE_ViewportSize;
-    float SSE_EnableContactShadows;
-    float SSE_EnableSSGI;
-
-    float SSE_ContactShadowStrength;
-    float SSE_SSGIStrength;
-    float2 SSE_Pad;
-};
-
 struct GhostAlphaConstantBuffer {
     float2 GA_ViewportSize;
     float GA_Alpha;
@@ -293,6 +283,19 @@ struct RefractionInfoConstantBuffer {
     XMFLOAT4X4 RI_ViewProj;
 };
 
+struct WaterReflectionInfoConstantBuffer {
+    float4 WR_LightPositionRange[8];
+    float4 WR_LightColorIntensity[8];
+
+    float WR_LightCount;
+    float WR_EnableLightReflections;
+    float WR_EnableShoreBlend;
+    float WR_ShoreBlendStrength;
+
+    float WR_LightReflectionStrength;
+    float3 WR_Pad;
+};
+
 struct AtmosphereConstantBuffer {
     float AC_Kr4PI;
     float AC_Km4PI;
@@ -324,11 +327,7 @@ struct AtmosphereConstantBuffer {
     float AC_EnableSSR;
     float AC_EnableSSS;
     float AC_SSRStrength;
-    float AC_EnableWaterLightReflections;
-    float AC_EnableWetSurfaceReflections;
     float AC_AtmospherePad2;
-    float AC_AtmospherePad3;
-    float AC_AtmospherePad4;
 };
 
 struct CASConstantBuffer {
