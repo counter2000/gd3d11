@@ -178,7 +178,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	float pxDistance = Input.vTexcoord2.y;
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
-	float cubeWeight = (AC_EnableSSR > 0.5f) ? 0.15f : 1.0f;
+	float cubeWeight = (AC_EnableSSR > 0.5f) ? 0.0f : 1.0f;
 	scene.rgb += reflection * cubeWeight * (1.0f - ssrWeight) * fresnel * lerp(1.0f, diffuse, 0.6f);
 	float ssrFresnel = lerp(0.5f, 1.0f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 1.5f)));
 	scene.rgb += reflectionSSR * ssrWeight * ssrFresnel * 2.4f;

@@ -79,7 +79,7 @@ VS_ExConstantBuffer_Wind g_windBuffer;
 static void UpdateRefractionViewProjection( RefractionInfoConstantBuffer& buffer ) {
     XMMATRIX view = Engine::GAPI->GetViewMatrixXM();
     XMMATRIX proj = XMLoadFloat4x4( &Engine::GAPI->GetProjectionMatrix() );
-    XMStoreFloat4x4( &buffer.RI_ViewProj, XMMatrixMultiply( view, proj ) );
+    XMStoreFloat4x4( &buffer.RI_ViewProj, XMMatrixMultiply( proj, view ) );
 }
 
 typedef void( __cdecl* PFN_DRAWMULTIINDEXEDINSTANCEDINDIRECT )(ID3D11DeviceContext* context, unsigned int drawCount,
