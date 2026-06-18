@@ -156,9 +156,13 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 		outColor = dayColor + nightColor * nightWeight + moonColor;
 
 	float cameraDistance = length(worldPosition - AC_WorldCameraPos);
-	float nightDistanceFade = smoothstep(3500.0f, 18000.0f, cameraDistance) * nightWeight * AC_EnableDepthAtmosphere;
-	float3 farNightColor = float3(0.002f, 0.004f, 0.014f);
-	outColor = lerp(outColor, farNightColor, nightDistanceFade * 0.90f);
+	float depthAtmosphere = saturate(AC_EnableDepthAtmosphere);
+	float nearNightLift = (1.0f - smoothstep(900.0f, 6500.0f, cameraDistance)) * nightWeight * depthAtmosphere;
+	outColor += (in_color * 0.16f + float3(0.006f, 0.008f, 0.014f)) * nearNightLift;
+
+	float nightDistanceFade = smoothstep(6500.0f, 26000.0f, cameraDistance) * nightWeight * depthAtmosphere;
+	float3 farNightColor = float3(0.0002f, 0.0003f, 0.0008f);
+	outColor = lerp(outColor, farNightColor, nightDistanceFade * 0.985f);
 		
 	return outColor;
 }

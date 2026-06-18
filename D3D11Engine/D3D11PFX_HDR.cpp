@@ -120,7 +120,7 @@ void D3D11PFX_HDR::CreateBloom( RenderToTextureBuffer* lum, RenderToTextureBuffe
 	gaussPS->Apply();
 
 	// Update settings 
-	BlurConstantBuffer bcb;
+	BlurConstantBuffer bcb = {};
 	bcb.B_BlurSize = 1.0f;
 	bcb.B_PixelSize = float2( 1.0f / bloomTempBuffer->GetSizeX(), 0.0f );
     //bcb.B_ColorMod = float4( 1.0f, 1.0f, 1.0f, 1.0f );

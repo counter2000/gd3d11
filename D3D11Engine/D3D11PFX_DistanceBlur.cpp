@@ -43,11 +43,12 @@ XRESULT D3D11PFX_DistanceBlur::Render( RenderToTextureBuffer* fxbuffer ) {
 	engine->GetDepthBuffer()->BindToPixelShader( engine->GetContext().Get(), 1 );
 
 	// Blur/Copy
-	BlurConstantBuffer bcb;
+	BlurConstantBuffer bcb = {};
 	bcb.B_PixelSize = float2( 1.0f / Engine::GraphicsEngine->GetResolution().x, 1.0f / Engine::GraphicsEngine->GetResolution().y );
-	bcb.B_BlurSize = 2.0f;
-	bcb.B_Threshold = 0.22f;
-	bcb.B_ColorMod = float4( 0.62f, 0, 0, 0 );
+	bcb.B_BlurSize = 3.25f;
+	bcb.B_Threshold = 6500.0f;
+	bcb.B_ColorMod = float4( 0.74f, 26000.0f, 0, 0 );
+	XMStoreFloat4x4( &bcb.B_InvProj, XMMatrixInverse( nullptr, XMLoadFloat4x4( &Engine::GAPI->GetProjectionMatrix() ) ) );
 	ps->GetConstantBuffer()[0]->UpdateBuffer( &bcb );
 	ps->GetConstantBuffer()[0]->BindToPixelShader( 0 );
 	ps->Apply();

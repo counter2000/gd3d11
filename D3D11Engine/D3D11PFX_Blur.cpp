@@ -38,7 +38,7 @@ XRESULT D3D11PFX_Blur::RenderBlur( RenderToTextureBuffer* fxbuffer, bool leaveRe
     auto tempBuffer2 = FxRenderer->GetTempBufferDS4();
 
 	// Update settings
-	BlurConstantBuffer bcb;
+	BlurConstantBuffer bcb = {};
 	bcb.B_BlurSize = scale;
 	bcb.B_PixelSize = float2( 1.0f / tempBuffer->GetSizeX(), 0.0f );
     bcb.B_Threshold = threshold;

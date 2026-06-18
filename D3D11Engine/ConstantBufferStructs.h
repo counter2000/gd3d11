@@ -52,6 +52,7 @@ struct BlurConstantBuffer {
     float B_Threshold;
 
     float4 B_ColorMod;
+    XMFLOAT4X4 B_InvProj;
 };
 
 struct PerObjectState {
