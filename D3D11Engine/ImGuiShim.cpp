@@ -1272,6 +1272,18 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             ImGui::PopID();
         }
 
+        ImGui::SeparatorText( "Depth Atmosphere" );
+        {
+            ImGui::PushID( "DepthAtmosphereSettings" );
+            ImGui::Checkbox( "Enable", &settings.EnableDistanceBlur );
+            ImGui::BeginDisabled( !settings.EnableDistanceBlur );
+            {
+                ImGui::SliderFloat( "Blur Strength", &settings.DistanceBlurStrength, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
+                ImGui::EndDisabled();
+            }
+            ImGui::PopID();
+        }
+
         ImGui::SeparatorText( "Anti Aliasing" );
         {
             ImGui::PushID( "AntiAliasingSettings" );
