@@ -30,24 +30,38 @@ runs:
 
     - name: Create nightly release
       if: ${{ inputs.nightly == 'true' }}
-      uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
-      with:
-        allowUpdates: true
-        artifactErrorsFailBuild: true
-        artifacts: "${{ steps.download-artifact.outputs.download-path }}/*.zip"
-        generateReleaseNotes: true
-        name: Nightly
-        prerelease: true
-        removeArtifacts: true
-        tag: nightly
-        token: ${{ inputs.token }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        asset="$(find "${{ steps.download-artifact.outputs.download-path }}" -maxdepth 1 -name '*.zip' -print -quit)"
+        if [[ -z "$asset" ]]; then
+          echo "No release zip found in ${{ steps.download-artifact.outputs.download-path }}" >&2
+          exit 1
+        fi
+
+        gh release create nightly "$asset" \
+          --target "$GITHUB_SHA" \
+          --title "Nightly" \
+          --prerelease \
+          --generate-notes
+      env:
+        GH_TOKEN: ${{ inputs.token }}
 
     - name: Create regular release
       if: ${{ inputs.nightly != 'true' }}
-      uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
-      with:
-        allowUpdates: true
-        artifactErrorsFailBuild: true
-        artifacts: "${{ steps.download-artifact.outputs.download-path }}/*.zip"
-        generateReleaseNotes: true
-        token: ${{ inputs.token }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        asset="$(find "${{ steps.download-artifact.outputs.download-path }}" -maxdepth 1 -name '*.zip' -print -quit)"
+        if [[ -z "$asset" ]]; then
+          echo "No release zip found in ${{ steps.download-artifact.outputs.download-path }}" >&2
+          exit 1
+        fi
+
+        if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+          gh release upload "$GITHUB_REF_NAME" "$asset" --clobber
+        else
+          gh release create "$GITHUB_REF_NAME" "$asset" --generate-notes
+        fi
+      env:
+        GH_TOKEN: ${{ inputs.token }}
