@@ -36,7 +36,7 @@ struct PS_INPUT
 float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
 	float depth = TX_Depth.Sample(SS_Linear, Input.vTexcoord).r;
-	float blurMask = smoothstep(B_Threshold, 0.92f, saturate(depth)) * B_ColorMod.x;
+	float blurMask = saturate(smoothstep(B_Threshold, 0.74f, saturate(depth)) * B_ColorMod.x);
 
 	float2 ps = B_PixelSize * B_BlurSize * blurMask;
 	float4 blur = DoBlurPassSingle(ps, Input.vTexcoord, TX_Texture0, TX_Depth, SS_Linear, 1.0f);

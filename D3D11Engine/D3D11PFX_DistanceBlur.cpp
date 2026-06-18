@@ -45,9 +45,9 @@ XRESULT D3D11PFX_DistanceBlur::Render( RenderToTextureBuffer* fxbuffer ) {
 	// Blur/Copy
 	BlurConstantBuffer bcb;
 	bcb.B_PixelSize = float2( 1.0f / Engine::GraphicsEngine->GetResolution().x, 1.0f / Engine::GraphicsEngine->GetResolution().y );
-	bcb.B_BlurSize = 1.35f;
-	bcb.B_Threshold = 0.42f;
-	bcb.B_ColorMod = float4( 0.82f, 0, 0, 0 );
+	bcb.B_BlurSize = 2.0f;
+	bcb.B_Threshold = 0.22f;
+	bcb.B_ColorMod = float4( 0.62f, 0, 0, 0 );
 	ps->GetConstantBuffer()[0]->UpdateBuffer( &bcb );
 	ps->GetConstantBuffer()[0]->BindToPixelShader( 0 );
 	ps->Apply();

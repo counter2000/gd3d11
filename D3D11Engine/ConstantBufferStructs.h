@@ -315,6 +315,9 @@ struct AtmosphereConstantBuffer {
     float AC_EnableSSS;
     float AC_SSRStrength;
     float AC_AtmospherePad2;
+
+    float AC_EnableDepthAtmosphere;
+    float3 AC_WorldCameraPos;
 };
 
 struct CASConstantBuffer {

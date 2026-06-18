@@ -578,12 +578,17 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::SetItemTooltip( "Enable Screen-Space ambient occlusion." );
 
             ImGui::Checkbox( "Godrays", &settings.EnableGodRays );
-            ImGui::Checkbox( "Water Reflections", &settings.EnableSSR );
-            ImGui::SetItemTooltip( "Adds real-time screen-space reflections to water." );
+            bool enhancedWater = settings.EnableSSR;
+            if ( ImGui::Checkbox( "Enhanced Water", &enhancedWater ) ) {
+                settings.EnableSSR = enhancedWater;
+                settings.EnableWaterAnimation = enhancedWater;
+                Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Water );
+            }
+            ImGui::SetItemTooltip( "Enables water reflections, shoreline detail, and animated water waves." );
             ImGui::Checkbox( "Backlit Vegetation", &settings.EnableSSS );
             ImGui::SetItemTooltip( "Adds soft light transmission to grass, leaves, and alpha-tested vegetation." );
-            ImGui::Checkbox( "Distance Blur", &settings.EnableDistanceBlur );
-            ImGui::SetItemTooltip( "Softens distant scenery while keeping the near field and interface sharp." );
+            ImGui::Checkbox( "Depth Atmosphere", &settings.EnableDistanceBlur );
+            ImGui::SetItemTooltip( "Darkens and softly blurs distant scenery while keeping the near field sharp." );
             static std::vector<std::pair<const char*, GothicRendererSettings::E_AntiAliasingMode>> antiAliasing = {
                 {"Disabled", GothicRendererSettings::E_AntiAliasingMode::AA_NONE},
                 {"SMAA", GothicRendererSettings::E_AntiAliasingMode::AA_SMAA},
@@ -633,9 +638,6 @@ void ImGuiShim::RenderSettingsWindow()
 
             ImGui::Checkbox( "Enable Rain", &settings.EnableRain );
             ImGui::Checkbox( "Enable Rain Effects", &settings.EnableRainEffects );
-            if ( ImGui::Checkbox( "Enable Water waves", &settings.EnableWaterAnimation ) ) {
-                Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Water );
-            }
             ImGui::Checkbox( "Limit Light Intensity", &settings.LimitLightIntesity );
             ImGui::Checkbox( "Draw World Section Intersections", &settings.DrawSectionIntersections );
             ImGui::SetItemTooltip( "This option draws every world chunk that intersect with GD3D11 world draw distance." );
@@ -1253,13 +1255,18 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             ImGui::PopID();
         }
 
-        ImGui::SeparatorText( "Water Reflections" );
+        ImGui::SeparatorText( "Enhanced Water" );
         {
-            ImGui::PushID( "WaterReflectionSettings" );
-            ImGui::Checkbox( "Enable", &settings.EnableSSR );
+            ImGui::PushID( "EnhancedWaterSettings" );
+            bool enhancedWater = settings.EnableSSR;
+            if ( ImGui::Checkbox( "Enable", &enhancedWater ) ) {
+                settings.EnableSSR = enhancedWater;
+                settings.EnableWaterAnimation = enhancedWater;
+                Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Water );
+            }
             ImGui::BeginDisabled( !settings.EnableSSR );
             {
-                ImGui::DragFloat( "Strength", &settings.SSRStrength, 0.01f, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
+                ImGui::DragFloat( "Reflection Strength", &settings.SSRStrength, 0.01f, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
                 ImGui::EndDisabled();
             }
             ImGui::PopID();
