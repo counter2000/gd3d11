@@ -724,7 +724,7 @@ struct GothicRendererSettings {
         EnableSSS = true;
         SSSIntensity = 1.0f;
         EnableDistanceBlur = true;
-        DistanceBlurStrength = 0.50f;
+        DistanceBlurStrength = 1.0f;
         EnableNightAtmosphere = true;
         NearNightBrightness = 1.0f;
         NightDarkeningStart = 0.0f;

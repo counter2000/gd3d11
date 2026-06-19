@@ -5317,7 +5317,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.EnableSSS = GetPrivateProfileBoolA( "General", "EnableSSS", ds.EnableSSS, ini );
         s.SSSIntensity = std::clamp( GetPrivateProfileFloatA( "General", "SSSIntensity", ds.SSSIntensity, ini.c_str() ), 0.0f, 2.0f );
         s.EnableDistanceBlur = GetPrivateProfileBoolA( "General", "EnableDepthAtmosphere", ds.EnableDistanceBlur, ini );
-        s.DistanceBlurStrength = std::clamp( GetPrivateProfileFloatA( "General", "DepthAtmosphereBlurStrength", ds.DistanceBlurStrength, ini.c_str() ), 0.0f, 1.0f );
+        s.DistanceBlurStrength = std::clamp( GetPrivateProfileFloatA( "General", "DepthAtmosphereBlurStrength", ds.DistanceBlurStrength, ini.c_str() ), 0.0f, 2.0f );
         s.EnableNightAtmosphere = GetPrivateProfileBoolA( "General", "EnableNightAtmosphere", ds.EnableNightAtmosphere, ini );
         s.NearNightBrightness = std::clamp( GetPrivateProfileFloatA( "General", "NearNightBrightness", ds.NearNightBrightness, ini.c_str() ), 0.0f, 2.0f );
         s.NightDarkeningStart = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningStart", ds.NightDarkeningStart, ini.c_str() ), 0.0f, 30000.0f );

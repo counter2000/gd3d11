@@ -45,7 +45,8 @@ XRESULT D3D11PFX_DistanceBlur::Render( ID3D11ShaderResourceView* diffuse ) {
 	engine->GetDepthBuffer()->BindToPixelShader( engine->GetContext().Get(), 1 );
 
 	// Blur/Copy
-	const float blurStrength = std::clamp( Engine::GAPI->GetRendererState().RendererSettings.DistanceBlurStrength * 1.12f, 0.0f, 1.0f );
+	// The normalized 1.0 setting represents four times the former 0.5 default.
+	const float blurStrength = std::clamp( Engine::GAPI->GetRendererState().RendererSettings.DistanceBlurStrength * 2.0f, 0.0f, 4.0f );
 	BlurConstantBuffer bcb = {};
 	bcb.B_PixelSize = float2( 1.0f / Engine::GraphicsEngine->GetResolution().x, 1.0f / Engine::GraphicsEngine->GetResolution().y );
 	bcb.B_BlurSize = 1.20f + blurStrength * 2.05f;

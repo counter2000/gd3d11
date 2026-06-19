@@ -1674,7 +1674,7 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             ImGui::Checkbox( "Enable", &settings.EnableDistanceBlur );
             ImGui::BeginDisabled( !settings.EnableDistanceBlur );
             {
-                ImGui::SliderFloat( "Blur Strength", &settings.DistanceBlurStrength, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Blur Strength", &settings.DistanceBlurStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
                 ImGui::EndDisabled();
             }
             ImGui::PopID();

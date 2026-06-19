@@ -115,7 +115,7 @@ float3 ApplyNightDistanceDarkening(float3 worldPosition, float3 color)
 	return lerp(color, float3(0.0f, 0.0f, 0.0f), nightDistanceFade * extraNightDarkening);
 }
 
-float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, bool applyNightshade=true)
+float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, bool applyNightshade=true, bool applyDistanceDarkening=true)
 {
 	float3 camPos = AC_CameraPos;
 	float3 v3Pos = worldPosition - AC_SpherePosition;
@@ -188,7 +188,7 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 	else
 		outColor = dayColor + nightColor * nightWeight + moonColor;
 
-	return ApplyNightDistanceDarkening(worldPosition, outColor);
+	return applyDistanceDarkening ? ApplyNightDistanceDarkening(worldPosition, outColor) : outColor;
 }
 
 float3 ApplyAtmosphericScatteringSky(float3 worldPosition)
