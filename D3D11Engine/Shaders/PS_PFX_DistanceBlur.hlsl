@@ -49,6 +49,7 @@ float4 DepthAwareBlur(float2 pixelStep, float2 texCoord, float centerDistance, u
 	float4 colorSum = 0.0f;
 	float weightSum = 0.0f;
 	float depthTolerance = max(120.0f, centerDistance * 0.02f);
+	float3 centerColor = TX_Texture0.Sample(SS_Linear, texCoord).rgb;
 
 	[unroll]
 	for (int x = -3; x <= 3; x++)
@@ -62,10 +63,13 @@ float4 DepthAwareBlur(float2 pixelStep, float2 texCoord, float centerDistance, u
 			float sampleDistance = length(VSPositionFromDepth(sampleDepth, uv));
 			float depthDelta = abs(sampleDistance - centerDistance);
 			float depthWeight = 1.0f - smoothstep(depthTolerance, depthTolerance * 2.0f, depthDelta);
+			float4 sampleColor = TX_Texture0.Sample(SS_Linear, uv);
+			float colorDelta = length(sampleColor.rgb - centerColor);
+			float silhouetteWeight = 1.0f - smoothstep(0.10f, 0.32f, colorDelta);
 			float spatialWeight = rcp(1.0f + dot(offset, offset) * 0.22f);
-			float weight = depthWeight * spatialWeight;
+			float weight = depthWeight * silhouetteWeight * spatialWeight;
 
-			colorSum += TX_Texture0.Sample(SS_Linear, uv) * weight;
+			colorSum += sampleColor * weight;
 			weightSum += weight;
 		}
 	}

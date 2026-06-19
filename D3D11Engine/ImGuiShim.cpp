@@ -691,7 +691,9 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::Checkbox( "Backlit Vegetation", &settings.EnableSSS );
             ImGui::SetItemTooltip( "Adds soft light transmission to grass, leaves, and alpha-tested vegetation." );
             ImGui::Checkbox( "Depth Atmosphere", &settings.EnableDistanceBlur );
-            ImGui::SetItemTooltip( "Darkens and softly blurs distant scenery while keeping the near field sharp." );
+            ImGui::SetItemTooltip( "Softly blurs distant scenery while keeping the near field sharp." );
+            ImGui::Checkbox( "Enhanced Night", &settings.EnableNightAtmosphere );
+            ImGui::SetItemTooltip( "Enables configurable near lighting, distance darkening, and night fog." );
             static std::vector<std::tuple<const char*, GothicRendererSettings::E_AntiAliasingMode, const char*>> antiAliasing = {
                 {"Disabled", GothicRendererSettings::E_AntiAliasingMode::AA_NONE, nullptr },
                 {"SMAA", GothicRendererSettings::E_AntiAliasingMode::AA_SMAA, nullptr },
@@ -1673,9 +1675,22 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             ImGui::BeginDisabled( !settings.EnableDistanceBlur );
             {
                 ImGui::SliderFloat( "Blur Strength", &settings.DistanceBlurStrength, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::EndDisabled();
+            }
+            ImGui::PopID();
+        }
+
+        ImGui::SeparatorText( "Enhanced Night" );
+        {
+            ImGui::PushID( "EnhancedNightSettings" );
+            ImGui::Checkbox( "Enable", &settings.EnableNightAtmosphere );
+            ImGui::BeginDisabled( !settings.EnableNightAtmosphere );
+            {
+                ImGui::SliderFloat( "Near Night Brightness", &settings.NearNightBrightness, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
                 ImGui::SliderFloat( "Night Fade Start", &settings.NightDarkeningStart, 0.0f, 30000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
                 ImGui::SliderFloat( "Night Fade Range", &settings.NightDarkeningRange, 1000.0f, 30000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
                 ImGui::SliderFloat( "Night Max Darkness", &settings.NightDarkeningMax, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Night Fog Brightness", &settings.NightFogBrightness, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
                 ImGui::EndDisabled();
             }
             ImGui::PopID();

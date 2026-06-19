@@ -39,9 +39,15 @@ cbuffer Atmosphere : register( b1 )
 	float AC_SSSIntensity;
 
 	float AC_EnableDepthAtmosphere;
+	float AC_EnableNightAtmosphere;
+	float AC_NearNightBrightness;
+	float AC_NightFogBrightness;
+
 	float AC_NightDarkeningStart;
 	float AC_NightDarkeningMax;
 	float AC_NightDarkeningRange;
+	float AC_AtmospherePad2;
+
 	float3 AC_WorldCameraPos;
 	float AC_AtmospherePad3;
 };
@@ -85,7 +91,29 @@ float3 GetAtmosphericSunTerm(float3 normal)
 	return saturate(dot(normal, AC_LightPos));
 }
 
+float GetNightWeight()
+{
+	return saturate(((-AC_LightPos.y) + 0.2f) * 10.0f);
+}
 
+float GetNightDistanceFade(float3 worldPosition)
+{
+	float cameraDistance = length(worldPosition - AC_WorldCameraPos);
+	float nightFadeStart = max(0.0f, AC_NightDarkeningStart);
+	float nightFadeEnd = nightFadeStart + max(1000.0f, AC_NightDarkeningRange);
+	return smoothstep(nightFadeStart, nightFadeEnd, cameraDistance)
+		* GetNightWeight() * saturate(AC_EnableNightAtmosphere);
+}
+
+float3 ApplyNightDistanceDarkening(float3 worldPosition, float3 color)
+{
+	float nightDistanceFade = GetNightDistanceFade(worldPosition);
+	float3 farNightColor = float3(0.0012f, 0.0016f, 0.0035f);
+	float baseNightDarkening = saturate(AC_NightDarkeningMax);
+	float extraNightDarkening = saturate(AC_NightDarkeningMax - 1.0f);
+	color = lerp(color, farNightColor, nightDistanceFade * baseNightDarkening);
+	return lerp(color, float3(0.0f, 0.0f, 0.0f), nightDistanceFade * extraNightDarkening);
+}
 
 float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, bool applyNightshade=true)
 {
@@ -93,7 +121,7 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 	float3 v3Pos = worldPosition - AC_SpherePosition;
 	float3 v3Ray = v3Pos - camPos;
 
-	float nightWeight = saturate(((-AC_LightPos.y) + 0.2f) * 10.0f);
+	float nightWeight = GetNightWeight();
 		
 	float innerRadius = AC_InnerRadius;
 				
@@ -147,11 +175,12 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 	float3 c1 = v3Attenuate;
 	
 	float3 dayColor = c0 + in_color * c1;
-	float3 nightColor = float3(0.095f,0.115f,0.255f) * NIGHT_BRIGHTNESS;
-	nightColor = lerp(nightColor, float3(0.24,0.24,0.24) * NIGHT_BRIGHTNESS * 0.6f, AC_SceneWettness); // Grey fog when raining
+	float nearNightBrightness = lerp(1.0f, max(0.0f, AC_NearNightBrightness), saturate(AC_EnableNightAtmosphere));
+	float3 nightColor = float3(0.095f,0.115f,0.255f) * NIGHT_BRIGHTNESS * nearNightBrightness;
+	nightColor = lerp(nightColor, float3(0.24,0.24,0.24) * NIGHT_BRIGHTNESS * 0.6f * nearNightBrightness, AC_SceneWettness); // Grey fog when raining
 	float moonWeight = saturate((-AC_LightPos.y - 0.08f) * 1.7f) * (1.0f - AC_SceneWettness * 0.5f);
 	float midtone = saturate(dot(in_color, float3(0.299f, 0.587f, 0.114f)) * 0.95f + 0.04f);
-	float3 moonColor = float3(0.018f, 0.026f, 0.052f) * moonWeight * midtone;
+	float3 moonColor = float3(0.018f, 0.026f, 0.052f) * moonWeight * midtone * nearNightBrightness;
 	float3 outColor;
 
 	if(applyNightshade)
@@ -159,19 +188,7 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 	else
 		outColor = dayColor + nightColor * nightWeight + moonColor;
 
-	float cameraDistance = length(worldPosition - AC_WorldCameraPos);
-	float depthAtmosphere = saturate(AC_EnableDepthAtmosphere);
-
-	float nightFadeStart = max(0.0f, AC_NightDarkeningStart);
-	float nightFadeEnd = nightFadeStart + max(1000.0f, AC_NightDarkeningRange);
-	float nightDistanceFade = smoothstep(nightFadeStart, nightFadeEnd, cameraDistance) * nightWeight * depthAtmosphere;
-	float3 farNightColor = float3(0.0012f, 0.0016f, 0.0035f);
-	float baseNightDarkening = saturate(AC_NightDarkeningMax);
-	float extraNightDarkening = saturate(AC_NightDarkeningMax - 1.0f);
-	outColor = lerp(outColor, farNightColor, nightDistanceFade * baseNightDarkening);
-	outColor = lerp(outColor, float3(0.0f, 0.0f, 0.0f), nightDistanceFade * extraNightDarkening);
-		
-	return outColor;
+	return ApplyNightDistanceDarkening(worldPosition, outColor);
 }
 
 float3 ApplyAtmosphericScatteringSky(float3 worldPosition)

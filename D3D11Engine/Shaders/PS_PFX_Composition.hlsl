@@ -92,6 +92,11 @@ float4 ComputeHeightFog( float2 texcoord )
 
     float fog = 1.0f - ComputeVolumetricFog( position, posOriginal );
     float3 color = ApplyAtmosphericScatteringGround( posOriginal, HF_FogColorMod, true );
+	float nightTimeBlend = saturate(-AC_LightPos.y * 4.0f);
+	float nightFogBrightness = lerp(1.0f, max(0.0f, AC_NightFogBrightness), saturate(AC_EnableNightAtmosphere));
+	float3 nightFogColor = float3(0.12f, 0.18f, 0.27f) * nightFogBrightness;
+	color = lerp(color, nightFogColor, nightTimeBlend);
+	color = ApplyNightDistanceDarkening(posOriginal, color);
 
 	// Starts darker (2.5) and doesn't drop as much at noon.
 	float darknessFactor = 2.5f; 
