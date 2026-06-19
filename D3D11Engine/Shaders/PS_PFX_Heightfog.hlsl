@@ -88,14 +88,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	float fog = 1.0f - ComputeVolumetricFog(position, posOriginal);
 		
-	float3 color = ApplyAtmosphericScatteringGround(position, HF_FogColorMod, true);
-
-	//darken / lighten fog based on the day / night cycle
-	// (Increased the R, G, B values. Tweak these up/down if you want it brighter/darker!)
-	float3 nightFogColor = float3(0.04f, 0.06f, 0.09f); 
-	        nightFogColor = float3(0.12f, 0.18f, 0.27f); 
-	float nightTimeBlend = saturate(-AC_LightPos.y * 4.0f);
-	color = lerp(color, nightFogColor, nightTimeBlend);
+	float3 color = ApplyAtmosphericScatteringGround(posOriginal, HF_FogColorMod, true);
 
 	// Starts darker (2.5) and doesn't drop as much at noon.
 	float darknessFactor = 2.0f; 

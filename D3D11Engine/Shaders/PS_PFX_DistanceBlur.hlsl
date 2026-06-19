@@ -38,7 +38,13 @@ float3 VSPositionFromDepth(float depth, float2 texCoord)
 	return viewPos.xyz / viewPos.www;
 }
 
-float4 DepthAwareBlur(float2 pixelStep, float2 texCoord, float centerDistance)
+float LoadDepthPoint(float2 uv, uint2 dimensions)
+{
+	uint2 pixel = min((uint2)(saturate(uv) * float2(dimensions)), dimensions - uint2(1, 1));
+	return TX_Depth.Load(int3(pixel, 0)).r;
+}
+
+float4 DepthAwareBlur(float2 pixelStep, float2 texCoord, float centerDistance, uint2 depthDimensions)
 {
 	float4 colorSum = 0.0f;
 	float weightSum = 0.0f;
@@ -52,7 +58,7 @@ float4 DepthAwareBlur(float2 pixelStep, float2 texCoord, float centerDistance)
 		{
 			float2 offset = float2(x, y);
 			float2 uv = saturate(texCoord + offset * pixelStep);
-			float sampleDepth = TX_Depth.Sample(SS_Linear, uv).r;
+			float sampleDepth = LoadDepthPoint(uv, depthDimensions);
 			float sampleDistance = length(VSPositionFromDepth(sampleDepth, uv));
 			float depthDelta = abs(sampleDistance - centerDistance);
 			float depthWeight = 1.0f - smoothstep(depthTolerance, depthTolerance * 2.0f, depthDelta);
@@ -72,12 +78,16 @@ float4 DepthAwareBlur(float2 pixelStep, float2 texCoord, float centerDistance)
 //--------------------------------------------------------------------------------------
 float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
-	float depth = TX_Depth.Sample(SS_Linear, Input.vTexcoord).r;
+	uint depthWidth;
+	uint depthHeight;
+	TX_Depth.GetDimensions(depthWidth, depthHeight);
+	uint2 depthDimensions = uint2(depthWidth, depthHeight);
+	float depth = LoadDepthPoint(Input.vTexcoord, depthDimensions);
 	float viewDistance = length(VSPositionFromDepth(depth, Input.vTexcoord));
 	float blurMask = saturate(smoothstep(B_Threshold, B_ColorMod.y, viewDistance) * B_ColorMod.x);
 
 	float2 ps = B_PixelSize * B_BlurSize * blurMask;
-	float4 blur = DepthAwareBlur(ps, Input.vTexcoord, viewDistance);
+	float4 blur = DepthAwareBlur(ps, Input.vTexcoord, viewDistance, depthDimensions);
 	
 	float4 scene = TX_Texture0.Sample(SS_Linear, Input.vTexcoord);
 	

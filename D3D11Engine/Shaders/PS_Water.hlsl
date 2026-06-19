@@ -165,7 +165,8 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 
 				reflectionSSR = TX_Scene.SampleLevel(SS_Linear, uv, 0).xyz;
 				float2 edgeFade = saturate(abs(uv - 0.5f) * 2.0f);
-				ssrWeight = saturate(pow(1.0f - max(edgeFade.x, edgeFade.y), 2.0f));
+				float edgeDistance = max(edgeFade.x, edgeFade.y);
+				ssrWeight = 1.0f - smoothstep(0.78f, 1.0f, edgeDistance);
 				break;
 			}
 		}
@@ -182,11 +183,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
 	float cubeWeight = (AC_EnableSSR > 0.5f) ? lerp(0.45f, 0.95f, nightAmount) : 1.0f;
 	scene.rgb += reflection * cubeWeight * (1.0f - ssrWeight * lerp(0.75f, 0.90f, nightAmount)) * fresnel * lerp(1.0f, diffuse, 0.6f);
-	float ssrFresnel = lerp(0.20f, 0.75f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
+	float ssrFresnel = lerp(0.55f, 0.80f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));
 	reflectionSSRColor *= rcp(1.0f + max(0.0f, reflectionLuma - 1.0f) * 0.8f);
-	float ssrBlend = saturate(ssrWeight * ssrFresnel * max(0.0f, AC_SSRStrength) * lerp(0.85f, 1.10f, nightAmount));
+	float ssrBlend = saturate(ssrWeight * ssrFresnel * max(0.0f, AC_SSRStrength) * 1.30f * lerp(0.85f, 1.10f, nightAmount));
 	scene.rgb = lerp(scene.rgb, reflectionSSRColor, ssrBlend);
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
 	color = lerp(color, sceneWet, (1-shallowDepth));

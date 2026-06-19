@@ -5208,8 +5208,8 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "Display", "ForceFOV", std::to_string( s.ForceFOV ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "FOVHoriz", std::to_string( static_cast<int>(s.FOVHoriz) ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "FOVVert", std::to_string( static_cast<int>(s.FOVVert) ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "Display", "Contrast", std::to_string( s.GammaValue ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "Display", "Luminance", std::to_string( s.BrightnessValue ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "Display", "DisplayContrast", std::to_string( s.GammaValue ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "Display", "DisplayBrightness", std::to_string( s.BrightnessValue ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "DisplayFlip", std::to_string( s.DisplayFlip ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "LowLatency", std::to_string( s.LowLatency ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "HDR_Monitor", std::to_string( s.HDR_Monitor ? TRUE : FALSE ).c_str(), ini.c_str() );
@@ -5365,8 +5365,8 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.ForceFOV = GetPrivateProfileBoolA( "Display", "ForceFOV", ds.ForceFOV, ini );
         s.FOVHoriz = GetPrivateProfileIntA( "Display", "FOVHoriz", 90, ini.c_str() );
         s.FOVVert = GetPrivateProfileIntA( "Display", "FOVVert", 90, ini.c_str() );
-        s.GammaValue = GetPrivateProfileFloatA( "Display", "Contrast", ds.GammaValue, ini );
-        s.BrightnessValue = GetPrivateProfileFloatA( "Display", "Luminance", ds.BrightnessValue, ini );
+        s.GammaValue = GetPrivateProfileFloatA( "Display", "DisplayContrast", ds.GammaValue, ini );
+        s.BrightnessValue = GetPrivateProfileFloatA( "Display", "DisplayBrightness", ds.BrightnessValue, ini );
         s.DisplayFlip = GetPrivateProfileBoolA( "Display", "DisplayFlip", ds.DisplayFlip, ini );
         s.LowLatency = GetPrivateProfileBoolA( "Display", "LowLatency", ds.LowLatency, ini );
         s.HDR_Monitor = GetPrivateProfileBoolA( "Display", "HDR_Monitor", false, ini );
