@@ -5186,6 +5186,16 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "General", "SunLightStrength", std::to_string( s.SunLightStrength ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DrawG1ForestPortals", std::to_string( s.DrawG1ForestPortals ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DrawRainThroughTransformFeedback", std::to_string( s.DrawRainThroughTransformFeedback ? TRUE : FALSE ).c_str(), ini.c_str() );
+    s.EnableWaterAnimation = s.EnableSSR;
+    WritePrivateProfileStringA( "General", "EnableSSR", std::to_string( s.EnableSSR ? TRUE : FALSE ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "SSRStrength", std::to_string( s.SSRStrength ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "EnableSSS", std::to_string( s.EnableSSS ? TRUE : FALSE ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "SSSIntensity", std::to_string( s.SSSIntensity ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "EnableDepthAtmosphere", std::to_string( s.EnableDistanceBlur ? TRUE : FALSE ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "EnableDistanceBlur", std::to_string( s.EnableDistanceBlur ? TRUE : FALSE ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "DepthAtmosphereBlurStrengthV2", std::to_string( s.DistanceBlurStrength ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "NightDarkeningStart", std::to_string( s.NightDarkeningStart ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "NightDarkeningMax", std::to_string( s.NightDarkeningMax ).c_str(), ini.c_str() );
 
     /*
     * Draw-distance is saved on a per World basis using SaveRendererWorldSettings
@@ -5311,6 +5321,15 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.SunLightStrength = GetPrivateProfileFloatA( "General", "SunLightStrength", ds.SunLightStrength, ini );
         s.DrawG1ForestPortals = GetPrivateProfileBoolA( "General", "DrawG1ForestPortals", ds.DrawG1ForestPortals, ini );
         s.DrawRainThroughTransformFeedback = GetPrivateProfileBoolA( "General", "DrawRainThroughTransformFeedback", ds.DrawRainThroughTransformFeedback, ini );
+        s.EnableSSR = GetPrivateProfileBoolA( "General", "EnableSSR", ds.EnableSSR, ini );
+        s.SSRStrength = GetPrivateProfileFloatA( "General", "SSRStrength", ds.SSRStrength, ini.c_str() );
+        s.EnableSSS = GetPrivateProfileBoolA( "General", "EnableSSS", ds.EnableSSS, ini );
+        s.SSSIntensity = std::clamp( GetPrivateProfileFloatA( "General", "SSSIntensity", ds.SSSIntensity, ini.c_str() ), 0.0f, 3.0f );
+        s.EnableDistanceBlur = GetPrivateProfileBoolA( "General", "EnableDepthAtmosphere",
+            GetPrivateProfileBoolA( "General", "EnableDistanceBlur", ds.EnableDistanceBlur, ini ), ini );
+        s.DistanceBlurStrength = std::clamp( GetPrivateProfileFloatA( "General", "DepthAtmosphereBlurStrengthV2", ds.DistanceBlurStrength, ini.c_str() ), 0.0f, 1.0f );
+        s.NightDarkeningStart = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningStart", ds.NightDarkeningStart, ini.c_str() ), 0.0f, 30000.0f );
+        s.NightDarkeningMax = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningMax", ds.NightDarkeningMax, ini.c_str() ), 0.0f, 1.0f );
 
         /*
         * Draw-distance is Loaded on a per World basis using LoadRendererWorldSettings
@@ -5379,6 +5398,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.WindQuality = GetPrivateProfileIntA( "Display", "WindQuality", 0, ini.c_str() );
         s.GlobalWindStrength = GetPrivateProfileFloatA( "Display", "WindStrength", ds.GlobalWindStrength, ini );
         s.EnableWaterAnimation = GetPrivateProfileBoolA( "Display", "WaterWaveAnimation", ds.EnableWaterAnimation, ini );
+        s.EnableWaterAnimation = s.EnableSSR;
         s.HeroAffectsObjects = GetPrivateProfileBoolA( "Display", "HeroAffectsObjects", ds.HeroAffectsObjects, ini );
 
         if ( GetPrivateProfileBoolA( "SMAA", "Enabled", false, ini ) ) {

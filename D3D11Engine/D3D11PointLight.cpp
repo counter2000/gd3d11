@@ -437,6 +437,10 @@ void D3D11PointLight::RenderFullCubemap() {
             CopyStaticAsideToActiveTarget();
         }
 
+        if ( LightInfo->IsIndoorVob ) {
+            return;
+        }
+
         RenderAnimatedShadowPass( *activeTarget, false );
         return;
     }

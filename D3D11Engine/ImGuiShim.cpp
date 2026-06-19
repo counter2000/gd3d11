@@ -676,6 +676,17 @@ void ImGuiShim::RenderSettingsWindow()
 
             ImGui::Checkbox( "Depth of Field", &settings.EnableDoF );
             ImGui::SetItemTooltip( "Enable Depth of Field with bokeh blur." );
+            bool enhancedWater = settings.EnableSSR;
+            if ( ImGui::Checkbox( "Enhanced Water", &enhancedWater ) ) {
+                settings.EnableSSR = enhancedWater;
+                settings.EnableWaterAnimation = enhancedWater;
+                shadersToReload |= ShaderCategory::Water;
+            }
+            ImGui::SetItemTooltip( "Enables water reflections, shoreline detail, and animated water waves." );
+            ImGui::Checkbox( "Backlit Vegetation", &settings.EnableSSS );
+            ImGui::SetItemTooltip( "Adds soft light transmission to grass, leaves, and alpha-tested vegetation." );
+            ImGui::Checkbox( "Depth Atmosphere", &settings.EnableDistanceBlur );
+            ImGui::SetItemTooltip( "Darkens and softly blurs distant scenery while keeping the near field sharp." );
             static std::vector<std::tuple<const char*, GothicRendererSettings::E_AntiAliasingMode, const char*>> antiAliasing = {
                 {"Disabled", GothicRendererSettings::E_AntiAliasingMode::AA_NONE, nullptr },
                 {"SMAA", GothicRendererSettings::E_AntiAliasingMode::AA_SMAA, nullptr },
@@ -755,9 +766,6 @@ void ImGuiShim::RenderSettingsWindow()
 
             ImGui::Checkbox( "Enable Rain", &settings.EnableRain );
             ImGui::Checkbox( "Enable Rain Effects", &settings.EnableRainEffects );
-            if ( ImGui::Checkbox( "Enable Water waves", &settings.EnableWaterAnimation ) ) {
-                shadersToReload |= ShaderCategory::Water;
-            }
             ImGui::Checkbox( "Limit Light Intensity", &settings.LimitLightIntesity );
             ImGui::Checkbox( "Draw World Section Intersections", &settings.DrawSectionIntersections );
             ImGui::SetItemTooltip( "This option draws every world chunk that intersect with GD3D11 world draw distance." );
@@ -1632,6 +1640,49 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
                 }
                 ImGui::PopID();
             }
+
+        ImGui::SeparatorText( "Enhanced Water" );
+        {
+            ImGui::PushID( "EnhancedWaterSettings" );
+            bool enhancedWater = settings.EnableSSR;
+            if ( ImGui::Checkbox( "Enable", &enhancedWater ) ) {
+                settings.EnableSSR = enhancedWater;
+                settings.EnableWaterAnimation = enhancedWater;
+                Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Water );
+            }
+            ImGui::BeginDisabled( !settings.EnableSSR );
+            {
+                ImGui::DragFloat( "Reflection Strength", &settings.SSRStrength, 0.01f, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::EndDisabled();
+            }
+            ImGui::PopID();
+        }
+
+        ImGui::SeparatorText( "Backlit Vegetation" );
+        {
+            ImGui::PushID( "BacklitVegetationSettings" );
+            ImGui::Checkbox( "Enable", &settings.EnableSSS );
+            ImGui::BeginDisabled( !settings.EnableSSS );
+            {
+                ImGui::SliderFloat( "Intensity", &settings.SSSIntensity, 0.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::EndDisabled();
+            }
+            ImGui::PopID();
+        }
+
+        ImGui::SeparatorText( "Depth Atmosphere" );
+        {
+            ImGui::PushID( "DepthAtmosphereSettings" );
+            ImGui::Checkbox( "Enable", &settings.EnableDistanceBlur );
+            ImGui::BeginDisabled( !settings.EnableDistanceBlur );
+            {
+                ImGui::SliderFloat( "Blur Strength", &settings.DistanceBlurStrength, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Night Fade Start", &settings.NightDarkeningStart, 0.0f, 12000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Night Max Darkness", &settings.NightDarkeningMax, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::EndDisabled();
+            }
+            ImGui::PopID();
+        }
 
         ImGui::SeparatorText( "Anti Aliasing" );
         {

@@ -3,6 +3,16 @@
 //--------------------------------------------------------------------------------------
 #include <GaussBlur.h>
 
+cbuffer B_BlurSettings : register(b0)
+{
+	float2 B_PixelSize;
+	float B_BlurSize;
+	float B_Threshold;
+
+	float4 B_ColorMod;
+	matrix B_InvProj;
+};
+
 //--------------------------------------------------------------------------------------
 // Textures and Samplers
 //--------------------------------------------------------------------------------------
@@ -21,16 +31,23 @@ struct PS_INPUT
 	float4 vPosition		: SV_POSITION;
 };
 
+float3 VSPositionFromDepth(float depth, float2 texCoord)
+{
+	float4 projectedPos = float4(texCoord * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f), depth, 1.0f);
+	float4 viewPos = mul(projectedPos, B_InvProj);
+	return viewPos.xyz / viewPos.www;
+}
+
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
 float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
-	float4 depth = TX_Depth.Sample(SS_Linear, Input.vTexcoord);
+	float depth = TX_Depth.Sample(SS_Linear, Input.vTexcoord).r;
+	float viewDistance = length(VSPositionFromDepth(depth, Input.vTexcoord));
+	float blurMask = saturate(smoothstep(B_Threshold, B_ColorMod.y, viewDistance) * B_ColorMod.x);
 
-	float2 ps = float2(1.0f / 1920.0f, 1.0f / 1080.0f);
-	ps = lerp(float2(0,0), ps, pow(abs((float)depth), 300));
-	
+	float2 ps = B_PixelSize * B_BlurSize * blurMask;
 	float4 blur = DoBlurPassSingle(ps, Input.vTexcoord, TX_Texture0, TX_Depth, SS_Linear, 1.0f);
 	
 	float4 scene = TX_Texture0.Sample(SS_Linear, Input.vTexcoord);
@@ -38,6 +55,5 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	blur.a = 1.0f;
 	scene.a = 1.0f;
 
-	return blur;
+	return lerp(scene, blur, blurMask);
 }
-

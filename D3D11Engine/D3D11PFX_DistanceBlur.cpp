@@ -32,10 +32,11 @@ XRESULT D3D11PFX_DistanceBlur::Render( ID3D11ShaderResourceView* diffuse ) {
 
 	// Copy scene
     auto tempBuffer = FxRenderer->GetTempBuffer();
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> sourceSRV( diffuse );
 
 	const float clearColor[4] = { 0.f, 0.f, 0.f, 0.f };
 	engine->GetContext()->ClearRenderTargetView( tempBuffer->GetRenderTargetView().Get(), clearColor );
-    FxRenderer->CopyTextureToRTV( diffuse, tempBuffer->GetRenderTargetView(), Engine::GraphicsEngine->GetResolution() );
+    FxRenderer->CopyTextureToRTV( sourceSRV, tempBuffer->GetRenderTargetView(), Engine::GraphicsEngine->GetResolution() );
 
 	engine->GetContext()->OMSetRenderTargets( 1, oldRTV.GetAddressOf(), nullptr );
 
@@ -44,9 +45,19 @@ XRESULT D3D11PFX_DistanceBlur::Render( ID3D11ShaderResourceView* diffuse ) {
 	engine->GetDepthBuffer()->BindToPixelShader( engine->GetContext().Get(), 1 );
 
 	// Blur/Copy
+	const float blurStrength = std::clamp( Engine::GAPI->GetRendererState().RendererSettings.DistanceBlurStrength * 1.12f, 0.0f, 1.0f );
+	BlurConstantBuffer bcb = {};
+	bcb.B_PixelSize = float2( 1.0f / Engine::GraphicsEngine->GetResolution().x, 1.0f / Engine::GraphicsEngine->GetResolution().y );
+	bcb.B_BlurSize = 1.20f + blurStrength * 2.05f;
+	bcb.B_Threshold = 6500.0f;
+	bcb.B_ColorMod = float4( blurStrength * 0.74f, 26000.0f, 0, 0 );
+	XMStoreFloat4x4( &bcb.B_InvProj, XMMatrixInverse( nullptr, XMLoadFloat4x4( &Engine::GAPI->GetProjectionMatrix() ) ) );
+	ps->GetBuffer( "B_BlurSettings" ).Update( &bcb ).Bind();
 	ps->Apply();
 
 	FxRenderer->DrawFullScreenQuad();
+
+	FxRenderer->UnbindPSResources( 2 );
 
 	// Restore rendertargets
 	engine->GetContext()->OMSetRenderTargets( 1, oldRTV.GetAddressOf(), oldDSV.Get() );

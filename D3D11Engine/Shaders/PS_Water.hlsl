@@ -24,6 +24,8 @@ cbuffer RefractionInfo : register( b2 )
 	
 	float3 RI_CameraPosition;
 	float RI_Pad2;
+
+	float4x4 RI_ViewProj;
 };
 
 //--------------------------------------------------------------------------------------
@@ -110,18 +112,91 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	// sample reflection cube
 	float3 reflection = TX_ReflectionCube.Sample(SS_Linear, reflect_vec).xyz;
+	float3 reflectionSSR = float3(0.0f, 0.0f, 0.0f);
+	float ssrWeight = 0.0f;
+
+	if (AC_EnableSSR > 0.5f) {
+		float3 rayPos = Input.vWorldPosition;
+		float3 rayDir = reflect(viewDirection, wavesFres);
+		float stepSize = 40.0f;
+		int maxSteps = 40;
+
+		for (int i = 1; i <= maxSteps; i++) {
+			rayPos += rayDir * stepSize;
+			stepSize *= 1.1f;
+
+			float4 projPos = mul(float4(rayPos, 1.0f), RI_ViewProj);
+			projPos.xyz /= projPos.w;
+
+			float2 uv = projPos.xy * float2(0.5f, -0.5f) + 0.5f;
+			if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || projPos.z < 0.0f || projPos.z > 1.0f)
+				break;
+
+			float depthSample = TX_Depth.SampleLevel(SS_Linear, uv, 0).r;
+			float sampleZ = RI_Projection._43 / (depthSample - RI_Projection._33);
+			float rayZ = projPos.w;
+			float depthDiff = rayZ - sampleZ;
+
+			if (depthDiff > 0.0f && depthDiff < (stepSize * 2.0f)) {
+				float3 minPos = rayPos - rayDir * stepSize;
+				float3 maxPos = rayPos;
+				float3 midPos = rayPos;
+
+				[unroll]
+				for (int j = 0; j < 5; j++) {
+					midPos = (minPos + maxPos) * 0.5f;
+					float4 projMid = mul(float4(midPos, 1.0f), RI_ViewProj);
+					projMid.xyz /= projMid.w;
+					float2 uvMid = projMid.xy * float2(0.5f, -0.5f) + 0.5f;
+					float dMid = TX_Depth.SampleLevel(SS_Linear, uvMid, 0).r;
+					float zMid = RI_Projection._43 / (dMid - RI_Projection._33);
+
+					if (projMid.w - zMid > 0.0f) {
+						maxPos = midPos;
+					} else {
+						minPos = midPos;
+					}
+				}
+
+				float4 projFinal = mul(float4(midPos, 1.0f), RI_ViewProj);
+				projFinal.xyz /= projFinal.w;
+				uv = projFinal.xy * float2(0.5f, -0.5f) + 0.5f;
+
+				reflectionSSR = TX_Scene.SampleLevel(SS_Linear, uv, 0).xyz;
+				float2 edgeFade = saturate(abs(uv - 0.5f) * 2.0f);
+				ssrWeight = saturate(pow(1.0f - max(edgeFade.x, edgeFade.y), 2.0f));
+				break;
+			}
+		}
+	}
 	
 	// Darken the scene, to make a wet surface
 	float f = 1-saturate(pow(1-shallowDepth, 8.0f) + clamp(pow(distortionSmall.y, 2), 0.5f, 1.0f));
+	float nightAmount = saturate((-AC_LightPos.y + 0.12f) * 2.2f);
 
-	float3 sceneWet = lerp(sceneClean, sceneClean * 0.01f, f); // Darken border-scene
+	float3 sceneWet = lerp(sceneClean, sceneClean * lerp(0.01f, 0.38f, nightAmount), f); // Darken border-scene
 	scene = lerp(scene, scene * float3(4, 0.2f, 0.1f) * 0.05f, f); // Darken distorted scene
 	
 	float pxDistance = Input.vTexcoord2.y;
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
-	scene.rgb += reflection * 1.0f * fresnel * lerp(1.0f, diffuse, 0.6f);
+	float cubeWeight = (AC_EnableSSR > 0.5f) ? lerp(0.45f, 0.95f, nightAmount) : 1.0f;
+	scene.rgb += reflection * cubeWeight * (1.0f - ssrWeight * lerp(0.35f, 0.18f, nightAmount)) * fresnel * lerp(1.0f, diffuse, 0.6f);
+	float ssrFresnel = lerp(0.20f, 0.75f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
+	float3 reflectionSSRClamped = min(reflectionSSR, float3(1.25f, 1.25f, 1.25f));
+	scene.rgb += reflectionSSRClamped * ssrWeight * ssrFresnel * max(0.0f, AC_SSRStrength) * lerp(1.10f, 2.75f, nightAmount);
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
 	color = lerp(color, sceneWet, (1-shallowDepth));
+
+	if (AC_EnableSSR > 0.5f) {
+		float shore = 1.0f - shallowDepth;
+		float shoreMask = smoothstep(0.12f, 0.78f, shore);
+		float shoreNoise = saturate(distortionSmall.y * 0.45f + distortionBig.y * 0.35f + 0.55f);
+		float foamBand = smoothstep(0.78f, 0.94f, shore) * (1.0f - smoothstep(0.97f, 1.0f, shore));
+		float foamMask = shoreMask * foamBand * smoothstep(0.58f, 0.88f, shoreNoise);
+		float3 wetShore = lerp(sceneClean, color, 0.55f);
+		color = lerp(color, wetShore, shoreMask * 0.24f);
+		color = lerp(color, sceneClean * 0.58f + float3(0.14f, 0.17f, 0.16f), foamMask * 0.12f);
+	}
 	
 	color.rgb = ApplyAtmosphericScatteringGround(Input.vWorldPosition, color.rgb);
 	
@@ -138,6 +213,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	//darken / lighten water based on the day / night cycle
 	float darknessFactor = 2.0f;
 	darknessFactor -= AC_LightPos.y;
+	darknessFactor = lerp(darknessFactor, max(1.22f, darknessFactor * 0.58f), nightAmount);
 
 	return float4(color / darknessFactor, 1);
 }

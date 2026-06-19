@@ -719,6 +719,14 @@ struct GothicRendererSettings {
         DoZPrepass = false;
         SortRenderQueue = false;
         DrawThreaded = false;
+        EnableSSR = true;
+        SSRStrength = 1.0f;
+        EnableSSS = true;
+        SSSIntensity = 1.5f;
+        EnableDistanceBlur = true;
+        DistanceBlurStrength = 0.50f;
+        NightDarkeningStart = 3000.0f;
+        NightDarkeningMax = 0.955f;
 
         WindQuality = WIND_QUALITY_ADVANCED;
         HeroAffectsObjects = true;
@@ -799,7 +807,7 @@ struct GothicRendererSettings {
         AnimateStaticVobs = true;
         RunInSpacerNet = false;
         BinkVideoRunning = false;
-        EnableWaterAnimation = false;
+        EnableWaterAnimation = true;
 
         GraphicsPreset = E_GraphicsPreset::GRAPHICS_CUSTOM;
         ApplyAssaoPreset(1);
@@ -919,6 +927,14 @@ struct GothicRendererSettings {
     // doesn't help much if at all.
     bool DoZPrepass;
     bool EnableAutoupdates;
+    bool EnableSSR;
+    float SSRStrength;
+    bool EnableSSS;
+    float SSSIntensity;
+    bool EnableDistanceBlur;
+    float DistanceBlurStrength;
+    float NightDarkeningStart;
+    float NightDarkeningMax;
     bool EnableOcclusionCulling;
     bool SortRenderQueue;
     bool DrawThreaded;

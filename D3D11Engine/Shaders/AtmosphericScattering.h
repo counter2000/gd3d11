@@ -32,6 +32,18 @@ cbuffer Atmosphere : register( b1 )
 
 	float3 AC_SpherePosition;
 	float AC_RainFXWeight;
+
+	float AC_EnableSSR;
+	float AC_EnableSSS;
+	float AC_SSRStrength;
+	float AC_SSSIntensity;
+
+	float AC_EnableDepthAtmosphere;
+	float AC_NightDarkeningStart;
+	float AC_NightDarkeningMax;
+	float AC_AtmospherePad2;
+	float3 AC_WorldCameraPos;
+	float AC_AtmospherePad3;
 };
 
 // The scale equation calculated by Vernier's Graphical Analysis
@@ -135,14 +147,26 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 	float3 c1 = v3Attenuate;
 	
 	float3 dayColor = c0 + in_color * c1;
-	float3 nightColor = float3(0.20,0.20,0.4) * NIGHT_BRIGHTNESS;
+	float3 nightColor = float3(0.095f,0.115f,0.255f) * NIGHT_BRIGHTNESS;
 	nightColor = lerp(nightColor, float3(0.24,0.24,0.24) * NIGHT_BRIGHTNESS * 0.6f, AC_SceneWettness); // Grey fog when raining
+	float moonWeight = saturate((-AC_LightPos.y - 0.08f) * 1.7f) * (1.0f - AC_SceneWettness * 0.5f);
+	float midtone = saturate(dot(in_color, float3(0.299f, 0.587f, 0.114f)) * 0.95f + 0.04f);
+	float3 moonColor = float3(0.018f, 0.026f, 0.052f) * moonWeight * midtone;
 	float3 outColor;
 
 	if(applyNightshade)
-		outColor = dayColor + in_color * nightColor * nightWeight;
+		outColor = dayColor + in_color * nightColor * nightWeight + moonColor;
 	else
-		outColor = dayColor + nightColor * nightWeight;
+		outColor = dayColor + nightColor * nightWeight + moonColor;
+
+	float cameraDistance = length(worldPosition - AC_WorldCameraPos);
+	float depthAtmosphere = saturate(AC_EnableDepthAtmosphere);
+
+	float nightFadeStart = max(0.0f, AC_NightDarkeningStart);
+	float nightFadeEnd = max(nightFadeStart + 1000.0f, 30000.0f);
+	float nightDistanceFade = smoothstep(nightFadeStart, nightFadeEnd, cameraDistance) * nightWeight * depthAtmosphere;
+	float3 farNightColor = float3(0.0012f, 0.0016f, 0.0035f);
+	outColor = lerp(outColor, farNightColor, nightDistanceFade * saturate(AC_NightDarkeningMax));
 		
 	return outColor;
 }

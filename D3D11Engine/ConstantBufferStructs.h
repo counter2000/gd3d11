@@ -340,6 +340,8 @@ struct RefractionInfoConstantBuffer {
 
     float3 RI_CameraPosition;
     float RI_Pad2;
+
+    XMFLOAT4X4 RI_ViewProj;
 };
 
 struct AtmosphereConstantBuffer {
@@ -369,6 +371,18 @@ struct AtmosphereConstantBuffer {
 
     float3 AC_SpherePosition;
     float AC_RainFXWeight;
+
+    float AC_EnableSSR;
+    float AC_EnableSSS;
+    float AC_SSRStrength;
+    float AC_SSSIntensity;
+
+    float AC_EnableDepthAtmosphere;
+    float AC_NightDarkeningStart;
+    float AC_NightDarkeningMax;
+    float AC_AtmospherePad2;
+    float3 AC_WorldCameraPos;
+    float AC_AtmospherePad3;
 };
 
 struct CASConstantBuffer {
@@ -427,4 +441,3 @@ struct PsSimpleFFdata {
 };
 
 #pragma pack (pop)
-

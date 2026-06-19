@@ -81,6 +81,12 @@ bool FeatureRTArrayIndexFromAnyShader = false;
 
 VS_ExConstantBuffer_Wind g_windBuffer;
 
+static void UpdateRefractionViewProjection( RefractionInfoConstantBuffer& buffer ) {
+    XMMATRIX view = Engine::GAPI->GetViewMatrixXM();
+    XMMATRIX proj = XMLoadFloat4x4( &Engine::GAPI->GetProjectionMatrix() );
+    XMStoreFloat4x4( &buffer.RI_ViewProj, XMMatrixMultiply( proj, view ) );
+}
+
 typedef void( __cdecl* PFN_DRAWMULTIINDEXEDINSTANCEDINDIRECT )(ID3D11DeviceContext* context, unsigned int drawCount,
     ID3D11Buffer* buffer, unsigned int alignedByteOffsetForArgs, unsigned int alignedByteStrideForArgs);
 typedef void( __cdecl* PFN_BEGINUAVOVERLAP )(ID3D11DeviceContext* context);
@@ -4384,6 +4390,20 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
             };
         } );
     }
+
+    if ( rendererState.RendererSettings.EnableDistanceBlur ) {
+        graph.AddPass( RG_PASS_NAME("Render DistanceBlur"), [&]( RGBuilder& builder, RenderPass& pass ) {
+            builder.Read( backBufferHandle );
+            builder.Write( backBufferHandle );
+
+            pass.m_executeCallback = [this, backBufferHandle](const RenderGraph& graph) {
+                TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Render DistanceBlur" );
+                auto backbufferTex = graph.GetPhysicalTexture( backBufferHandle );
+                PfxRenderer->RenderDistanceBlur( backbufferTex->GetShaderResView().Get() );
+                GetContext()->PSSetSamplers( 0, 1, DefaultSamplerState.GetAddressOf() );
+            };
+        } );
+    }
     
     graph.AddPass( RG_PASS_NAME("Reset Viewport"), [&]( RGBuilder& builder, RenderPass& pass ) {
         builder.Write( backBufferHandle );
@@ -5296,11 +5316,12 @@ void D3D11GraphicsEngine::DrawWaterSurfaces() {
         auto Resolution = GetResolution();
 
         // Fill refraction info CB and bind it
-        RefractionInfoConstantBuffer ricb;
+        RefractionInfoConstantBuffer ricb = {};
         ricb.RI_Projection = Engine::GAPI->GetProjectionMatrix();
         ricb.RI_ViewportSize = float2( Resolution.x, Resolution.y );
         ricb.RI_Time = Engine::GAPI->GetTimeSeconds();
         ricb.RI_CameraPosition = float3( Engine::GAPI->GetCameraPosition() );
+        UpdateRefractionViewProjection( ricb );
 
         ActivePS->GetBuffer( "RefractionInfo" ).Update( &ricb ).Bind();
 
@@ -9334,4 +9355,3 @@ void D3D11GraphicsEngine::StoreVobPreviousTransforms() {
     // Store view-projection matrix
     StorePrevViewProjMatrix();
 }
-

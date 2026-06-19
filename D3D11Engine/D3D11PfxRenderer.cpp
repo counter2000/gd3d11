@@ -35,7 +35,7 @@ D3D11PfxRenderer::D3D11PfxRenderer() {
 
     FX_Blur = std::make_unique<D3D11PFX_Blur>( this );
     FX_HeightFog = std::make_unique<D3D11PFX_HeightFog>( this );
-    //FX_DistanceBlur = new D3D11PFX_DistanceBlur(this);
+    FX_DistanceBlur = std::make_unique<D3D11PFX_DistanceBlur>( this );
     FX_HDR = std::make_unique<D3D11PFX_HDR>( this );
     FX_GodRays = std::make_unique<D3D11PFX_GodRays>( this );
     FX_DepthOfField = std::make_unique<D3D11PFX_DepthOfField>( this );
@@ -59,9 +59,7 @@ D3D11PfxRenderer::D3D11PfxRenderer() {
     PFX_SimpleSharpen = std::make_unique<D3D11PFX_SimpleSharpen>( this );
 }
 
-D3D11PfxRenderer::~D3D11PfxRenderer() {
-    //delete FX_DistanceBlur;
-}
+D3D11PfxRenderer::~D3D11PfxRenderer() = default;
 
 /** Renders the distance blur effect */
 XRESULT D3D11PfxRenderer::RenderDistanceBlur(ID3D11ShaderResourceView* diffuse ) {
