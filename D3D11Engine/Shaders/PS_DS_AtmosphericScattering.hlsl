@@ -340,7 +340,7 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 	if (AC_EnableSSS > 0.5f && sssDayWeight > 0.001f && vegetationMask > 0.001f) {
 		float backlight = saturate(dot(normalize(SQ_LightDirectionVS), -V));
 		float sssShadow = lerp(0.4f, 1.0f, shadow);
-		float sss = pow(backlight, 2.0f) * AC_SSSIntensity * 2.0f * sssShadow;
+		float sss = pow(backlight, 2.0f) * AC_SSSIntensity * 4.0f * sssShadow;
 		litPixel += diffuse.rgb * lightColor.rgb * sss * vertLighting * sssDayWeight * vegetationMask;
 	}
 	

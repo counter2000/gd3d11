@@ -41,7 +41,7 @@ cbuffer Atmosphere : register( b1 )
 	float AC_EnableDepthAtmosphere;
 	float AC_NightDarkeningStart;
 	float AC_NightDarkeningMax;
-	float AC_AtmospherePad2;
+	float AC_NightDarkeningRange;
 	float3 AC_WorldCameraPos;
 	float AC_AtmospherePad3;
 };
@@ -163,7 +163,7 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 	float depthAtmosphere = saturate(AC_EnableDepthAtmosphere);
 
 	float nightFadeStart = max(0.0f, AC_NightDarkeningStart);
-	float nightFadeEnd = nightFadeStart + 30000.0f;
+	float nightFadeEnd = nightFadeStart + max(1000.0f, AC_NightDarkeningRange);
 	float nightDistanceFade = smoothstep(nightFadeStart, nightFadeEnd, cameraDistance) * nightWeight * depthAtmosphere;
 	float3 farNightColor = float3(0.0012f, 0.0016f, 0.0035f);
 	float baseNightDarkening = saturate(AC_NightDarkeningMax);

@@ -5186,9 +5186,9 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "General", "EnableSSS", std::to_string( s.EnableSSS ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "SSSIntensity", std::to_string( s.SSSIntensity ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableDepthAtmosphere", std::to_string( s.EnableDistanceBlur ? TRUE : FALSE ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "General", "EnableDistanceBlur", std::to_string( s.EnableDistanceBlur ? TRUE : FALSE ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "General", "DepthAtmosphereBlurStrengthV2", std::to_string( s.DistanceBlurStrength ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "DepthAtmosphereBlurStrength", std::to_string( s.DistanceBlurStrength ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "NightDarkeningStart", std::to_string( s.NightDarkeningStart ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "NightDarkeningRange", std::to_string( s.NightDarkeningRange ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "NightDarkeningMax", std::to_string( s.NightDarkeningMax ).c_str(), ini.c_str() );
 
     /*
@@ -5208,8 +5208,8 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "Display", "ForceFOV", std::to_string( s.ForceFOV ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "FOVHoriz", std::to_string( static_cast<int>(s.FOVHoriz) ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "FOVVert", std::to_string( static_cast<int>(s.FOVVert) ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "Display", "Gamma", std::to_string( s.GammaValue ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "Display", "Brightness", std::to_string( s.BrightnessValue ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "Display", "CalibratedContrast", std::to_string( s.GammaValue ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "Display", "CalibratedBrightness", std::to_string( s.BrightnessValue ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "DisplayFlip", std::to_string( s.DisplayFlip ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "LowLatency", std::to_string( s.LowLatency ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "HDR_Monitor", std::to_string( s.HDR_Monitor ? TRUE : FALSE ).c_str(), ini.c_str() );
@@ -5310,13 +5310,13 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.DrawG1ForestPortals = GetPrivateProfileBoolA( "General", "DrawG1ForestPortals", ds.DrawG1ForestPortals, ini );
         s.DrawRainThroughTransformFeedback = GetPrivateProfileBoolA( "General", "DrawRainThroughTransformFeedback", ds.DrawRainThroughTransformFeedback, ini );
         s.EnableSSR = GetPrivateProfileBoolA( "General", "EnableSSR", ds.EnableSSR, ini );
-        s.SSRStrength = GetPrivateProfileFloatA( "General", "SSRStrength", ds.SSRStrength, ini.c_str() );
+        s.SSRStrength = std::clamp( GetPrivateProfileFloatA( "General", "SSRStrength", ds.SSRStrength, ini.c_str() ), 0.0f, 2.0f );
         s.EnableSSS = GetPrivateProfileBoolA( "General", "EnableSSS", ds.EnableSSS, ini );
-        s.SSSIntensity = std::clamp( GetPrivateProfileFloatA( "General", "SSSIntensity", ds.SSSIntensity, ini.c_str() ), 0.0f, 3.0f );
-        s.EnableDistanceBlur = GetPrivateProfileBoolA( "General", "EnableDepthAtmosphere",
-            GetPrivateProfileBoolA( "General", "EnableDistanceBlur", ds.EnableDistanceBlur, ini ), ini );
-        s.DistanceBlurStrength = std::clamp( GetPrivateProfileFloatA( "General", "DepthAtmosphereBlurStrengthV2", ds.DistanceBlurStrength, ini.c_str() ), 0.0f, 1.0f );
-        s.NightDarkeningStart = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningStart", ds.NightDarkeningStart, ini.c_str() ), 0.0f, 50000.0f );
+        s.SSSIntensity = std::clamp( GetPrivateProfileFloatA( "General", "SSSIntensity", ds.SSSIntensity, ini.c_str() ), 0.0f, 2.0f );
+        s.EnableDistanceBlur = GetPrivateProfileBoolA( "General", "EnableDepthAtmosphere", ds.EnableDistanceBlur, ini );
+        s.DistanceBlurStrength = std::clamp( GetPrivateProfileFloatA( "General", "DepthAtmosphereBlurStrength", ds.DistanceBlurStrength, ini.c_str() ), 0.0f, 1.0f );
+        s.NightDarkeningStart = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningStart", ds.NightDarkeningStart, ini.c_str() ), 0.0f, 30000.0f );
+        s.NightDarkeningRange = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningRange", ds.NightDarkeningRange, ini.c_str() ), 1000.0f, 30000.0f );
         s.NightDarkeningMax = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningMax", ds.NightDarkeningMax, ini.c_str() ), 0.0f, 2.0f );
 
         /*
@@ -5365,8 +5365,8 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.ForceFOV = GetPrivateProfileBoolA( "Display", "ForceFOV", ds.ForceFOV, ini );
         s.FOVHoriz = GetPrivateProfileIntA( "Display", "FOVHoriz", 90, ini.c_str() );
         s.FOVVert = GetPrivateProfileIntA( "Display", "FOVVert", 90, ini.c_str() );
-        s.GammaValue = GetPrivateProfileFloatA( "Display", "Gamma", 1.0f, ini );
-        s.BrightnessValue = GetPrivateProfileFloatA( "Display", "Brightness", 1.0f, ini );
+        s.GammaValue = GetPrivateProfileFloatA( "Display", "CalibratedContrast", ds.GammaValue, ini );
+        s.BrightnessValue = GetPrivateProfileFloatA( "Display", "CalibratedBrightness", ds.BrightnessValue, ini );
         s.DisplayFlip = GetPrivateProfileBoolA( "Display", "DisplayFlip", ds.DisplayFlip, ini );
         s.LowLatency = GetPrivateProfileBoolA( "Display", "LowLatency", ds.LowLatency, ini );
         s.HDR_Monitor = GetPrivateProfileBoolA( "Display", "HDR_Monitor", false, ini );

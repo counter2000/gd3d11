@@ -368,7 +368,7 @@ struct AtmosphereConstantBuffer {
     float AC_EnableDepthAtmosphere;
     float AC_NightDarkeningStart;
     float AC_NightDarkeningMax;
-    float AC_AtmospherePad2;
+    float AC_NightDarkeningRange;
     float3 AC_WorldCameraPos;
     float AC_AtmospherePad3;
 };

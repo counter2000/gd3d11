@@ -722,11 +722,12 @@ struct GothicRendererSettings {
         EnableSSR = true;
         SSRStrength = 1.0f;
         EnableSSS = true;
-        SSSIntensity = 1.5f;
+        SSSIntensity = 1.0f;
         EnableDistanceBlur = true;
         DistanceBlurStrength = 0.50f;
         NightDarkeningStart = 0.0f;
-        NightDarkeningMax = 0.95f;
+        NightDarkeningRange = 12000.0f;
+        NightDarkeningMax = 2.0f;
 
         WindQuality = WIND_QUALITY_ADVANCED;
         HeroAffectsObjects = true;
@@ -927,6 +928,7 @@ struct GothicRendererSettings {
     bool EnableDistanceBlur;
     float DistanceBlurStrength;
     float NightDarkeningStart;
+    float NightDarkeningRange;
     float NightDarkeningMax;
     bool EnableOcclusionCulling;
     bool SortRenderQueue;

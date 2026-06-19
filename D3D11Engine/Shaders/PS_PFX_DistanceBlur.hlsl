@@ -38,6 +38,35 @@ float3 VSPositionFromDepth(float depth, float2 texCoord)
 	return viewPos.xyz / viewPos.www;
 }
 
+float4 DepthAwareBlur(float2 pixelStep, float2 texCoord, float centerDistance)
+{
+	float4 colorSum = 0.0f;
+	float weightSum = 0.0f;
+	float depthTolerance = max(120.0f, centerDistance * 0.02f);
+
+	[unroll]
+	for (int x = -3; x <= 3; x++)
+	{
+		[unroll]
+		for (int y = -3; y <= 3; y++)
+		{
+			float2 offset = float2(x, y);
+			float2 uv = saturate(texCoord + offset * pixelStep);
+			float sampleDepth = TX_Depth.Sample(SS_Linear, uv).r;
+			float sampleDistance = length(VSPositionFromDepth(sampleDepth, uv));
+			float depthDelta = abs(sampleDistance - centerDistance);
+			float depthWeight = 1.0f - smoothstep(depthTolerance, depthTolerance * 2.0f, depthDelta);
+			float spatialWeight = rcp(1.0f + dot(offset, offset) * 0.22f);
+			float weight = depthWeight * spatialWeight;
+
+			colorSum += TX_Texture0.Sample(SS_Linear, uv) * weight;
+			weightSum += weight;
+		}
+	}
+
+	return colorSum / max(weightSum, 0.0001f);
+}
+
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
@@ -48,7 +77,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float blurMask = saturate(smoothstep(B_Threshold, B_ColorMod.y, viewDistance) * B_ColorMod.x);
 
 	float2 ps = B_PixelSize * B_BlurSize * blurMask;
-	float4 blur = DoBlurPassSingle(ps, Input.vTexcoord, TX_Texture0, TX_Depth, SS_Linear, 1.0f);
+	float4 blur = DepthAwareBlur(ps, Input.vTexcoord, viewDistance);
 	
 	float4 scene = TX_Texture0.Sample(SS_Linear, Input.vTexcoord);
 	

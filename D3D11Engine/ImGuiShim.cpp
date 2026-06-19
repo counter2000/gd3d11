@@ -648,6 +648,10 @@ void ImGuiShim::RenderSettingsWindow()
         }
         ImGui::PopItemWidth();
         ImGui::Separator();
+
+        const float standardComboWidth = 250.0f;
+        const float standardComboStart = std::max( 180.0f,
+            ImGui::GetWindowWidth() * 0.5f - standardComboWidth - ImGui::GetStyle().WindowPadding.x );
         
         {
             ImGui::BeginGroup();
@@ -663,8 +667,8 @@ void ImGuiShim::RenderSettingsWindow()
                     {"ASSAO", AOMode::AO_ASSAO, "Intel ASSAO (Adaptive Screen Space Ambient Occlusion)"},
             };
             ImGui::TextUnformatted( "AO Mode" );
-            ImGui::SameLine( 150.0f );
-            ImGui::SetNextItemWidth( 250.0f );
+            ImGui::SameLine( standardComboStart );
+            ImGui::SetNextItemWidth( standardComboWidth );
             if ( ImComboBoxCT( "##AOMode", aoModes, &settings.AoMode, [] {
                 Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
                 } ) ) {
@@ -703,8 +707,8 @@ void ImGuiShim::RenderSettingsWindow()
                     selectedMode = GothicRendererSettings::E_AntiAliasingMode::AA_FSR3;
                 }
                 ImGui::TextUnformatted( "Anti Aliasing" );
-                ImGui::SameLine( 150.0f );
-                ImGui::SetNextItemWidth( 250.0f );
+                ImGui::SameLine( standardComboStart );
+                ImGui::SetNextItemWidth( standardComboWidth );
                 if ( ImComboBoxCT( "##AntiAliasing", antiAliasing, &selectedMode, [&selectedMode, &settings] {
                     if ( selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR3 ) {
                         selectedMode = GothicRendererSettings::E_AntiAliasingMode::AA_FSR;
@@ -730,8 +734,8 @@ void ImGuiShim::RenderSettingsWindow()
                     {"PCSS", GothicRendererSettings::E_ShadowFilterMode::SHADOW_FILTER_PCSS},
                 };
                 ImGui::TextUnformatted( "Shadow Filtering" );
-                ImGui::SameLine( 150.0f );
-                ImGui::SetNextItemWidth( 250.0f );
+                ImGui::SameLine( standardComboStart );
+                ImGui::SetNextItemWidth( standardComboWidth );
                 if ( ImComboBoxC( "##ShadowFiltering", shadowFilterModes, &settings.ShadowFilterMode, [&shadersToReload]() {
                     shadersToReload |= ShaderCategory::LightsAndShadows;
                     } ) ) {
@@ -740,7 +744,6 @@ void ImGuiShim::RenderSettingsWindow()
             }
 
 
-            ImGui::Checkbox( "Animate Static Vobs", &settings.AnimateStaticVobs );
 
 #if defined(BUILD_GOTHIC_2_6_fix) || (defined(BUILD_GOTHIC_1_08k) && !defined(BUILD_1_12F))
 #if defined(BUILD_GOTHIC_1_08k) && !defined(BUILD_1_12F)
@@ -1214,6 +1217,8 @@ void ImGuiShim::RenderAdvancedColumn2( GothicRendererSettings& settings, GothicA
             ImGui::SetItemTooltip("Perform a lightweight Z Prepass.\nMIGHT improve performance on low bandwidth devices.");
         }
         ImGui::Checkbox( "VSync", &settings.EnableVSync );
+        ImGui::Checkbox( "Animate Static Vobs", &settings.AnimateStaticVobs );
+        ImGui::SetItemTooltip( "Updates morph-mesh animations on otherwise static world objects." );
         if ( ImGui::Checkbox( "Compress Backbuffer", &settings.CompressBackBuffer ) ) {
             Engine::GAPI->UpdateCompressBackBuffer();
         }
@@ -1643,7 +1648,7 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             }
             ImGui::BeginDisabled( !settings.EnableSSR );
             {
-                ImGui::DragFloat( "Reflection Strength", &settings.SSRStrength, 0.01f, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Reflection Strength", &settings.SSRStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
                 ImGui::EndDisabled();
             }
             ImGui::PopID();
@@ -1655,7 +1660,7 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             ImGui::Checkbox( "Enable", &settings.EnableSSS );
             ImGui::BeginDisabled( !settings.EnableSSS );
             {
-                ImGui::SliderFloat( "Intensity", &settings.SSSIntensity, 0.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Intensity", &settings.SSSIntensity, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
                 ImGui::EndDisabled();
             }
             ImGui::PopID();
@@ -1668,7 +1673,8 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             ImGui::BeginDisabled( !settings.EnableDistanceBlur );
             {
                 ImGui::SliderFloat( "Blur Strength", &settings.DistanceBlurStrength, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
-                ImGui::SliderFloat( "Night Fade Start", &settings.NightDarkeningStart, 0.0f, 50000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Night Fade Start", &settings.NightDarkeningStart, 0.0f, 30000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Night Fade Range", &settings.NightDarkeningRange, 1000.0f, 30000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
                 ImGui::SliderFloat( "Night Max Darkness", &settings.NightDarkeningMax, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
                 ImGui::EndDisabled();
             }
