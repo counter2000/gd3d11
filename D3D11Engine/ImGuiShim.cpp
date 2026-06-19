@@ -674,8 +674,6 @@ void ImGuiShim::RenderSettingsWindow()
             }
             ImGui::SetItemTooltip( "Changing this will reload shaders." );
 
-            ImGui::Checkbox( "Depth of Field", &settings.EnableDoF );
-            ImGui::SetItemTooltip( "Enable Depth of Field with bokeh blur." );
             bool enhancedWater = settings.EnableSSR;
             if ( ImGui::Checkbox( "Enhanced Water", &enhancedWater ) ) {
                 settings.EnableSSR = enhancedWater;
@@ -1051,22 +1049,6 @@ void RenderAdvancedColumn1( GothicRendererSettings& settings, GothicAPI* gapi ) 
             ImGui::DragFloat( "GodRayWeight", &settings.GodRayWeight, 0.01f );
             ImGui::ColorEdit3( "GodRayColorMod", &settings.GodRayColorMod.x );
             ImGui::DragFloat( "GodRayDensity", &settings.GodRayDensity, 0.01f );
-            ImGui::PopID();
-        }
-
-        ImGui::SeparatorText( "Depth of Field" );
-        {
-            ImGui::PushID( "DoFSettings" );
-            ImGui::Checkbox( "Enabled", &settings.EnableDoF );
-            ImGui::DragFloat( "Focus Range", &settings.DoFFocusRange, 50.0f, 500.0f, 50000.0f, "%.0f" );
-            ImGui::SetItemTooltip( "Range around the auto-focus point that remains sharp." );
-            const char* bokehOrBlurLabel = settings.DoFGaussBlur ? "Blur Radius" : "Bokeh Radius";
-            ImGui::DragFloat( bokehOrBlurLabel, &settings.DoFBokehRadius, 0.5f, 1.0f, 32.0f, "%.1f" );
-            ImGui::SetItemTooltip( "Size of the blur disc in pixels." );
-            ImGui::DragFloat( "Max Blur", &settings.DoFMaxBlur, 0.5f, 1.0f, 32.0f, "%.1f" );
-            ImGui::SetItemTooltip( "Maximum blur radius." );
-            ImGui::Checkbox( "Simple Gaussian Blur", &settings.DoFGaussBlur );
-            ImGui::SetItemTooltip( "Use a fast Gaussian blur instead of the full bokeh kernel (cheaper, ~3x fewer taps)." );
             ImGui::PopID();
         }
 

@@ -336,11 +336,12 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 				  + specColored;
 
 	float sssDayWeight = saturate((AC_LightPos.y - 0.03f) * 4.0f);
-	if (AC_EnableSSS > 0.5f && sssDayWeight > 0.001f && gb2.w > 0.1f && gb2.w < 0.9f) {
+	float vegetationMask = saturate(diffuse.g * 1.25f - diffuse.r * 0.45f - diffuse.b * 0.25f);
+	if (AC_EnableSSS > 0.5f && sssDayWeight > 0.001f && vegetationMask > 0.001f) {
 		float backlight = saturate(dot(normalize(SQ_LightDirectionVS), -V));
 		float sssShadow = lerp(0.4f, 1.0f, shadow);
 		float sss = pow(backlight, 2.0f) * AC_SSSIntensity * sssShadow;
-		litPixel += diffuse.rgb * lightColor.rgb * sss * vertLighting * sssDayWeight;
+		litPixel += diffuse.rgb * lightColor.rgb * sss * vertLighting * sssDayWeight * vegetationMask;
 	}
 	
     float f = 1.0f - saturate(dot(normal, V));

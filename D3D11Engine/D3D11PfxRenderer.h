@@ -15,7 +15,6 @@ class D3D11PFX_DistanceBlur;
 class D3D11PFX_HDR;
 class D3D11PFX_SMAA;
 class D3D11PFX_GodRays;
-class D3D11PFX_DepthOfField;
 class D3D11NVHBAO;
 class D3D11PFX_SAO;
 class D3D11PFX_SimpleSharpen;
@@ -50,9 +49,6 @@ public:
 
     /** Renders the godrays-Effect */
     XRESULT RenderGodRays(ID3D11ShaderResourceView* backbuffer, ID3D11ShaderResourceView* depth);
-
-    /** Renders the depth-of-field effect */
-    XRESULT RenderDepthOfField(ID3D11ShaderResourceView* backbuffer);
 
     /** Copies the given texture to the given RTV */
     XRESULT CopyTextureToRTV( const Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& texture, const Microsoft::WRL::ComPtr<ID3D11RenderTargetView>& rtv, INT2 targetResolution = INT2( 0, 0 ), bool useCustomPS = false, INT2 offset = INT2( 0, 0 ) );
@@ -125,7 +121,6 @@ private:
     std::unique_ptr<D3D11PFX_HDR> FX_HDR;
     std::unique_ptr<D3D11PFX_SMAA> FX_SMAA;
     std::unique_ptr<D3D11PFX_GodRays> FX_GodRays;
-    std::unique_ptr<D3D11PFX_DepthOfField> FX_DepthOfField;
 
     /** SAO effect (FL11+ only) */
     std::unique_ptr<D3D11PFX_SAO> FX_SAO;
@@ -144,4 +139,3 @@ private:
     std::unique_ptr<TexturePool> m_texturePool;
     std::unique_ptr<DepthStencilPool> m_depthStencilPool;
 };
-

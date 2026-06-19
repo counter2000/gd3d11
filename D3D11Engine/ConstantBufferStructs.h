@@ -111,19 +111,6 @@ struct GodRayZoomConstantBuffer {
     float3 GR_ColorMod;
 };
 
-struct DepthOfFieldConstantBuffer {
-    float DoF_FocusDistance;
-    float DoF_FocusRange;
-    float DoF_BokehRadius;
-    float DoF_MaxBlur;
-
-    float4 DoF_ProjParams;
-    float DoF_NearPlane;
-    float DoF_FarPlane;
-    float DoF_Pad;
-    float DoF_Pad2;
-};
-
 struct SAOConstantBuffer {
     float4 SAO_ProjParams;    // x = 1/P._11, y = 1/P._22, z = P._34, w = P._33
     float  SAO_Radius;        // World-space AO radius

@@ -4266,19 +4266,6 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         });
     }
     
-    if (rendererState.RendererSettings.EnableDoF) {
-        graph.AddPass( RG_PASS_NAME("Draw DepthOfField"), [&]( RGBuilder& builder, RenderPass& pass ) {
-            builder.Read( backBufferHandle );
-            builder.Write( backBufferHandle );
-
-            pass.m_executeCallback = [this, backBufferHandle](const RenderGraph& graph) {
-                TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Draw DepthOfField" );
-                auto backbufferResource = graph.GetPhysicalTexture(backBufferHandle);
-                PfxRenderer->RenderDepthOfField(backbufferResource->GetShaderResView().Get());
-            };
-        });
-    }
-    
     graph.AddPass( RG_PASS_NAME("Draw ParticlesSimple"), [&]( RGBuilder& builder, RenderPass& pass ) {
         auto size = GetResolution();
 
