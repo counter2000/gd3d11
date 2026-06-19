@@ -496,26 +496,45 @@ XRESULT D3D11Effect::LoadRainResources()
 
 /** Renders the rain-shadowmap */
 XRESULT D3D11Effect::DrawRainShadowmap() {
-    if ( !RainShadowmap.get() )
-        return XR_SUCCESS;
-
     D3D11GraphicsEngine* e = reinterpret_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine); // TODO: This has to be a cast to D3D11GraphicsEngineBase!
     //D3D11GraphicsEngineBase* e = (D3D11GraphicsEngineBase*)Engine::GraphicsEngine; //RenderShadowmaps to be moved then to D3D11GraphicsEngineBase
-    GothicRendererState& state = Engine::GAPI->GetRendererState();
 
+    if ( !RainShadowmap ) {
+        const int s = 2048;
+        RainShadowmap = std::make_unique<RenderToDepthStencilBuffer>( e->GetDevice().Get(), s, s,
+            DXGI_FORMAT_R16_TYPELESS, nullptr, DXGI_FORMAT_D16_UNORM, DXGI_FORMAT_R16_UNORM );
+        SetDebugName( RainShadowmap->GetDepthStencilView().Get(), "RainShadowmap->DepthStencilView" );
+        SetDebugName( RainShadowmap->GetShaderResView().Get(), "RainShadowmap->ShaderResView" );
+        SetDebugName( RainShadowmap->GetTexture().Get(), "RainShadowmap->Texture" );
+    }
+
+    if ( !RainShadowmap ) {
+        return XR_SUCCESS;
+    }
+
+    GothicRendererState& state = Engine::GAPI->GetRendererState();
     CameraReplacement& cr = RainShadowmapCameraRepl;
 
     // Get the section we are currently in
     XMVECTOR p = Engine::GAPI->GetCameraPositionXM();
-    FXMVECTOR dir = XMVector3Normalize( XMLoadFloat3( &Engine::GAPI->GetRendererState().RendererSettings.RainGlobalVelocity ) * -1 ); //check was previous XMVector3NormalizeEst
+    XMVECTOR rainVelocity = XMLoadFloat3( &state.RendererSettings.RainGlobalVelocity );
+    if ( XMVectorGetX( XMVector3LengthSq( rainVelocity ) ) < 0.0001f ) {
+        rainVelocity = XMVectorSet( 0, -1, 0, 0 );
+    }
+    XMVECTOR dir = XMVector3Normalize( rainVelocity * -1.0f );
+
     // Set the camera height to the highest point in this section
-    //p.y = 0;
     p += dir * 6000.0f;
 
-    FXMVECTOR lookAt = p - dir;
+    XMVECTOR lookAt = p - dir;
+    XMVECTOR forward = XMVector3Normalize( lookAt - p );
+    XMVECTOR up = XMVectorSet( 0, 1, 0, 0 );
+    if ( fabsf( XMVectorGetX( XMVector3Dot( forward, up ) ) ) > 0.95f ) {
+        up = XMVectorSet( 0, 0, 1, 0 );
+    }
 
     // Create shadowmap view-matrix
-    XMMATRIX crViewReplacement = XMMatrixLookAtLH( p, lookAt, XMVectorSet( 0, 1, 0, 0 ) );
+    XMMATRIX crViewReplacement = XMMatrixLookAtLH( p, lookAt, up );
 
     const auto size = RainShadowmap->GetSizeX();
     const auto legacySingleShadowMapScaleFactor = Toolbox::GetRecommendedWorldShadowRangeScaleForSize( size );
@@ -536,9 +555,7 @@ XRESULT D3D11Effect::DrawRainShadowmap() {
     Engine::GAPI->SetCameraReplacementPtr( &cr );
 
     // Make alpharef a bit more aggressive, to make trees less rain-proof
-
     float oldAlphaRef = Engine::GAPI->GetRendererState().GraphicsState.FF_AlphaRef;
-
     Engine::GAPI->GetRendererState().GraphicsState.FF_AlphaRef = -1.0f;
 
     // Bind the FF-Info to the first PS slot
@@ -553,8 +570,6 @@ XRESULT D3D11Effect::DrawRainShadowmap() {
     Engine::GAPI->GetRendererState().RendererSettings.DrawSkeletalMeshes = false;
 
     // Draw rain-shadowmap
-
-    // Save old rendertargets
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> oldRTV;
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView> oldDSV;
     e->GetContext()->OMGetRenderTargets( 1, oldRTV.GetAddressOf(), oldDSV.GetAddressOf() );
@@ -576,7 +591,6 @@ XRESULT D3D11Effect::DrawRainShadowmap() {
 
     return XR_SUCCESS;
 }
-
 //--------------------------------------------------------------------------------------
 // LoadTextureArray loads a texture array and associated view from a series
 // of textures on disk.

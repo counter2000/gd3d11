@@ -8,6 +8,14 @@
 SamplerState SS_Linear : register( s0 );
 Texture2D	TX_Texture0 : register( t0 );
 
+struct FFData {
+    float4 textureFactor;
+};
+
+cbuffer FFDataBuffer : register( b0 ) {
+    FFData cbFFData;
+};
+
 //--------------------------------------------------------------------------------------
 // Input / Output structures
 //--------------------------------------------------------------------------------------
@@ -28,8 +36,10 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
 	float4 color = TX_Texture0.Sample(SS_Linear, Input.vTexcoord);
 	color *= Input.vDiffuse;
+#ifdef USE_FFDATA
+    color *= cbFFData.textureFactor;
+#endif
 	//return float4(1,0,0,1);
 	
 	return color;
 }
-

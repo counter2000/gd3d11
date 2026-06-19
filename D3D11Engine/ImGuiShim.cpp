@@ -1272,6 +1272,18 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             ImGui::PopID();
         }
 
+        ImGui::SeparatorText( "Backlit Vegetation" );
+        {
+            ImGui::PushID( "BacklitVegetationSettings" );
+            ImGui::Checkbox( "Enable", &settings.EnableSSS );
+            ImGui::BeginDisabled( !settings.EnableSSS );
+            {
+                ImGui::SliderFloat( "Intensity", &settings.SSSIntensity, 0.0f, 3.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
+                ImGui::EndDisabled();
+            }
+            ImGui::PopID();
+        }
+
         ImGui::SeparatorText( "Depth Atmosphere" );
         {
             ImGui::PushID( "DepthAtmosphereSettings" );

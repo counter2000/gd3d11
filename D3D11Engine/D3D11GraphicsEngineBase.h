@@ -184,6 +184,7 @@ protected:
     std::shared_ptr<D3D11PShader> PS_DiffuseNormalmappedAlphatestFxMap;
     std::shared_ptr<D3D11PShader> PS_DiffuseAlphatest;
     std::shared_ptr<D3D11PShader> PS_Simple;
+    std::shared_ptr<D3D11PShader> PS_Simple_FF;
     std::shared_ptr<D3D11PShader> PS_LinDepth;
     std::shared_ptr<D3D11VShader> VS_Ex;
     std::shared_ptr<D3D11VShader> VS_ExInstancedObj;

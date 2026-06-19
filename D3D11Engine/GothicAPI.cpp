@@ -5021,6 +5021,7 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "General", "EnableSSR", std::to_string( s.EnableSSR ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "SSRStrength", std::to_string( s.SSRStrength ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableSSS", std::to_string( s.EnableSSS ? TRUE : FALSE ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "SSSIntensity", std::to_string( s.SSSIntensity ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableDepthAtmosphere", std::to_string( s.EnableDistanceBlur ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableDistanceBlur", std::to_string( s.EnableDistanceBlur ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DepthAtmosphereBlurStrengthV2", std::to_string( s.DistanceBlurStrength ).c_str(), ini.c_str() );
@@ -5132,6 +5133,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.EnableSSR = GetPrivateProfileBoolA( "General", "EnableSSR", defaultRendererSettings.EnableSSR, ini );
         s.SSRStrength = GetPrivateProfileFloatA( "General", "SSRStrength", defaultRendererSettings.SSRStrength, ini.c_str() );
         s.EnableSSS = GetPrivateProfileBoolA( "General", "EnableSSS", defaultRendererSettings.EnableSSS, ini );
+        s.SSSIntensity = std::clamp( GetPrivateProfileFloatA( "General", "SSSIntensity", defaultRendererSettings.SSSIntensity, ini.c_str() ), 0.0f, 3.0f );
         s.EnableDistanceBlur = GetPrivateProfileBoolA( "General", "EnableDepthAtmosphere",
             GetPrivateProfileBoolA( "General", "EnableDistanceBlur", defaultRendererSettings.EnableDistanceBlur, ini ), ini );
         s.DistanceBlurStrength = std::clamp( GetPrivateProfileFloatA( "General", "DepthAtmosphereBlurStrengthV2", defaultRendererSettings.DistanceBlurStrength, ini.c_str() ), 0.0f, 1.0f );

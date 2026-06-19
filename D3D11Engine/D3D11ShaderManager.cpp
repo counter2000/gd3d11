@@ -260,6 +260,11 @@ XRESULT D3D11ShaderManager::Init() {
 
     Shaders.push_back( ShaderInfo( "PS_Simple", "PS_Simple.hlsl", "p" ) );
 
+    makros.push_back( D3D_SHADER_MACRO{ "USE_FFDATA", "1" } );
+    Shaders.push_back( ShaderInfo( "PS_Simple_FF", "PS_Simple.hlsl", "p", makros ) );
+    Shaders.back().cBufferSizes.push_back( sizeof( PsSimpleFFdata ) );
+    makros.clear();
+
     Shaders.push_back( ShaderInfo( "PS_Rain", "PS_Rain.hlsl", "p" ) );
 
     makros.push_back( D3D_SHADER_MACRO{ "SNOW_FEATURE", "1" } );

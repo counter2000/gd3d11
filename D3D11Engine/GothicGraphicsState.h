@@ -664,6 +664,7 @@ struct GothicRendererSettings {
         EnableSSR = false;
         SSRStrength = 1.0f;
         EnableSSS = false;
+        SSSIntensity = 1.8f;
         EnableDistanceBlur = false;
         DistanceBlurStrength = 0.50f;
 
@@ -805,6 +806,7 @@ struct GothicRendererSettings {
     bool EnableSSR;
     float SSRStrength;
     bool EnableSSS;
+    float SSSIntensity;
     bool EnableDistanceBlur;
     float DistanceBlurStrength;
     bool EnableOcclusionCulling;

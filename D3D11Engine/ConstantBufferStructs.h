@@ -315,10 +315,14 @@ struct AtmosphereConstantBuffer {
     float AC_EnableSSR;
     float AC_EnableSSS;
     float AC_SSRStrength;
-    float AC_AtmospherePad2;
+    float AC_SSSIntensity;
 
     float AC_EnableDepthAtmosphere;
     float3 AC_WorldCameraPos;
+};
+
+struct PsSimpleFFdata {
+    float4 textureFactor;
 };
 
 struct CASConstantBuffer {

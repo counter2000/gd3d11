@@ -36,7 +36,7 @@ cbuffer Atmosphere : register( b1 )
 	float AC_EnableSSR;
 	float AC_EnableSSS;
 	float AC_SSRStrength;
-	float AC_AtmospherePad2;
+	float AC_SSSIntensity;
 
 	float AC_EnableDepthAtmosphere;
 	float3 AC_WorldCameraPos;

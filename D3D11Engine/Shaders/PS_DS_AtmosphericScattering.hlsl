@@ -520,6 +520,8 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
     float3 V = normalize(-vsPosition);
 	
 #if SHD_ENABLE
+	float3 wsNormal = normalize(mul(float4(normal, 0.0f), SQ_InvView).xyz);
+
 	// CSM: Use soft cascaded shadow map with configurable softness
 	float shadow = 0.0f;
 	if(AC_LightPos.y > 0) // only get shadow value if it isn't night-time
@@ -527,6 +529,9 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 		float bias = lerp(0.00005f, 0.0001f, abs(vsPosition.z) / 1000);
 		// Use screen position for per-pixel rotation (TAA-friendly)
 		shadow = ComputeCascadedShadowValueSoft(wsPosition, vsPosition.z, vertLighting, bias, Input.vPosition.xy);
+	}
+	else {
+		shadow = saturate(wsNormal.y) * vertLighting;
 	}
 #else
     float shadow = vertLighting;
@@ -575,7 +580,7 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 	if (AC_EnableSSS > 0.5f && sssDayWeight > 0.001f && gb2.w > 0.1f && gb2.w < 0.9f) {
 		float backlight = saturate(dot(normalize(SQ_LightDirectionVS), -V));
 		float sssShadow = lerp(0.4f, 1.0f, shadow);
-		float sss = pow(backlight, 2.0f) * 1.8f * sssShadow;
+		float sss = pow(backlight, 2.0f) * AC_SSSIntensity * sssShadow;
 		litPixel += diffuse.rgb * lightColor.rgb * sss * vertLighting * sssDayWeight;
 	}
 	
