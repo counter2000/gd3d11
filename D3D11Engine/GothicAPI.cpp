@@ -5025,6 +5025,8 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "General", "EnableDepthAtmosphere", std::to_string( s.EnableDistanceBlur ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableDistanceBlur", std::to_string( s.EnableDistanceBlur ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DepthAtmosphereBlurStrengthV2", std::to_string( s.DistanceBlurStrength ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "NightDarkeningStart", std::to_string( s.NightDarkeningStart ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "NightDarkeningMax", std::to_string( s.NightDarkeningMax ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableGodRays", std::to_string( s.EnableGodRays ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "AllowNormalmaps", std::to_string( s.AllowNormalmaps ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "AllowNumpadKeys", std::to_string( s.AllowNumpadKeys ? TRUE : FALSE ).c_str(), ini.c_str() );
@@ -5137,6 +5139,8 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.EnableDistanceBlur = GetPrivateProfileBoolA( "General", "EnableDepthAtmosphere",
             GetPrivateProfileBoolA( "General", "EnableDistanceBlur", defaultRendererSettings.EnableDistanceBlur, ini ), ini );
         s.DistanceBlurStrength = std::clamp( GetPrivateProfileFloatA( "General", "DepthAtmosphereBlurStrengthV2", defaultRendererSettings.DistanceBlurStrength, ini.c_str() ), 0.0f, 1.0f );
+        s.NightDarkeningStart = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningStart", defaultRendererSettings.NightDarkeningStart, ini.c_str() ), 0.0f, 30000.0f );
+        s.NightDarkeningMax = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningMax", defaultRendererSettings.NightDarkeningMax, ini.c_str() ), 0.0f, 1.0f );
         s.EnableGodRays = GetPrivateProfileBoolA( "General", "EnableGodRays", defaultRendererSettings.EnableGodRays, ini );
         s.AllowNormalmaps = GetPrivateProfileBoolA( "General", "AllowNormalmaps", defaultRendererSettings.AllowNormalmaps, ini );
         s.AllowNumpadKeys = GetPrivateProfileBoolA( "General", "AllowNumpadKeys", defaultRendererSettings.AllowNumpadKeys, ini );
@@ -5791,8 +5795,8 @@ float GothicAPI::GetRainFXWeight() {
         }
     }
 
-    // This doesn't seem to go as high as 1 or just very slowly. Scale it so it does go up quicker.
-    gRainFxWeight = std::min( gRainFxWeight / 0.85f, 1.0f );
+    // Keep Gothic's weather responsive, but avoid driving rain/wetness to full strength too aggressively.
+    gRainFxWeight = std::min( gRainFxWeight / 1.20f, 1.0f );
 
     // Return the higher of the two, so we get the chance to overwrite it
     return std::max( myRainFxWeight, gRainFxWeight );

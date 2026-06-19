@@ -1291,6 +1291,8 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             ImGui::BeginDisabled( !settings.EnableDistanceBlur );
             {
                 ImGui::SliderFloat( "Blur Strength", &settings.DistanceBlurStrength, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Night Fade Start", &settings.NightDarkeningStart, 0.0f, 12000.0f, "%.0f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Night Max Darkness", &settings.NightDarkeningMax, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp );
                 ImGui::EndDisabled();
             }
             ImGui::PopID();

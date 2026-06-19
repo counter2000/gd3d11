@@ -3145,18 +3145,12 @@ XRESULT D3D11GraphicsEngine::DrawMeshInfoListAlphablended(
                     : zMAT_ALPHA_FUNC_MAT_DEFAULT;
             }
 
-            // Get the right shader for it. Transparent world meshes need the fixed-function
-            // factor path so material alpha/envmap strength is respected (G2 ice lake fix).
-            bool useFFData = meshKey.Info->MaterialType != MaterialInfo::MT_Portal
-                && meshKey.Info->MaterialType != MaterialInfo::MT_WaterfallFoam;
-            if ( useFFData && PS_Simple_FF ) {
-                if ( ActivePS != PS_Simple_FF ) {
-                    ActivePS = PS_Simple_FF;
-                    ActivePS->Apply();
-                }
-            } else {
-                BindShaderForTexture( texture, false, alphaFunc, meshKey.Info->MaterialType );
+            // Get the right shader for it. Blend/Add materials use PS_Simple_FF so
+            // material alpha/envmap strength is respected (G2 ice lake fix).
+            BindShaderForTexture( texture, false, alphaFunc, meshKey.Info->MaterialType );
+            bool useFFData = ActivePS == PS_Simple_FF;
 
+            if ( !useFFData ) {
                 ActivePS->GetConstantBuffer()[0]->UpdateBuffer(
                     &Engine::GAPI->GetRendererState().GraphicsState );
                 ActivePS->GetConstantBuffer()[0]->BindToPixelShader( 0 );
@@ -5967,7 +5961,7 @@ void D3D11GraphicsEngine::BindShaderForTexture( zCTexture* texture,
     } else if ( linZ ) {
         newShader = PS_LinDepth;
     } else if ( blendAdd || blendBlend ) {
-        newShader = PS_Simple;
+        newShader = PS_Simple_FF ? PS_Simple_FF : PS_Simple;
     } else if ( texture->HasAlphaChannel() || forceAlphaTest ) {
         if ( texture->GetSurface()->GetFxMap() ) {
             newShader = PS_DiffuseNormalmappedAlphatestFxMap;

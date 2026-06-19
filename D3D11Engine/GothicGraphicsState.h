@@ -664,9 +664,11 @@ struct GothicRendererSettings {
         EnableSSR = false;
         SSRStrength = 1.0f;
         EnableSSS = false;
-        SSSIntensity = 1.8f;
+        SSSIntensity = 1.5f;
         EnableDistanceBlur = false;
         DistanceBlurStrength = 0.50f;
+        NightDarkeningStart = 3000.0f;
+        NightDarkeningMax = 0.955f;
 
         WindQuality = WIND_QUALITY_ADVANCED;
         HeroAffectsObjects = true;
@@ -685,7 +687,7 @@ struct GothicRendererSettings {
 
         RainRadiusRange = 5000.0f;
         RainHeightRange = 1000.0f;
-        RainNumParticles = 50000;
+        RainNumParticles = 25000;
         RainMoveParticles = true;
         RainGlobalVelocity = XMFLOAT3( 250, -1000, 0 );
         RainUseInitialSet = false;
@@ -809,6 +811,8 @@ struct GothicRendererSettings {
     float SSSIntensity;
     bool EnableDistanceBlur;
     float DistanceBlurStrength;
+    float NightDarkeningStart;
+    float NightDarkeningMax;
     bool EnableOcclusionCulling;
     bool SortRenderQueue;
     bool DrawThreaded;

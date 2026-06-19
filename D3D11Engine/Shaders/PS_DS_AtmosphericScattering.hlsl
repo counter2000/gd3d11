@@ -425,7 +425,7 @@ void ApplyRainNormalDeformation(inout float3 vsNormal, float3 wsPosition, inout 
 void ApplySceneWettness(float3 wsPosition, float3 vsPosition, float3 vsDir, inout float3 vsNormal, in out float3 diffuse, in out float specIntensity, in out float specPower, out float specAdd)
 {
 	// Ask the rain-shadowmap if we can hit this pixel
-    float pixelWettnes = ComputeShadowValue(0.0f, wsPosition, TX_RainShadowmap, SS_Comp, vsPosition.z, 1.0f, mul(SQ_RainView, SQ_RainProj), 0.0001f, 2.5f) * AC_SceneWettness;
+    float pixelWettnes = ComputeShadowValue(0.0f, wsPosition, TX_RainShadowmap, SS_Comp, vsPosition.z, 1.0f, SQ_RainViewProj, 0.0001f, 2.5f) * AC_SceneWettness * 0.55f;
     pixelWettnes = pixelWettnes < 0.001f ? 0 : pixelWettnes;
     
     //IsWet(wsPosition, TX_RainShadowmap, SS_Comp) * AC_SceneWettness;
@@ -436,7 +436,12 @@ void ApplySceneWettness(float3 wsPosition, float3 vsPosition, float3 vsDir, inou
     float3 nrm = vsNormal;
     float3 wsNormal;
     ApplyRainNormalDeformation(nrm, wsPosition, diffuse.rgb, wsNormal);
-    pixelWettnes *= 1 - pow(saturate(dot(wsNormal, float3(0, -1, 0))), 4.0f);
+    float downwardFacing = saturate(dot(wsNormal, float3(0, -1, 0)));
+    pixelWettnes *= 1.0f - pow(downwardFacing, 4.0f);
+
+    float surfaceExposure = saturate(dot(wsNormal, float3(0, 1, 0)));
+    surfaceExposure *= surfaceExposure;
+    pixelWettnes *= surfaceExposure;
 	
     vsNormal = lerp(vsNormal, nrm, AC_RainFXWeight * pixelWettnes * 0.5f); // Only apply deformation if it's actually raining
 	
@@ -482,7 +487,7 @@ void ApplySceneWettness(float3 wsPosition, float3 vsPosition, float3 vsDir, inou
 	
 	
 		// Scale the total amount of spec-lighting by the wetness factor and whether the scene is currently drying out or it's still raining
-    specAdd = reflection * pixelWettnes * lerp(0.08f, 0.10f, AC_RainFXWeight);
+    specAdd = reflection * pixelWettnes * lerp(0.035f, 0.055f, AC_RainFXWeight);
     diffuse = lerp(diffuse, wetPixel, pixelWettnes);
 }
 

@@ -778,6 +778,9 @@ XRESULT D3D11ShadowMap::DrawLighting( std::vector<VobLightInfo*>& lights ) {
     // Get rain matrix
     scb.SQ_RainView = graphicsEngine->Effects->GetRainShadowmapCameraRepl().ViewReplacement;
     scb.SQ_RainProj = graphicsEngine->Effects->GetRainShadowmapCameraRepl().ProjectionReplacement;
+    XMStoreFloat4x4( &scb.SQ_RainViewProj,
+        XMLoadFloat4x4( &graphicsEngine->Effects->GetRainShadowmapCameraRepl().ProjectionReplacement ) *
+        XMLoadFloat4x4( &graphicsEngine->Effects->GetRainShadowmapCameraRepl().ViewReplacement ) );
 
     scb.SQ_ShadowStrength = Engine::GAPI->GetRendererState().RendererSettings.ShadowStrength;
     scb.SQ_ShadowAOStrength = Engine::GAPI->GetRendererState().RendererSettings.ShadowAOStrength;

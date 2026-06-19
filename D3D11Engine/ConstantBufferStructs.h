@@ -318,7 +318,11 @@ struct AtmosphereConstantBuffer {
     float AC_SSSIntensity;
 
     float AC_EnableDepthAtmosphere;
+    float AC_NightDarkeningStart;
+    float AC_NightDarkeningMax;
+    float AC_AtmospherePad2;
     float3 AC_WorldCameraPos;
+    float AC_AtmospherePad3;
 };
 
 struct PsSimpleFFdata {

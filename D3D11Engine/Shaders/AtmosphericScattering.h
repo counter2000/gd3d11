@@ -39,7 +39,11 @@ cbuffer Atmosphere : register( b1 )
 	float AC_SSSIntensity;
 
 	float AC_EnableDepthAtmosphere;
+	float AC_NightDarkeningStart;
+	float AC_NightDarkeningMax;
+	float AC_AtmospherePad2;
 	float3 AC_WorldCameraPos;
+	float AC_AtmospherePad3;
 };
 
 // The scale equation calculated by Vernier's Graphical Analysis
@@ -158,9 +162,11 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 	float cameraDistance = length(worldPosition - AC_WorldCameraPos);
 	float depthAtmosphere = saturate(AC_EnableDepthAtmosphere);
 
-	float nightDistanceFade = smoothstep(3000.0f, 30000.0f, cameraDistance) * nightWeight * depthAtmosphere;
+	float nightFadeStart = max(0.0f, AC_NightDarkeningStart);
+	float nightFadeEnd = max(nightFadeStart + 1000.0f, 30000.0f);
+	float nightDistanceFade = smoothstep(nightFadeStart, nightFadeEnd, cameraDistance) * nightWeight * depthAtmosphere;
 	float3 farNightColor = float3(0.0012f, 0.0016f, 0.0035f);
-	outColor = lerp(outColor, farNightColor, nightDistanceFade * 0.955f);
+	outColor = lerp(outColor, farNightColor, nightDistanceFade * saturate(AC_NightDarkeningMax));
 		
 	return outColor;
 }
