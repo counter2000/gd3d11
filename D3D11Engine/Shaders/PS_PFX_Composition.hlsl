@@ -83,7 +83,9 @@ float ComputeVolumetricFog( float3 cameraToWorldPos, float3 posOriginal )
 
 float FogDither(float2 pixelPosition)
 {
-    return frac(52.9829189f * frac(dot(pixelPosition, float2(0.06711056f, 0.00583715f)))) - 0.5f;
+    float noiseA = frac(52.9829189f * frac(dot(pixelPosition, float2(0.06711056f, 0.00583715f))));
+    float noiseB = frac(52.9829189f * frac(dot(pixelPosition + float2(37.0f, 17.0f), float2(0.06711056f, 0.00583715f))));
+    return (noiseA - noiseB) * 0.75f;
 }
 
 float4 ComputeHeightFog( float2 texcoord )

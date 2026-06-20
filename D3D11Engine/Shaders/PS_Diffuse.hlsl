@@ -230,7 +230,12 @@ DEFERRED_PS_OUTPUT PSMain( PS_INPUT Input ) : SV_TARGET
 	output.vNrm = EncodeNormalGBuffer(nrm);
 	
 	output.vSI_SP.x = MI_SpecularIntensity * fx.r;
+#if ALPHATEST == 1
+	// Negative values mark alpha-tested vegetation candidates for deferred backlighting.
+	output.vSI_SP.y = -(MI_SpecularPower * fx.g + 1.0f);
+#else
 	output.vSI_SP.y = MI_SpecularPower * fx.g;
+#endif
 	
 	// Calculate velocity for motion vectors
 	// For instanced objects (VOBs, skeletal meshes), vCurrClipPos/vPrevClipPos come from VS

@@ -71,8 +71,11 @@ float4 DepthAwareBlur(float2 blurRadius, float2 texCoord, float centerDistance, 
 		float depthWeight = 1.0f - smoothstep(depthTolerance, depthTolerance * 2.0f, depthDelta);
 
 		float4 sampleColor = TX_Texture0.Sample(SS_Linear, uv);
+		float colorDelta = length(sampleColor.rgb - centerColor.rgb);
+		float silhouetteWeight = 1.0f - smoothstep(0.10f, 0.32f, colorDelta);
+		silhouetteWeight = lerp(silhouetteWeight, 1.0f, saturate(B_ColorMod.z));
 		float spatialWeight = exp(-dot(offset, offset) * 2.0f);
-		float weight = depthWeight * spatialWeight;
+		float weight = depthWeight * silhouetteWeight * spatialWeight;
 
 		colorSum += sampleColor * weight;
 		weightSum += weight;
@@ -113,7 +116,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float blurEnd = lerp(B_ColorMod.y, 3200.0f, dialogFocus);
 	float blurMask = saturate(smoothstep(blurStart, blurEnd, blurDistance) * B_ColorMod.x);
 
-	float2 ps = B_PixelSize * B_BlurSize * blurMask * lerp(3.0f, 4.25f, dialogFocus);
+	float2 ps = B_PixelSize * B_BlurSize * blurMask * lerp(0.85f, 4.25f, dialogFocus);
 	float4 blur = DepthAwareBlur(ps, Input.vTexcoord, viewDistance, depthDimensions);
 	
 	float4 scene = TX_Texture0.Sample(SS_Linear, Input.vTexcoord);

@@ -257,7 +257,8 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 	// Get specular parameters
     float4 gb3 = TX_SI_SP.Sample(SS_Linear, uv);
     float specIntensity = gb3.x;
-    float specPower = gb3.y;
+    float vegetationMaterial = gb3.y < 0.0f ? 1.0f : 0.0f;
+    float specPower = vegetationMaterial > 0.5f ? max(-gb3.y - 1.0f, 1.0f) : gb3.y;
 	
 	// Reconstruct VS World Position from depth
     float3 vsPosition = VSPositionFromDepth(expDepth, uv);
@@ -336,7 +337,7 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 				  + specColored;
 
 	float sssDayWeight = saturate((AC_LightPos.y - 0.03f) * 4.0f);
-	float vegetationMask = saturate(diffuse.g * 1.25f - diffuse.r * 0.45f - diffuse.b * 0.25f);
+	float vegetationMask = vegetationMaterial * saturate(diffuse.g * 1.25f - diffuse.r * 0.45f - diffuse.b * 0.25f);
 	if (AC_EnableSSS > 0.5f && sssDayWeight > 0.001f && vegetationMask > 0.001f) {
 		float backlight = saturate(dot(normalize(SQ_LightDirectionVS), -V));
 		float sssShadow = lerp(0.4f, 1.0f, shadow);

@@ -687,7 +687,7 @@ void ImGuiShim::RenderSettingsWindow()
                 settings.EnableWaterAnimation = enhancedWater;
                 shadersToReload |= ShaderCategory::Water;
             }
-            ImGui::SetItemTooltip( "Enables water reflections, shoreline detail, and animated water waves." );
+            ImGui::SetItemTooltip( "Enables water reflections and animated water waves." );
             ImGui::Checkbox( "Enhanced Night", &settings.EnableNightAtmosphere );
             ImGui::SetItemTooltip( "Enables configurable near lighting, distance darkening, and night fog." );
             ImGui::Checkbox( "Backlit Vegetation", &settings.EnableSSS );

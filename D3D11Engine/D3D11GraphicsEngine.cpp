@@ -1167,27 +1167,29 @@ XRESULT D3D11GraphicsEngine::RecreateBuffers() {
 /** Called on window resize/resolution change */
 XRESULT D3D11GraphicsEngine::OnResize( INT2 newSize ) {
     HRESULT hr;
+
+    // Keep Gothic's internal viewport in sync even when the DXGI backbuffer
+    // already has the requested size on the first frame.
+    zCView::SetWindowMode(
+        newSize.x,
+        newSize.y,
+        32 );
+
+    zCView::SetVirtualMode(
+        static_cast<int>(newSize.x),
+        static_cast<int>(newSize.y),
+        32 );
+
+    POINT virtualSize = { 8192, 8192 };
+    zCViewDraw::GetScreen().SetVirtualSize( virtualSize );
+
     if ( memcmp( &Resolution, &newSize, sizeof( newSize ) ) == 0 && SwapChain.Get() )
-        return XR_SUCCESS;  // Don't resize if we don't have to
+        return XR_SUCCESS;  // Resources already match; the Gothic viewport is now synchronized.
 
     Resolution = newSize;
     NewResolution = newSize;
 
     INT2 bbres = GetBackbufferResolution();
-
-    // TODO: Also always set/reset if player changes from Gothics UI, as settings a resolution from gothics settings breaks this.
-    zCView::SetWindowMode(
-        Resolution.x,
-        Resolution.y,
-        32 );
-
-    zCView::SetVirtualMode(
-        static_cast<int>(Resolution.x),
-        static_cast<int>(Resolution.y),
-        32 );
-
-    POINT virtualSize = { 8192, 8192 };
-    zCViewDraw::GetScreen().SetVirtualSize( virtualSize );
 
 #ifndef BUILD_SPACER
     BOOL isFullscreen = 0;

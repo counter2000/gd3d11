@@ -172,6 +172,9 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 		}
 	}
 	
+	// Suppress unstable self-reflections where the player intersects nearby water.
+	float ssrNearFade = smoothstep(350.0f, 1000.0f, abs(Input.vTexcoord2.y));
+	ssrWeight *= ssrNearFade;
 	// Darken the scene, to make a wet surface
 	float f = 1-saturate(pow(1-shallowDepth, 8.0f) + clamp(pow(distortionSmall.y, 2), 0.5f, 1.0f));
 	float nightAmount = saturate((-AC_LightPos.y + 0.12f) * 2.2f);
@@ -187,22 +190,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));
 	reflectionSSRColor *= rcp(1.0f + max(0.0f, reflectionLuma - 1.0f) * 0.8f);
-	float ssrBlend = saturate(ssrWeight * ssrFresnel * max(0.0f, AC_SSRStrength) * 1.30f * lerp(0.85f, 1.10f, nightAmount));
+	float ssrBlend = saturate(ssrWeight * ssrFresnel * max(0.0f, AC_SSRStrength) * 0.78f * lerp(0.85f, 1.10f, nightAmount));
 	scene.rgb = lerp(scene.rgb, reflectionSSRColor, ssrBlend);
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
 	color = lerp(color, sceneWet, (1-shallowDepth));
 
-	if (AC_EnableSSR > 0.5f) {
-		float shore = 1.0f - shallowDepth;
-		float shoreMask = smoothstep(0.12f, 0.78f, shore);
-		float shoreNoise = saturate(distortionSmall.y * 0.45f + distortionBig.y * 0.35f + 0.55f);
-		float foamBand = smoothstep(0.78f, 0.94f, shore) * (1.0f - smoothstep(0.97f, 1.0f, shore));
-		float foamMask = shoreMask * foamBand * smoothstep(0.58f, 0.88f, shoreNoise);
-		float3 wetShore = lerp(sceneClean, color, 0.55f);
-		color = lerp(color, wetShore, shoreMask * 0.24f);
-		color = lerp(color, sceneClean * 0.58f + float3(0.14f, 0.17f, 0.16f), foamMask * 0.12f);
-	}
-	
 	color.rgb = ApplyAtmosphericScatteringGround(Input.vWorldPosition, color.rgb);
 	
 	// Do spec lighting
