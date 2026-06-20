@@ -46,6 +46,49 @@ float ComputeCoCFromDepth( float d, float focusDepth )
     return saturate( ( LinearizeDepth( d ) - focusDepth ) / DoF_FocusRange );
 }
 
+float GetSkyEdgeBlur(float2 texcoord, float2 dtexel, float focusDepth)
+{
+    float edgeCoC = 0.0f;
+    float d;
+
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( -dtexel.x, 0 ), 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2(  dtexel.x, 0 ), 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( 0, -dtexel.y ), 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( 0,  dtexel.y ), 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( -dtexel.x, -dtexel.y ) * 2.0f, 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2(  dtexel.x, -dtexel.y ) * 2.0f, 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( -dtexel.x,  dtexel.y ) * 2.0f, 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2(  dtexel.x,  dtexel.y ) * 2.0f, 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+
+
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( -dtexel.x, 0 ) * 4.0f , 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2(  dtexel.x, 0 ) * 4.0f , 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( 0, -dtexel.y ) * 4.0f , 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( 0,  dtexel.y ) * 4.0f , 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
+
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( -dtexel.x, 0 ) * 8.0f , 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2(  dtexel.x, 0 ) * 8.0f , 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( 0, -dtexel.y ) * 8.0f , 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
+    d = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( 0,  dtexel.y ) * 8.0f , 0 ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
+    return smoothstep(0.18f, 0.65f, edgeCoC);
+}
 [numthreads(8, 8, 1)]
 void CSMain( uint3 DTid : SV_DispatchThreadID )
 {
@@ -67,9 +110,11 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
     TX_Depth.GetDimensions( depthSize.x, depthSize.y );
     float2 dtexel = 1.0 / depthSize;
     float depthC = TX_Depth.SampleLevel( SS_Linear, texcoord, 0 ).r;
+    float4 blurSample = TX_Blur.SampleLevel( SS_Linear, texcoord, 0 );
     if ( IsSkyDepth( depthC ) )
     {
-        OutputComposite[DTid.xy] = float4( sharpColor, 1.0 );
+        float skyEdgeBlur = GetSkyEdgeBlur( texcoord, dtexel, focusDepth ) * smoothstep( 0.15f, 0.75f, blurSample.a );
+        OutputComposite[DTid.xy] = float4( lerp( sharpColor, blurSample.rgb, skyEdgeBlur ), 1.0 );
         return;
     }
 
@@ -82,7 +127,6 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
     float minCoC = min( min( cocC, cocL ), min( cocR, min( cocU, cocD ) ) );
 
     // Bilinear-upsampled half-res bokeh blur
-    float4 blurSample = TX_Blur.SampleLevel( SS_Linear, texcoord, 0 );
 
     float blendFactor = smoothstep( 0.0, 1.0, minCoC );
     float3 finalColor = lerp( sharpColor, blurSample.rgb, blendFactor );

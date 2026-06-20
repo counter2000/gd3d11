@@ -28,14 +28,14 @@ static DepthOfFieldConstantBuffer BuildDepthOfFieldConstants() {
 
     DepthOfFieldConstantBuffer cb = {};
     cb.DoF_FocusDistance = settings.DoFFocusDistance
-        + (600.0f - settings.DoFFocusDistance) * dialogBlend;
+        + (1100.0f - settings.DoFFocusDistance) * dialogBlend;
     cb.DoF_FocusRange = settings.DoFFocusRange
-        + (2600.0f - settings.DoFFocusRange) * dialogBlend;
-
+        + (3400.0f - settings.DoFFocusRange) * dialogBlend;
     const float strengthScale = std::clamp( settings.DoFBokehRadius / 8.0f, 0.125f, 4.0f );
-    const float dialogStrength = 1.0f + 0.35f * dialogBlend;
-    cb.DoF_BokehRadius = 8.0f * strengthScale * dialogStrength;
-    cb.DoF_MaxBlur = 12.0f * strengthScale * dialogStrength;
+    const float baseBokehRadius = 8.0f * strengthScale;
+    const float baseMaxBlur = 12.0f * strengthScale;
+    cb.DoF_BokehRadius = baseBokehRadius + (32.0f - baseBokehRadius) * dialogBlend;
+    cb.DoF_MaxBlur = baseMaxBlur + (48.0f - baseMaxBlur) * dialogBlend;
 
     auto& proj = Engine::GAPI->GetProjectionMatrix();
     cb.DoF_ProjParams = float4( 1.0f / proj._11, 1.0f / proj._22, proj._34, proj._33 );

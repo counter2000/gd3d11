@@ -51,6 +51,49 @@ float ComputeCoCFromDepth( float d, float focusDepth )
     return saturate( ( LinearizeDepth( d ) - focusDepth ) / DoF_FocusRange );
 }
 
+float GetSkyEdgeBlur(float2 texcoord, float2 dtexel, float focusDepth)
+{
+    float edgeCoC = 0.0f;
+    float d;
+
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2( -dtexel.x, 0 ) ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2(  dtexel.x, 0 ) ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0, -dtexel.y ) ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0,  dtexel.y ) ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2( -dtexel.x, -dtexel.y ) * 2.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2(  dtexel.x, -dtexel.y ) * 2.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2( -dtexel.x,  dtexel.y ) * 2.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2(  dtexel.x,  dtexel.y ) * 2.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+
+
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2( -dtexel.x, 0 ) * 4.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2(  dtexel.x, 0 ) * 4.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0, -dtexel.y ) * 4.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0,  dtexel.y ) * 4.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
+
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2( -dtexel.x, 0 ) * 8.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2(  dtexel.x, 0 ) * 8.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0, -dtexel.y ) * 8.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
+    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0,  dtexel.y ) * 8.0f ).r;
+    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
+    return smoothstep(0.18f, 0.65f, edgeCoC);
+}
 float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
     float3 sharpColor = TX_Scene.Sample( SS_Linear, Input.vTexcoord ).rgb;
@@ -65,8 +108,12 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
     TX_Depth.GetDimensions( depthSize.x, depthSize.y );
     float2 dtexel = 1.0 / depthSize;
     float depthC = TX_Depth.Sample( SS_Linear, Input.vTexcoord ).r;
+    float4 blurSample = TX_Blur.Sample( SS_Linear, Input.vTexcoord );
     if ( IsSkyDepth( depthC ) )
-        return float4( sharpColor, 1.0 );
+    {
+        float skyEdgeBlur = GetSkyEdgeBlur( Input.vTexcoord, dtexel, focusDepth ) * smoothstep( 0.15f, 0.75f, blurSample.a );
+        return float4( lerp( sharpColor, blurSample.rgb, skyEdgeBlur ), 1.0 );
+    }
 
     float cocC = ComputeCoCFromDepth( depthC, focusDepth );
     float cocL = ComputeCoCFromDepth( TX_Depth.Sample( SS_Linear, Input.vTexcoord + float2( -dtexel.x, 0 ) ).r, focusDepth );
@@ -77,7 +124,6 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
     float minCoC = min( min( cocC, cocL ), min( cocR, min( cocU, cocD ) ) );
 
     // Bilinear-upsampled half-res bokeh blur
-    float4 blurSample = TX_Blur.Sample( SS_Linear, Input.vTexcoord );
 
     float blendFactor = smoothstep( 0.0, 1.0, minCoC );
     float3 finalColor = lerp( sharpColor, blurSample.rgb, blendFactor );
