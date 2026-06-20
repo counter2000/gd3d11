@@ -397,6 +397,12 @@ XRESULT D3D11ShaderManager::Init() {
 
     Shaders.push_back( ShaderInfo::make<PShaderID::PS_PFX_GammaCorrectInv>( "PS_PFX_GammaCorrectInv.hlsl" ) );
 
+    Shaders.push_back( ShaderInfo::make<PShaderID::PS_PFX_DoF_FocusResolve>( "PS_PFX_DoF_FocusResolve.hlsl" ) );
+    Shaders.push_back( ShaderInfo::make<PShaderID::PS_PFX_DoF>( "PS_PFX_DoF.hlsl" ) );
+    Shaders.push_back( ShaderInfo::make<PShaderID::PS_PFX_DoF_Gauss>( "PS_PFX_DoF.hlsl" )
+        .with_macros( {{ "DOF_GAUSS_BLUR", "1" }} ) );
+    Shaders.push_back( ShaderInfo::make<PShaderID::PS_PFX_DoF_Composite>( "PS_PFX_DoF_Composite.hlsl" ) );
+
     if ( FeatureRTArrayIndexFromAnyShader ) {
         Shaders.push_back( ShaderInfo::make<VShaderID::VS_ExLayered>( "VS_ExLayered.hlsl" )
             .with_layout( VERTEX_INPUT_LAYOUT_1 ) );
@@ -465,6 +471,12 @@ XRESULT D3D11ShaderManager::Init() {
         Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_GodRayMask>( "CS_PFX_GodRayMask.hlsl" ));
 
         Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_GodRayZoom>( "CS_PFX_GodRayZoom.hlsl" ));
+
+        Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_DoF_FocusResolve>( "CS_PFX_DoF_FocusResolve.hlsl" ));
+        Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_DoF>( "CS_PFX_DoF.hlsl" ));
+        Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_DoF_Gauss>( "CS_PFX_DoF.hlsl" )
+            .with_macros( {{ "DOF_GAUSS_BLUR", "1" }} ) );
+        Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_DoF_Composite>( "CS_PFX_DoF_Composite.hlsl" ));
 
         Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_SAO>( "CS_PFX_SAO.hlsl" ));
 

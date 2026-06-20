@@ -426,18 +426,12 @@ public:
 		DebugWrite( "MyDirect3DDevice7::SetViewport" );
 
 		float scale = std::max( 0.1f, Engine::GAPI->GetRendererState().RendererSettings.GothicUIScale );
-		const INT2 renderResolution = Engine::GraphicsEngine->GetResolution();
-		const bool legacyFullscreenViewport = lpViewport->dwX == 0 && lpViewport->dwY == 0
-			&& ((lpViewport->dwWidth == 640 && lpViewport->dwHeight == 480)
-				|| (lpViewport->dwWidth == 800 && lpViewport->dwHeight == 600))
-			&& renderResolution.x > static_cast<int>(lpViewport->dwWidth)
-			&& renderResolution.y > static_cast<int>(lpViewport->dwHeight);
 
 		ViewportInfo vp;
-		vp.TopLeftX = legacyFullscreenViewport ? 0 : static_cast<UINT>(lpViewport->dwX * scale);
-		vp.TopLeftY = legacyFullscreenViewport ? 0 : static_cast<UINT>(lpViewport->dwY * scale);
-		vp.Height = legacyFullscreenViewport ? renderResolution.y : static_cast<UINT>(lpViewport->dwHeight * scale);
-		vp.Width = legacyFullscreenViewport ? renderResolution.x : static_cast<UINT>(lpViewport->dwWidth * scale);
+		vp.TopLeftX = static_cast<UINT>(lpViewport->dwX * scale);
+		vp.TopLeftY = static_cast<UINT>(lpViewport->dwY * scale);
+		vp.Height = static_cast<UINT>(lpViewport->dwHeight * scale);
+		vp.Width = static_cast<UINT>(lpViewport->dwWidth * scale);
 		vp.MinZ = lpViewport->dvMinZ;
 		vp.MaxZ = lpViewport->dvMaxZ;
 

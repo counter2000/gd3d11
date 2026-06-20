@@ -13,6 +13,7 @@
 #include "D3D11PFX_HDR.h"
 #include "D3D11PFX_SMAA.h"
 #include "D3D11PFX_GodRays.h"
+#include "D3D11PFX_DepthOfField.h"
 #include "D3D11PFX_TAA.h"
 #include "D3D11PFX_SimpleSharpen.h"
 #include "D3D11PFX_CAS.h"
@@ -34,9 +35,10 @@ D3D11PfxRenderer::D3D11PfxRenderer() {
 
     FX_Blur = std::make_unique<D3D11PFX_Blur>( this );
     FX_HeightFog = std::make_unique<D3D11PFX_HeightFog>( this );
-    FX_DistanceBlur = std::make_unique<D3D11PFX_DistanceBlur>( this );
+    //FX_DistanceBlur = std::make_unique<D3D11PFX_DistanceBlur>( this );
     FX_HDR = std::make_unique<D3D11PFX_HDR>( this );
     FX_GodRays = std::make_unique<D3D11PFX_GodRays>( this );
+    FX_DepthOfField = std::make_unique<D3D11PFX_DepthOfField>( this );
 
     if ( !FeatureLevel10Compatibility ) {
         FX_SMAA = std::make_unique<D3D11PFX_SMAA>( this );
@@ -79,6 +81,11 @@ XRESULT D3D11PfxRenderer::RenderHeightfog() {
 /** Renders the godrays-Effect */
 XRESULT D3D11PfxRenderer::RenderGodRays(ID3D11ShaderResourceView* backbuffer, ID3D11ShaderResourceView* depth) {
     return FX_GodRays->Render( backbuffer , depth );
+}
+
+/** Renders the depth-of-field effect */
+XRESULT D3D11PfxRenderer::RenderDepthOfField( ID3D11ShaderResourceView* backbuffer ) {
+    return FX_DepthOfField->Render( backbuffer );
 }
 
 /** Renders the HDR-Effect */

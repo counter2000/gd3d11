@@ -122,29 +122,14 @@ public:
             LogInfo() << "Forcing zSndCacheSizeMaxBytes = 40000000"; // G2A Engine default: 20 MB (not MiB)
         }
 
-        auto getStartupResolution = [engine]() {
-            if ( engine ) {
-                return engine->GetResolution();
-            }
-            if ( Engine::GAPI ) {
-                const INT2 configured = Engine::GAPI->GetRendererState().RendererSettings.LoadedResolution;
-                if ( configured.x > 0 && configured.y > 0 ) {
-                    return configured;
-                }
-            }
-
-            DEVMODEA displayMode = {};
-            displayMode.dmSize = sizeof( displayMode );
-            if ( EnumDisplaySettingsA( nullptr, ENUM_CURRENT_SETTINGS, &displayMode ) ) {
-                return INT2( static_cast<int>(displayMode.dmPelsWidth), static_cast<int>(displayMode.dmPelsHeight) );
-            }
-            return INT2( 1920, 1080 );
-        };
-
         if ( _stricmp( var, "zVidResFullscreenX" ) == 0 ) {
-            return getStartupResolution().x;
+            if ( engine ) {
+                return engine->GetResolution().x;
+            }
         } else if ( _stricmp( var, "zVidResFullscreenY" ) == 0 ) {
-            return getStartupResolution().y;
+            if ( engine ) {
+                return engine->GetResolution().y;
+            }
         } else if ( _stricmp( var, "zVidResFullscreenBPP" ) == 0 ) {
             return 32;
         } else if ( _stricmp( var, "zTexMaxSize" ) == 0 ) {
@@ -188,7 +173,7 @@ public:
         int i = Do_hooked_zOptionReadInt( thisptr, section, var, def );
 
         // Save the variable
-        Engine::GAPI->SetIntParamFromConfig( var, i );
+        Engine::GAPI->SetIntParamFromConfig( "var", i );
 
         return i;
     }

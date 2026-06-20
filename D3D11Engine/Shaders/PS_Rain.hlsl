@@ -212,8 +212,8 @@ void rainResponse(PS_INPUT input, float3 lightVector, float lightIntensity, floa
         // Sample opacity from the textures
         float rainBlurBias = 0.0f;
 #ifndef SNOW_FEATURE
-        rainBlurBias = (1.0f - smoothstep(250.0f, 1200.0f, length(eyeVector)))
-            * 1.5f * saturate(AR_Pad1.x);
+        rainBlurBias = (1.0f - smoothstep(150.0f, 1600.0f, length(eyeVector)))
+            * 3.0f * saturate(AR_Pad1.x);
 #endif
 
         // Sample opacity from the textures
@@ -271,7 +271,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	// instead of looking like clipped rectangular streaks.
 	float endFade = smoothstep(0.0f, 0.22f, Input.vTexcoord.y)
 		* smoothstep(0.0f, 0.22f, 1.0f - Input.vTexcoord.y);
-	directionalLight.w *= endFade;
+	directionalLight.w *= endFade * 0.82f;
 #endif
 	return directionalLight;
 }

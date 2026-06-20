@@ -301,7 +301,7 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_EnableSSS = Engine::GAPI->GetRendererState().RendererSettings.EnableSSS ? 1.0f : 0.0f;
     AtmosphereCB.AC_SSRStrength = Engine::GAPI->GetRendererState().RendererSettings.SSRStrength;
     AtmosphereCB.AC_SSSIntensity = Engine::GAPI->GetRendererState().RendererSettings.SSSIntensity;
-    AtmosphereCB.AC_EnableDepthAtmosphere = Engine::GAPI->GetRendererState().RendererSettings.EnableDistanceBlur ? 1.0f : 0.0f;
+    AtmosphereCB.AC_AtmospherePad1 = 0.0f;
     AtmosphereCB.AC_EnableNightAtmosphere = Engine::GAPI->GetRendererState().RendererSettings.EnableNightAtmosphere ? 1.0f : 0.0f;
     AtmosphereCB.AC_NearNightBrightness = Engine::GAPI->GetRendererState().RendererSettings.NearNightBrightness;
     AtmosphereCB.AC_NightFogBrightness = Engine::GAPI->GetRendererState().RendererSettings.NightFogBrightness;

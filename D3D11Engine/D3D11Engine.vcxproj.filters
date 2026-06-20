@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Engine">
@@ -381,6 +381,9 @@
     </ClInclude>
     <ClInclude Include="BasePipelineStates.h" />
     <ClInclude Include="D3D11PFX_GodRays.h">
+      <Filter>Engine\D3D11\PFX\Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11PFX_DepthOfField.h">
       <Filter>Engine\D3D11\PFX\Effects</Filter>
     </ClInclude>
     <ClInclude Include="D3D11OcclusionQuerry.h">
@@ -953,6 +956,9 @@
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="D3D11PFX_GodRays.cpp">
+      <Filter>Engine\D3D11\PFX\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11PFX_DepthOfField.cpp">
       <Filter>Engine\D3D11\PFX\Effects</Filter>
     </ClCompile>
     <ClCompile Include="D3D11OcclusionQuerry.cpp">

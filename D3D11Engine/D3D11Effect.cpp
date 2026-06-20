@@ -51,19 +51,14 @@ void D3D11Effect::FillRandomRaindropData( std::vector<RainParticleDynamic>& dyna
     float height = Engine::GAPI->GetRendererState().RendererSettings.RainHeightRange;
 
     for ( size_t i = 0; i < dynamicData.size(); i++ ) {
-        //use rejection sampling to generate random points inside a circle of radius 1 centered at 0, 0
-        float SeedX;
-        float SeedZ;
-        bool pointIsInside = false;
-        while ( !pointIsInside ) {
-            SeedX = Toolbox::frand() - 0.5f;
-            SeedZ = Toolbox::frand() - 0.5f;
-            if ( sqrt( SeedX * SeedX + SeedZ * SeedZ ) <= 0.5f )
-                pointIsInside = true;
-        }
-        //save these random locations for reinitializing rain particles that have fallen out of bounds
-        SeedX *= radius;
-        SeedZ *= radius;
+        // Vogel-disc distribution avoids conspicuous pairs while retaining a
+        // subtle angular jitter so the rain does not form a visible pattern.
+        const float normalizedRadius = sqrt( (static_cast<float>(i) + 0.5f)
+            / static_cast<float>(dynamicData.size()) );
+        const float angle = static_cast<float>(i) * 2.39996323f
+            + (Toolbox::frand() - 0.5f) * 0.12f;
+        const float SeedX = cos( angle ) * normalizedRadius * radius * 0.5f;
+        const float SeedZ = sin( angle ) * normalizedRadius * radius * 0.5f;
         float SeedY = Toolbox::frand() * height;
 
         //add some random speed to the particles, to prevent all the particles from following exactly the same trajectory

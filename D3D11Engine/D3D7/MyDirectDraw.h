@@ -14,26 +14,8 @@ public:
 
 		ZeroMemory( &DisplayMode, sizeof( DDSURFACEDESC2 ) );
 
-		// Gothic queries this before selecting a mode. Report the renderer's real
-		// backbuffer size so its internal viewport cannot start at 800x600.
-		INT2 initialResolution = {};
-		if ( Engine::GraphicsEngine ) {
-			initialResolution = Engine::GraphicsEngine->GetBackbufferResolution();
-		}
-		if ( initialResolution.x <= 0 || initialResolution.y <= 0 ) {
-			MONITORINFO monitorInfo = {};
-			monitorInfo.cbSize = sizeof( monitorInfo );
-			HMONITOR monitor = MonitorFromWindow( GetForegroundWindow(), MONITOR_DEFAULTTOPRIMARY );
-			if ( monitor && GetMonitorInfo( monitor, &monitorInfo ) ) {
-				initialResolution = INT2(
-					monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
-					monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top );
-			}
-		}
-		if ( initialResolution.x <= 0 || initialResolution.y <= 0 ) {
-			initialResolution = INT2( 1920, 1080 );
-		}
-		SetDisplayMode( initialResolution.x, initialResolution.y, 32, 60, 0 );
+		// Gothic calls GetDisplayMode without Setting it first, so do it here
+		SetDisplayMode( 800, 600, 32, 60, 0 );
 	}
 
 	/*** IUnknown methods ***/
@@ -101,14 +83,6 @@ public:
 
 	HRESULT __declspec(nothrow) STDMETHODCALLTYPE SetDisplayMode( DWORD dwWidth, DWORD dwHeight, DWORD dwBPP, DWORD dwRefreshRate, DWORD dwFlags ) override {
 		DebugWrite( "MyDirectDraw::SetDisplayMode\n" );
-
-		if ( Engine::GraphicsEngine ) {
-			const INT2 rendererResolution = Engine::GraphicsEngine->GetBackbufferResolution();
-			if ( rendererResolution.x > 0 && rendererResolution.y > 0 ) {
-				dwWidth = rendererResolution.x;
-				dwHeight = rendererResolution.y;
-			}
-		}
 
 		DisplayMode.dwWidth = dwWidth;
 		DisplayMode.dwHeight = dwHeight;

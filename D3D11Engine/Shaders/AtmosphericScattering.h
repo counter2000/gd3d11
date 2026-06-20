@@ -38,7 +38,7 @@ cbuffer Atmosphere : register( b1 )
 	float AC_SSRStrength;
 	float AC_SSSIntensity;
 
-	float AC_EnableDepthAtmosphere;
+	float AC_AtmospherePad1;
 	float AC_EnableNightAtmosphere;
 	float AC_NearNightBrightness;
 	float AC_NightFogBrightness;

@@ -692,7 +692,7 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::SetItemTooltip( "Enables configurable near lighting, distance darkening, and night fog." );
             ImGui::Checkbox( "Backlit Vegetation", &settings.EnableSSS );
             ImGui::SetItemTooltip( "Adds soft light transmission to grass, leaves, and alpha-tested vegetation." );
-            ImGui::Checkbox( "Depth of Field", &settings.EnableDistanceBlur );
+            ImGui::Checkbox( "Depth of Field", &settings.EnableDoF );
             ImGui::SetItemTooltip( "Keeps the subject sharp while softly blurring distant scenery and dialog backgrounds." );
             static std::vector<std::tuple<const char*, GothicRendererSettings::E_AntiAliasingMode, const char*>> antiAliasing = {
                 {"Disabled", GothicRendererSettings::E_AntiAliasingMode::AA_NONE, nullptr },
@@ -1686,11 +1686,12 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
 
         ImGui::SeparatorText( "Depth of Field" );
         {
-            ImGui::PushID( "DepthAtmosphereSettings" );
-            ImGui::Checkbox( "Enable", &settings.EnableDistanceBlur );
-            ImGui::BeginDisabled( !settings.EnableDistanceBlur );
+            ImGui::PushID( "DepthOfFieldSettings" );
+            ImGui::Checkbox( "Enable", &settings.EnableDoF );
+            ImGui::BeginDisabled( !settings.EnableDoF );
             {
-                ImGui::SliderFloat( "Blur Strength", &settings.DistanceBlurStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Blur Distance", &settings.DoFFocusDistance, 500.0f, 50000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Blur Strength", &settings.DoFBokehRadius, 1.0f, 32.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp );
                 ImGui::EndDisabled();
             }
             ImGui::PopID();

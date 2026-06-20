@@ -5185,8 +5185,12 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "General", "SSRStrength", std::to_string( s.SSRStrength ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableSSS", std::to_string( s.EnableSSS ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "SSSIntensity", std::to_string( s.SSSIntensity ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "General", "EnableDepthAtmosphere", std::to_string( s.EnableDistanceBlur ? TRUE : FALSE ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "General", "DepthAtmosphereBlurStrength", std::to_string( s.DistanceBlurStrength ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "EnableDoF", std::to_string( s.EnableDoF ? TRUE : FALSE ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "DoFGaussBlur", std::to_string( s.DoFGaussBlur ? TRUE : FALSE ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "DoFFocusDistance", float_to_string( s.DoFFocusDistance, 1 ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "DoFFocusRange", float_to_string( s.DoFFocusRange, 1 ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "DoFBokehRadius", float_to_string( s.DoFBokehRadius, 1 ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "DoFMaxBlur", float_to_string( s.DoFMaxBlur, 1 ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableNightAtmosphere", std::to_string( s.EnableNightAtmosphere ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "NearNightBrightness", std::to_string( s.NearNightBrightness ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "NightDarkeningStart", std::to_string( s.NightDarkeningStart ).c_str(), ini.c_str() );
@@ -5316,8 +5320,12 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.SSRStrength = std::clamp( GetPrivateProfileFloatA( "General", "SSRStrength", ds.SSRStrength, ini.c_str() ), 0.0f, 2.0f );
         s.EnableSSS = GetPrivateProfileBoolA( "General", "EnableSSS", ds.EnableSSS, ini );
         s.SSSIntensity = std::clamp( GetPrivateProfileFloatA( "General", "SSSIntensity", ds.SSSIntensity, ini.c_str() ), 0.0f, 2.0f );
-        s.EnableDistanceBlur = GetPrivateProfileBoolA( "General", "EnableDepthAtmosphere", ds.EnableDistanceBlur, ini );
-        s.DistanceBlurStrength = std::clamp( GetPrivateProfileFloatA( "General", "DepthAtmosphereBlurStrength", ds.DistanceBlurStrength, ini.c_str() ), 0.0f, 2.0f );
+        s.EnableDoF = GetPrivateProfileBoolA( "General", "EnableDoF", ds.EnableDoF, ini );
+        s.DoFGaussBlur = GetPrivateProfileBoolA( "General", "DoFGaussBlur", ds.DoFGaussBlur, ini );
+        s.DoFFocusDistance = std::clamp( GetPrivateProfileFloatA( "General", "DoFFocusDistance", ds.DoFFocusDistance, ini.c_str() ), 500.0f, 50000.0f );
+        s.DoFFocusRange = ds.DoFFocusRange;
+        s.DoFBokehRadius = std::clamp( GetPrivateProfileFloatA( "General", "DoFBokehRadius", ds.DoFBokehRadius, ini.c_str() ), 1.0f, 32.0f );
+        s.DoFMaxBlur = ds.DoFMaxBlur;
         s.EnableNightAtmosphere = GetPrivateProfileBoolA( "General", "EnableNightAtmosphere", ds.EnableNightAtmosphere, ini );
         s.NearNightBrightness = std::clamp( GetPrivateProfileFloatA( "General", "NearNightBrightness", ds.NearNightBrightness, ini.c_str() ), 0.0f, 2.0f );
         s.NightDarkeningStart = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningStart", ds.NightDarkeningStart, ini.c_str() ), 0.0f, 30000.0f );
@@ -5360,29 +5368,11 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.WorldAOStrength = GetPrivateProfileFloatA( "Shadows", "WorldAOStrength", ds.WorldAOStrength, ini );
 
         INT2 res = {};
+        RECT desktopRect;
+        GetClientRect( GetDesktopWindow(), &desktopRect );
         s.textureMaxSize = std::max<int>( 32, GetPrivateProfileIntA( "Display", "TextureQuality", 16384, ini.c_str() ) );
-
-        const int configuredWidth = GetPrivateProfileIntA( "Display", "Width", -1, ini.c_str() );
-        const int configuredHeight = GetPrivateProfileIntA( "Display", "Height", -1, ini.c_str() );
-        if ( configuredWidth > 0 && configuredHeight > 0 ) {
-            res = INT2( configuredWidth, configuredHeight );
-        } else {
-            MONITORINFO monitorInfo = {};
-            monitorInfo.cbSize = sizeof( monitorInfo );
-            HMONITOR monitor = MonitorFromWindow( GetForegroundWindow(), MONITOR_DEFAULTTOPRIMARY );
-            if ( monitor && GetMonitorInfo( monitor, &monitorInfo ) ) {
-                res = INT2(
-                    monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
-                    monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top );
-            } else {
-                res = INT2( GetSystemMetrics( SM_CXSCREEN ), GetSystemMetrics( SM_CYSCREEN ) );
-            }
-
-            if ( res.x <= 0 || res.y <= 0 ) {
-                res = INT2( 1920, 1080 );
-            }
-            LogInfo() << "No valid UserSettings resolution found; using native monitor resolution " << res.toString();
-        }
+        res.x = GetPrivateProfileIntA( "Display", "Width", desktopRect.right, ini.c_str() );
+        res.y = GetPrivateProfileIntA( "Display", "Height", desktopRect.bottom, ini.c_str() );
         s.ResolutionScalePercent = std::clamp<int>( GetPrivateProfileIntA( "Display", "ResolutionScale", ds.ResolutionScalePercent, ini.c_str() ), 25, 200 );
         s.Upscaler = (GothicRendererSettings::E_Upscaler)std::clamp<int>( GetPrivateProfileIntA( "Display", "Upscaler", ds.Upscaler, ini.c_str() ), 0, GothicRendererSettings::E_Upscaler::_UPSCALER_NUM_MODES - 1 );
         s.EnableVSync = GetPrivateProfileBoolA( "Display", "VSync", ds.EnableVSync, ini );
