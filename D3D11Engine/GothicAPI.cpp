@@ -5314,7 +5314,8 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.SunLightStrength = GetPrivateProfileFloatA( "General", "SunLightStrength", ds.SunLightStrength, ini );
         s.DrawG1ForestPortals = GetPrivateProfileBoolA( "General", "DrawG1ForestPortals", ds.DrawG1ForestPortals, ini );
         s.DrawRainThroughTransformFeedback = GetPrivateProfileBoolA( "General", "DrawRainThroughTransformFeedback", ds.DrawRainThroughTransformFeedback, ini );
-        s.WaterReflectionsMode = std::clamp( GetPrivateProfileIntA( "General", "WaterReflections", GetPrivateProfileBoolA( "General", "EnableSSR", ds.EnableSSR, ini ) ? ds.WaterReflectionsMode : 0, ini.c_str() ), 0, 2 );
+        const int defaultWaterReflectionsMode = GetPrivateProfileBoolA( "General", "EnableSSR", ds.EnableSSR, ini ) ? ds.WaterReflectionsMode : 0;
+        s.WaterReflectionsMode = std::clamp( static_cast<int>(GetPrivateProfileIntA( "General", "WaterReflections", defaultWaterReflectionsMode, ini.c_str() )), 0, 2 );
         s.EnableSSR = s.WaterReflectionsMode > 0;
         s.SSRStrength = std::clamp( GetPrivateProfileFloatA( "General", "SSRStrength", ds.SSRStrength, ini.c_str() ), 0.0f, 2.0f );
         s.EnableSSS = GetPrivateProfileBoolA( "General", "EnableSSS", ds.EnableSSS, ini );
