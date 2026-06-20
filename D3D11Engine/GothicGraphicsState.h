@@ -719,22 +719,16 @@ struct GothicRendererSettings {
         DoZPrepass = false;
         SortRenderQueue = false;
         DrawThreaded = false;
-        WaterReflectionsMode = 2;
         EnableSSR = true;
         SSRStrength = 1.0f;
         EnableSSS = true;
         SSSIntensity = 1.0f;
         EnableDoF = true;
         DoFGaussBlur = false;
-        DoFFocusDistance = 12000.0f;
+        DoFFocusDistance = 5000.0f;
         DoFFocusRange = 8000.0f;
         DoFBokehRadius = 8.0f;
         DoFMaxBlur = 12.0f;
-        NightNearBrightness = 1.0f;
-        NightDarkeningStart = 3000.0f;
-        NightDarkeningRange = 12000.0f;
-        NightMaxDarkness = 2.0f;
-        NightFogBrightness = 1.0f;
 
         WindQuality = WIND_QUALITY_ADVANCED;
         HeroAffectsObjects = true;
@@ -771,7 +765,7 @@ struct GothicRendererSettings {
         GodRayDensity = 0.70f;
         GodRayColorMod = float3( 1.0f, 0.8f, 0.6f );
 
-        AoMode = AOMode::AO_ASSAO;
+        AoMode = AOMode::AO_HBAO;
 
         RECT desktopRect;
         GetClientRect( GetDesktopWindow(), &desktopRect );
@@ -879,7 +873,7 @@ struct GothicRendererSettings {
     void SetupAddonWorldSpecificValues() {
         FogGlobalDensity = 0.00004f;
         FogHeightFalloff = 0.0005f;
-        FogColorMod = float3::FromColor( 180, 180, 255 );
+        FogColorMod = float3::FromColor( 128, 173, 239 );
         FogHeight = 0;
     }
 
@@ -928,7 +922,6 @@ struct GothicRendererSettings {
     bool DoZPrepass;
     bool EnableAutoupdates;
     bool EnableSSR;
-    int WaterReflectionsMode;
     float SSRStrength;
     bool EnableSSS;
     float SSSIntensity;
@@ -938,11 +931,6 @@ struct GothicRendererSettings {
     float DoFFocusRange;
     float DoFBokehRadius;
     float DoFMaxBlur;
-    float NightNearBrightness;
-    float NightDarkeningStart;
-    float NightDarkeningRange;
-    float NightMaxDarkness;
-    float NightFogBrightness;
     bool EnableOcclusionCulling;
     bool SortRenderQueue;
     bool DrawThreaded;

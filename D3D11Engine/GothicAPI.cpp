@@ -5180,8 +5180,8 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "General", "SunLightStrength", std::to_string( s.SunLightStrength ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DrawG1ForestPortals", std::to_string( s.DrawG1ForestPortals ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DrawRainThroughTransformFeedback", std::to_string( s.DrawRainThroughTransformFeedback ? TRUE : FALSE ).c_str(), ini.c_str() );
-    s.EnableSSR = s.WaterReflectionsMode > 0;
-    WritePrivateProfileStringA( "General", "WaterReflections", std::to_string( s.WaterReflectionsMode ).c_str(), ini.c_str() );
+    s.EnableWaterAnimation = s.EnableSSR;
+    WritePrivateProfileStringA( "General", "EnableSSR", std::to_string( s.EnableSSR ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "SSRStrength", std::to_string( s.SSRStrength ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableSSS", std::to_string( s.EnableSSS ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "SSSIntensity", std::to_string( s.SSSIntensity ).c_str(), ini.c_str() );
@@ -5191,11 +5191,6 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "General", "DoFFocusRange", float_to_string( s.DoFFocusRange, 1 ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DoFBokehRadius", float_to_string( s.DoFBokehRadius, 1 ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DoFMaxBlur", float_to_string( s.DoFMaxBlur, 1 ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "General", "NightNearBrightness", float_to_string( s.NightNearBrightness, 2 ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "General", "NightDarkeningStart", float_to_string( s.NightDarkeningStart, 0 ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "General", "NightDarkeningRange", float_to_string( s.NightDarkeningRange, 0 ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "General", "NightMaxDarkness", float_to_string( s.NightMaxDarkness, 2 ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "General", "NightFogBrightness", float_to_string( s.NightFogBrightness, 2 ).c_str(), ini.c_str() );
 
     /*
     * Draw-distance is saved on a per World basis using SaveRendererWorldSettings
@@ -5228,7 +5223,7 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "Display", "RendererMode", std::to_string( static_cast<int>(s.RendererMode) ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "WindQuality", std::to_string( s.WindQuality ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "WindStrength", std::to_string( s.GlobalWindStrength ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "Display", "WaterEffects", std::to_string( s.EnableWaterAnimation ? TRUE : FALSE ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "Display", "WaterWaveAnimation", std::to_string( s.EnableWaterAnimation ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "HeroAffectsObjects", std::to_string( s.HeroAffectsObjects ? TRUE : FALSE ).c_str(), ini.c_str() );
     
 
@@ -5314,23 +5309,16 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.SunLightStrength = GetPrivateProfileFloatA( "General", "SunLightStrength", ds.SunLightStrength, ini );
         s.DrawG1ForestPortals = GetPrivateProfileBoolA( "General", "DrawG1ForestPortals", ds.DrawG1ForestPortals, ini );
         s.DrawRainThroughTransformFeedback = GetPrivateProfileBoolA( "General", "DrawRainThroughTransformFeedback", ds.DrawRainThroughTransformFeedback, ini );
-        const int defaultWaterReflectionsMode = GetPrivateProfileBoolA( "General", "EnableSSR", ds.EnableSSR, ini ) ? ds.WaterReflectionsMode : 0;
-        s.WaterReflectionsMode = std::clamp( static_cast<int>(GetPrivateProfileIntA( "General", "WaterReflections", defaultWaterReflectionsMode, ini.c_str() )), 0, 2 );
-        s.EnableSSR = s.WaterReflectionsMode > 0;
+        s.EnableSSR = GetPrivateProfileBoolA( "General", "EnableSSR", ds.EnableSSR, ini );
         s.SSRStrength = std::clamp( GetPrivateProfileFloatA( "General", "SSRStrength", ds.SSRStrength, ini.c_str() ), 0.0f, 2.0f );
         s.EnableSSS = GetPrivateProfileBoolA( "General", "EnableSSS", ds.EnableSSS, ini );
         s.SSSIntensity = std::clamp( GetPrivateProfileFloatA( "General", "SSSIntensity", ds.SSSIntensity, ini.c_str() ), 0.0f, 2.0f );
         s.EnableDoF = GetPrivateProfileBoolA( "General", "EnableDoF", ds.EnableDoF, ini );
         s.DoFGaussBlur = GetPrivateProfileBoolA( "General", "DoFGaussBlur", ds.DoFGaussBlur, ini );
-        s.DoFFocusDistance = std::clamp( GetPrivateProfileFloatA( "General", "DoFFocusDistance", ds.DoFFocusDistance, ini.c_str() ), 500.0f, 30000.0f );
+        s.DoFFocusDistance = std::clamp( GetPrivateProfileFloatA( "General", "DoFFocusDistance", ds.DoFFocusDistance, ini.c_str() ), 500.0f, 50000.0f );
         s.DoFFocusRange = ds.DoFFocusRange;
         s.DoFBokehRadius = std::clamp( GetPrivateProfileFloatA( "General", "DoFBokehRadius", ds.DoFBokehRadius, ini.c_str() ), 1.0f, 32.0f );
         s.DoFMaxBlur = ds.DoFMaxBlur;
-        s.NightNearBrightness = std::clamp( GetPrivateProfileFloatA( "General", "NightNearBrightness", ds.NightNearBrightness, ini.c_str() ), 0.0f, 2.0f );
-        s.NightDarkeningStart = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningStart", ds.NightDarkeningStart, ini.c_str() ), 0.0f, 30000.0f );
-        s.NightDarkeningRange = std::clamp( GetPrivateProfileFloatA( "General", "NightDarkeningRange", ds.NightDarkeningRange, ini.c_str() ), 1000.0f, 50000.0f );
-        s.NightMaxDarkness = std::clamp( GetPrivateProfileFloatA( "General", "NightMaxDarkness", ds.NightMaxDarkness, ini.c_str() ), 0.0f, 2.5f );
-        s.NightFogBrightness = std::clamp( GetPrivateProfileFloatA( "General", "NightFogBrightness", ds.NightFogBrightness, ini.c_str() ), 0.0f, 2.0f );
 
         /*
         * Draw-distance is Loaded on a per World basis using LoadRendererWorldSettings
@@ -5397,7 +5385,8 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
 
         s.WindQuality = GetPrivateProfileIntA( "Display", "WindQuality", 0, ini.c_str() );
         s.GlobalWindStrength = GetPrivateProfileFloatA( "Display", "WindStrength", ds.GlobalWindStrength, ini );
-        s.EnableWaterAnimation = GetPrivateProfileBoolA( "Display", "WaterEffects", GetPrivateProfileBoolA( "Display", "WaterWaveAnimation", ds.EnableWaterAnimation, ini ), ini );
+        s.EnableWaterAnimation = GetPrivateProfileBoolA( "Display", "WaterWaveAnimation", ds.EnableWaterAnimation, ini );
+        s.EnableWaterAnimation = s.EnableSSR;
         s.HeroAffectsObjects = GetPrivateProfileBoolA( "Display", "HeroAffectsObjects", ds.HeroAffectsObjects, ini );
 
         if ( GetPrivateProfileBoolA( "SMAA", "Enabled", false, ini ) ) {
@@ -5419,7 +5408,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.HbaoSettings.SsaoStepCount = GetPrivateProfileIntA( "HBAO", "SsaoStepCount", defaultHBAOSettings.SsaoStepCount, ini.c_str() );
 
         // Migrate legacy HBAO Enabled setting to AoMode
-        int defaultAoMode = static_cast<int>(ds.AoMode);
+        int defaultAoMode = static_cast<int>(s.HbaoSettings.Enabled ? AOMode::AO_HBAO : AOMode::AO_NONE);
         s.AoMode = static_cast<AOMode>(GetPrivateProfileIntA( "AO", "Mode", defaultAoMode, ini.c_str() ));
 
         const SAOSettings& defaultSAOSettings = ds.SaoSettings;
@@ -6264,7 +6253,7 @@ static void CollectVisibleVobsHelper( BspInfo* base,
  *  Uses the p-vertex (positive-vertex) method: for each plane, the corner of the AABB most
  *  aligned with the plane normal is tested. If that corner is outside the plane, the whole
  *  AABB is outside. All 8 leaves are tested in parallel; surviving leaves are processed
- *  with CollectLeafVobs.  Requires a perspective (plane-cached) Frustum - checked by the caller.
+ *  with CollectLeafVobs.  Requires a perspective (plane-cached) Frustum — checked by the caller.
  */
 static void CollectVisibleVobsWithLeafCache(
     const RndCullContext& ctx,
@@ -6347,7 +6336,7 @@ static void CollectVisibleVobsWithLeafCache(
         vOutside = _mm256_or_ps( vOutside, _mm256_cmp_ps( vDistSq, vDistSqThresh, _CMP_GE_OQ ) );
 
         const int cullMask = _mm256_movemask_ps( vOutside );
-        if ( cullMask == 0xFF ) continue; // All 8 culled - skip scalar work
+        if ( cullMask == 0xFF ) continue; // All 8 culled — skip scalar work
 
         if ( cullMask == 0 ) {
             for ( uint32_t lane = 0; lane < 8; ++lane ) {

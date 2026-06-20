@@ -51,7 +51,7 @@ float ComputeCoCFromDepth( float d, float focusDepth )
     return saturate( ( LinearizeDepth( d ) - focusDepth ) / DoF_FocusRange );
 }
 
-static const int SKY_EDGE_SAMPLE_COUNT = 48;
+static const int SKY_EDGE_SAMPLE_COUNT = 24;
 
 float2 GetSkyEdgeSpiralSample(int index)
 {
@@ -65,7 +65,7 @@ float4 GetSkyEdgeBlurSample(float2 texcoord, float2 dtexel, float focusDepth)
     float3 colorAccum = 0.0f;
     float coverageAccum = 0.0f;
     float kernelAccum = 0.0f;
-    float edgeRadius = clamp(max(DoF_BokehRadius, DoF_MaxBlur) * 0.52f, 4.0f, 24.0f);
+    float edgeRadius = clamp(max(DoF_BokehRadius, DoF_MaxBlur) * 0.22f, 2.0f, 10.0f);
 
     [unroll]
     for (int i = 0; i < SKY_EDGE_SAMPLE_COUNT; ++i)
@@ -75,8 +75,8 @@ float4 GetSkyEdgeBlurSample(float2 texcoord, float2 dtexel, float focusDepth)
         float depth = TX_Depth.SampleLevel(SS_Linear, sampleUV, 0).r;
         float coc = ComputeCoCFromDepth(depth, focusDepth);
         float4 blur = TX_Blur.SampleLevel(SS_Linear, sampleUV, 0);
-        float radialWeight = exp(-dot(offset, offset) * 1.55f);
-        float geometryWeight = IsSkyDepth(depth) ? 0.0f : smoothstep(0.02f, 0.38f, coc);
+        float radialWeight = exp(-dot(offset, offset) * 2.4f);
+        float geometryWeight = IsSkyDepth(depth) ? 0.0f : smoothstep(0.12f, 0.65f, coc);
         float sampleWeight = radialWeight * geometryWeight;
 
         colorAccum += blur.rgb * sampleWeight;
@@ -84,8 +84,8 @@ float4 GetSkyEdgeBlurSample(float2 texcoord, float2 dtexel, float focusDepth)
         kernelAccum += radialWeight;
     }
 
-    float coverage = saturate(coverageAccum / max(kernelAccum, 0.001f) * 2.15f);
-    float blend = smoothstep(0.05f, 0.92f, coverage) * 0.72f;
+    float coverage = saturate(coverageAccum / max(kernelAccum, 0.001f) * 2.2f);
+    float blend = smoothstep(0.02f, 0.85f, coverage);
     return float4(colorAccum / max(coverageAccum, 0.001f), blend);
 }
 
@@ -107,6 +107,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
     if ( IsSkyDepth( depthC ) )
     {
         float4 skyEdgeBlur = GetSkyEdgeBlurSample( Input.vTexcoord, dtexel, focusDepth );
+        skyEdgeBlur.rgb = min( skyEdgeBlur.rgb, sharpColor + 0.035f );
         return float4( lerp( sharpColor, skyEdgeBlur.rgb, skyEdgeBlur.a ), 1.0 );
     }
 
@@ -119,12 +120,12 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
     float cocR = IsSkyDepth( depthR ) ? cocC : ComputeCoCFromDepth( depthR, focusDepth );
     float cocU = IsSkyDepth( depthU ) ? cocC : ComputeCoCFromDepth( depthU, focusDepth );
     float cocD = IsSkyDepth( depthD ) ? cocC : ComputeCoCFromDepth( depthD, focusDepth );
-    float skyNeighbour = (IsSkyDepth(depthL) || IsSkyDepth(depthR) || IsSkyDepth(depthU) || IsSkyDepth(depthD)) ? 1.0f : 0.0f;
+
     float minCoC = min( min( cocC, cocL ), min( cocR, min( cocU, cocD ) ) );
 
     // Bilinear-upsampled half-res bokeh blur
 
-    float blendFactor = max(smoothstep( 0.0, 1.0, minCoC ), skyNeighbour * smoothstep(0.02f, 0.42f, cocC) * 0.55f);
+    float blendFactor = smoothstep( 0.0, 1.0, minCoC );
     float3 finalColor = lerp( sharpColor, blurSample.rgb, blendFactor );
 
     return float4( finalColor, 1.0 );

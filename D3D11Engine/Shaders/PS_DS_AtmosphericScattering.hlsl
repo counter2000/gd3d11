@@ -180,10 +180,10 @@ void ApplySceneWettness(float3 wsPosition, float3 vsPosition, float3 vsDir, inou
     float surfaceExposure = saturate(dot(wsNormal, float3(0, 1, 0)));
     surfaceExposure *= surfaceExposure;
     pixelWettnes *= surfaceExposure;
-    pixelWettnes *= 0.78f;
+    pixelWettnes *= 0.72f;
     localWettness = pixelWettnes;
 	
-    vsNormal = lerp(vsNormal, nrm, AC_RainFXWeight * pixelWettnes * 0.42f); // Only apply deformation if it's actually raining
+    vsNormal = lerp(vsNormal, nrm, AC_RainFXWeight * pixelWettnes * 0.38f); // Only apply deformation if it's actually raining
 	
 	// Get fresnel-effect
     // float fresnel = pow(1.0f - max(0.0f, dot(vsNormal, -vsDir)), 160.0f);
@@ -227,8 +227,8 @@ void ApplySceneWettness(float3 wsPosition, float3 vsPosition, float3 vsDir, inou
 	
 	
 		// Scale the total amount of spec-lighting by the wetness factor and whether the scene is currently drying out or it's still raining
-    specAdd = reflection * pixelWettnes * lerp(0.055f, 0.075f, AC_RainFXWeight);
-    diffuse = lerp(diffuse, wetPixel, pixelWettnes * 0.84f);
+    specAdd = reflection * pixelWettnes * lerp(0.05f, 0.068f, AC_RainFXWeight);
+    diffuse = lerp(diffuse, wetPixel, pixelWettnes * 0.80f);
 }
 
 //--------------------------------------------------------------------------------------
@@ -246,7 +246,7 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 	// Sample depth first to detect sky pixels (reversed-Z: sky has depth == 0.0)
     float expDepth = TX_Depth.Sample(SS_Linear, uv).r;
     if (!(expDepth > 0.0f))
-        // Sky pixel - no geometry was written, just return the diffuse (sky) color
+        // Sky pixel — no geometry was written, just return the diffuse (sky) color
         return float4(diffuse.rgb, 1);
 	
 	// Get the second GBuffer

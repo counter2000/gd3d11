@@ -18,12 +18,6 @@ cbuffer WetGroundSSRConstantBuffer : register(b0)
     float2 WG_InvResolution;
     float WG_Strength;
     float WG_Time;
-
-    float4 WG_WaterAreas[8];
-    float4 WG_WaterHeightsA;
-    float4 WG_WaterHeightsB;
-    float WG_WaterAreaCount;
-    float3 WG_WaterPad;
 };
 
 SamplerState SS_Linear : register(s0);
@@ -56,23 +50,6 @@ float GetRainExposure(float3 wsPosition)
     return TX_RainShadow.SampleCmpLevelZero(SS_Comp, shadowUV, shadowPosition.z - 0.0001f);
 }
 
-float GetWaterExclusion(float3 wsPosition)
-{
-    float exclusion = 0.0f;
-    int waterCount = min((int)WG_WaterAreaCount, 8);
-    [loop]
-    for (int i = 0; i < waterCount; ++i)
-    {
-        float4 area = WG_WaterAreas[i];
-        float waterHeight = (i < 4) ? WG_WaterHeightsA[i] : WG_WaterHeightsB[i - 4];
-        float2 insideMin = step(area.xy, wsPosition.xz);
-        float2 insideMax = step(wsPosition.xz, area.zw);
-        float inside = insideMin.x * insideMin.y * insideMax.x * insideMax.y;
-        float belowSurface = step(wsPosition.y, waterHeight + 80.0f);
-        exclusion = max(exclusion, inside * belowSurface);
-    }
-    return exclusion;
-}
 float3 SampleRoughReflection(float2 uv, float2 distortion)
 {
     float2 spread = WG_InvResolution * 2.0f + abs(distortion) * 0.0015f;
@@ -102,8 +79,7 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
         return float4(sceneColor, 1.0f);
 
     float rainExposure = GetRainExposure(wsPosition);
-    float waterExclusion = GetWaterExclusion(wsPosition);
-    float wetMask = upwardMask * rainExposure * saturate(WG_Wetness) * (1.0f - waterExclusion);
+    float wetMask = upwardMask * rainExposure * saturate(WG_Wetness);
     if (wetMask <= 0.01f)
         return float4(sceneColor, 1.0f);
 
@@ -155,13 +131,11 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
     if (hitWeight <= 0.0f)
         return float4(sceneColor, 1.0f);
 
-    float rippleNoise = saturate(abs(distortion.x - distortion.y) * 0.65f);
-    hitUV += distortion * WG_InvResolution * lerp(2.0f, 9.0f, rippleNoise);
     float3 reflectedColor = SampleRoughReflection(hitUV, distortion);
     float reflectionLuma = dot(reflectedColor, float3(0.2126f, 0.7152f, 0.0722f));
     reflectedColor *= rcp(1.0f + max(0.0f, reflectionLuma - 1.0f) * 0.7f);
 
     float fresnel = pow(1.0f - saturate(dot(-viewRay, wetNormal)), 3.0f);
-    float reflectionBlend = wetMask * hitWeight * lerp(0.10f, 0.48f, fresnel) * WG_Strength * lerp(0.92f, 0.72f, rippleNoise);
+    float reflectionBlend = wetMask * hitWeight * lerp(0.10f, 0.48f, fresnel) * WG_Strength;
     return float4(lerp(sceneColor, reflectedColor, saturate(reflectionBlend)), 1.0f);
 }

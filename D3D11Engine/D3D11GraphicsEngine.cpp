@@ -33,9 +33,6 @@
 #include <SpriteBatch.h>
 #include <locale>
 #include <codecvt>
-#include <array>
-#include <cfloat>
-#include <utility>
 #include <wrl\client.h>
 #include "D3D11_Helpers.h"
 
@@ -4002,7 +3999,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         } );
     }
     else if ( compositionSAO ) {
-        // SAO compute-only pass - skips the final modulate blit (composition handles it)
+        // SAO compute-only pass — skips the final modulate blit (composition handles it)
         graph.AddPass( RG_PASS_NAME("SAO Compute"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( normalsResource );
 
@@ -4035,8 +4032,8 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         } );
     }
 
-    if ( rendererState.RendererSettings.WaterReflectionsMode >= 2 && rendererState.RendererSettings.EnableRain
-        && Engine::GAPI->GetSceneWetness() > 1e-6f && isOutdoor ) {
+    if ( rendererState.RendererSettings.EnableSSR && rendererState.RendererSettings.EnableRain
+        && Engine::GAPI->GetSceneWetness() > 1e-6f && isOutdoor && FrameWaterSurfaces.empty() ) {
         graph.AddPass( RG_PASS_NAME("Wet Ground SSR"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( normalsResource );
             builder.Read( backBufferHandle );
@@ -4049,57 +4046,11 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
                 auto tempBuffer = PfxRenderer->GetTempBuffer();
 
                 GetContext()->CopyResource( tempBuffer->GetTexture().Get(), backBuffer->GetTexture().Get() );
-                std::array<XMFLOAT4, 8> waterAreas = {};
-                std::array<float, 8> waterHeights = {};
-                int waterAreaCount = 0;
-                for ( const auto& [texture, meshes] : FrameWaterSurfaces ) {
-                    if ( waterAreaCount >= 8 ) {
-                        break;
-                    }
-
-                    XMFLOAT3 minPos( FLT_MAX, FLT_MAX, FLT_MAX );
-                    XMFLOAT3 maxPos( -FLT_MAX, -FLT_MAX, -FLT_MAX );
-                    float heightSum = 0.0f;
-                    int heightCount = 0;
-
-                    for ( const auto& mesh : meshes ) {
-                        if ( !mesh || mesh->Vertices.empty() ) {
-                            continue;
-                        }
-
-                        for ( const auto& vertex : mesh->Vertices ) {
-                            const auto& p = vertex.Position;
-                            minPos.x = std::min( minPos.x, p.x );
-                            minPos.y = std::min( minPos.y, p.y );
-                            minPos.z = std::min( minPos.z, p.z );
-                            maxPos.x = std::max( maxPos.x, p.x );
-                            maxPos.y = std::max( maxPos.y, p.y );
-                            maxPos.z = std::max( maxPos.z, p.z );
-                            heightSum += p.y;
-                            heightCount++;
-                        }
-                    }
-
-                    if ( heightCount == 0 ) {
-                        continue;
-                    }
-
-                    constexpr float waterPadding = 240.0f;
-                    waterAreas[waterAreaCount] = XMFLOAT4(
-                        minPos.x - waterPadding, minPos.z - waterPadding,
-                        maxPos.x + waterPadding, maxPos.z + waterPadding );
-                    waterHeights[waterAreaCount] = heightSum / heightCount;
-                    waterAreaCount++;
-                }
-
                 PfxRenderer->RenderWetGroundSSR(
                     backBuffer->GetRenderTargetView().Get(),
                     tempBuffer->GetShaderResView().Get(),
                     GetDepthBufferCopy()->GetShaderResView().Get(),
-                    normals->GetShaderResView().Get(),
-                    waterAreas,
-                    waterHeights,
-                    waterAreaCount );
+                    normals->GetShaderResView().Get() );
             };
         });
     }
@@ -4189,7 +4140,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
     if (rendererState.RendererSettings.DrawFog &&
                 Engine::GAPI->GetLoadedWorldInfo()->BspTree->GetBspTreeMode() ==
                 zBSP_MODE_OUTDOOR && !compositionActive) {
-        // Standalone heightfog pass - only used when composition is not active (shouldn't happen
+        // Standalone heightfog pass — only used when composition is not active (shouldn't happen
         // when DrawFog is on, but kept as fallback for FL10 or edge cases)
         graph.AddPass( RG_PASS_NAME("Draw Heightfog"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( backBufferHandle );
@@ -4267,7 +4218,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         Engine::GAPI->GetLoadedWorldInfo()->BspTree->GetBspTreeMode() ==
         zBSP_MODE_OUTDOOR) {
         if ( compositionActive ) {
-            // GodRays compute-only pass - writes to pool texture, skips the final additive blit
+            // GodRays compute-only pass — writes to pool texture, skips the final additive blit
             graph.AddPass( RG_PASS_NAME("GodRays Compute"), [&]( RGBuilder& builder, RenderPass& pass ) {
                 builder.Read( backBufferHandle );
 
@@ -4307,7 +4258,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         }
     }
 
-    // PostFX Composition pass - merges SAO, HeightFog, and GodRays in a single full-screen blit
+    // PostFX Composition pass — merges SAO, HeightFog, and GodRays in a single full-screen blit
     if ( compositionActive ) {
         graph.AddPass( RG_PASS_NAME("PostFX Composition"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( backBufferHandle );
@@ -4319,7 +4270,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
 
                 auto backBuffer = graph.GetPhysicalTexture(backBufferHandle);
 
-                // Copy backbuffer to a temp texture - we need to read it as SRV while writing to RTV
+                // Copy backbuffer to a temp texture — we need to read it as SRV while writing to RTV
                 auto tempBuffer = PfxRenderer->GetTempBuffer();
                 GetContext()->CopyResource( tempBuffer->GetTexture().Get(), backBuffer->GetTexture().Get() );
 
@@ -4936,7 +4887,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
         Engine::GAPI->CollectVisibleSections( m_FrameGeometryCache.visibleSections, nullptr, true );
         m_FrameGeometryCache.worldMeshBuilt = true;
     }
-    renderList = m_FrameGeometryCache.visibleSections; // shallow copy of pointers - O(N_sections), not O(BSP)
+    renderList = m_FrameGeometryCache.visibleSections; // shallow copy of pointers — O(N_sections), not O(BSP)
 
     MeshInfo* meshInfo = Engine::GAPI->GetWrappedWorldMesh();
     DrawVertexBufferIndexedUINT( meshInfo->MeshVertexBuffer, meshInfo->MeshIndexBuffer, 0, 0 );
@@ -5383,44 +5334,6 @@ void D3D11GraphicsEngine::DrawWaterSurfaces() {
         ricb.RI_CameraPosition = float3( Engine::GAPI->GetCameraPosition() );
         UpdateRefractionViewProjection( ricb );
 
-        if ( Engine::GAPI->GetRendererState().RendererSettings.EnableWaterAnimation ) {
-            const XMVECTOR cameraPos = Engine::GAPI->GetCameraPositionXM();
-            std::array<std::pair<float, XMFLOAT4>, 8> rippleCandidates = {};
-            int rippleCandidateCount = 0;
-            for ( const auto& vobInfo : Engine::GAPI->GetAnimatedSkeletalMeshVobs() ) {
-                if ( !vobInfo || !vobInfo->Vob ) {
-                    continue;
-                }
-                XMFLOAT3 pos = vobInfo->Vob->GetPositionWorld();
-                XMVECTOR posVec = XMLoadFloat3( &pos );
-                float distSq = 0.0f;
-                XMStoreFloat( &distSq, XMVector3LengthSq( posVec - cameraPos ) );
-                if ( distSq > 5000.0f * 5000.0f ) {
-                    continue;
-                }
-
-                XMFLOAT4 source( pos.x, pos.y, pos.z, 1.0f );
-                if ( rippleCandidateCount < static_cast<int>( rippleCandidates.size() ) ) {
-                    rippleCandidates[rippleCandidateCount++] = { distSq, source };
-                } else {
-                    int farthest = 0;
-                    for ( int i = 1; i < static_cast<int>( rippleCandidates.size() ); ++i ) {
-                        if ( rippleCandidates[i].first > rippleCandidates[farthest].first ) {
-                            farthest = i;
-                        }
-                    }
-                    if ( distSq < rippleCandidates[farthest].first ) {
-                        rippleCandidates[farthest] = { distSq, source };
-                    }
-                }
-            }
-
-            ricb.RI_RippleCount = static_cast<float>( rippleCandidateCount );
-            ricb.RI_RippleStrength = 1.0f;
-            for ( int i = 0; i < rippleCandidateCount; ++i ) {
-                ricb.RI_RipplePositions[i] = rippleCandidates[i].second;
-            }
-        }
         ActivePS->GetBuffer( "RefractionInfo" ).Update( &ricb ).Bind();
 
         // Bind reflection cube
@@ -7063,7 +6976,7 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
                     auto _scopeCollectVisibleVobs = RecordGraphicsEvent( GE_NAME( "DrawVOBsInstanced::CollectVisibleVobs" ) );
                     Engine::GAPI->CollectVisibleVobs( vobs, m_FrameLights, mobs, EGothicCullFlags::CullAll, (EBspTreeCollectFlags)collect );
                 }
-                // Snapshot mobs into cache - the static 'mobs' vector is cleared at
+                // Snapshot mobs into cache — the static 'mobs' vector is cleared at
                 // end of this function, so the lit pass would find it empty otherwise.
                 m_FrameGeometryCache.cachedMobs = mobs;
             }

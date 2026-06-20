@@ -301,14 +301,13 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_EnableSSS = Engine::GAPI->GetRendererState().RendererSettings.EnableSSS ? 1.0f : 0.0f;
     AtmosphereCB.AC_SSRStrength = Engine::GAPI->GetRendererState().RendererSettings.SSRStrength;
     AtmosphereCB.AC_SSSIntensity = Engine::GAPI->GetRendererState().RendererSettings.SSSIntensity;
-    const auto& rendererSettings = Engine::GAPI->GetRendererState().RendererSettings;
     AtmosphereCB.AC_AtmospherePad1 = 0.0f;
     AtmosphereCB.AC_EnableNightAtmosphere = 1.0f;
-    AtmosphereCB.AC_NearNightBrightness = rendererSettings.NightNearBrightness;
-    AtmosphereCB.AC_NightFogBrightness = rendererSettings.NightFogBrightness;
-    AtmosphereCB.AC_NightDarkeningStart = rendererSettings.NightDarkeningStart;
-    AtmosphereCB.AC_NightDarkeningRange = rendererSettings.NightDarkeningRange;
-    AtmosphereCB.AC_NightDarkeningMax = rendererSettings.NightMaxDarkness;
+    AtmosphereCB.AC_NearNightBrightness = 1.0f;
+    AtmosphereCB.AC_NightFogBrightness = 1.0f;
+    AtmosphereCB.AC_NightDarkeningStart = 3000.0f;
+    AtmosphereCB.AC_NightDarkeningRange = 12000.0f;
+    AtmosphereCB.AC_NightDarkeningMax = 1.0f;
     AtmosphereCB.AC_WorldCameraPos = camPos;
 
     //Engine::GraphicsEngine->DrawSky();

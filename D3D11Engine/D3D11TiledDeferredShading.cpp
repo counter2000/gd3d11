@@ -265,7 +265,7 @@ XRESULT D3D11TiledDeferredShading::DrawPointlightLights(
         context->CSSetShaderResources( 9, 1, m_LightGridSRV.GetAddressOf() );
         context->CSSetShaderResources( 10, 1, m_LightIndexListSRV.GetAddressOf() );
 
-        // Bind comparison sampler unconditionally - the runtime validates at Dispatch
+        // Bind comparison sampler unconditionally — the runtime validates at Dispatch
         // even if the shader branches around SampleCmpLevelZero
         graphicsEngine->GetShadowMaps()->BindSamplerToCS( context.Get(), 2 );
 
@@ -394,7 +394,7 @@ D3D11TiledDeferredShading::CullResult D3D11TiledDeferredShading::CullLights(
         tl.Range = lightRange;
         tl.Color = XMFLOAT4( lightColor.x, lightColor.y, lightColor.z, lightColor.w );
         tl.PositionWorld = XMFLOAT3( posWorld.x, posWorld.y, posWorld.z );
-        tl.ShadowStrength = (light->IsIndoorVob && !vob->IsStatic()) ? 0.85f : 1.0f;
+        tl.ShadowStrength = (light->IsIndoorVob && !vob->IsStatic()) ? 0.45f : 1.0f;
         tl.Padding = XMFLOAT3( 0.0f, 0.0f, 0.0f );
 
         if ( hasShadow ) {

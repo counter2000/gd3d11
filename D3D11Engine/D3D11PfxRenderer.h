@@ -1,5 +1,4 @@
 #pragma once
-#include <array>
 #include "pch.h"
 #include "ShaderIDs.h"
 #include "TexturePool.h"
@@ -58,10 +57,7 @@ public:
     XRESULT RenderWetGroundSSR( ID3D11RenderTargetView* outputRTV,
                                 ID3D11ShaderResourceView* sceneSRV,
                                 ID3D11ShaderResourceView* depthSRV,
-                                ID3D11ShaderResourceView* normalsSRV,
-                                const std::array<XMFLOAT4, 8>& waterAreas,
-                                const std::array<float, 8>& waterHeights,
-                                int waterAreaCount );
+                                ID3D11ShaderResourceView* normalsSRV );
 
     /** Copies the given texture to the given RTV */
     XRESULT CopyTextureToRTV( const Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& texture, const Microsoft::WRL::ComPtr<ID3D11RenderTargetView>& rtv, INT2 targetResolution = INT2( 0, 0 ), bool useCustomPS = false, INT2 offset = INT2( 0, 0 ) );

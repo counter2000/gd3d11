@@ -187,7 +187,7 @@ struct DS_ScreenQuadConstantBuffer {
 
     float4 SQ_LightColor;
     
-    // CSM: Cascade 0 (fuer Kompatibilitaet mit bestehenden Shadern)
+    // CSM: Cascade 0 (f�r Kompatibilit�t mit bestehenden Shadern)
     XMFLOAT4X4 SQ_ShadowViewProj[MAX_CSM_CASCADES];
 
     float SQ_ShadowStrength;
@@ -342,11 +342,6 @@ struct RefractionInfoConstantBuffer {
     float RI_Pad2;
 
     XMFLOAT4X4 RI_ViewProj;
-
-    XMFLOAT4 RI_RipplePositions[8];
-    float RI_RippleCount;
-    float RI_RippleStrength;
-    float2 RI_RipplePad;
 };
 
 struct WetGroundSSRConstantBuffer {
@@ -361,12 +356,6 @@ struct WetGroundSSRConstantBuffer {
     float2 WG_InvResolution;
     float WG_Strength;
     float WG_Time;
-
-    XMFLOAT4 WG_WaterAreas[8];
-    XMFLOAT4 WG_WaterHeightsA;
-    XMFLOAT4 WG_WaterHeightsB;
-    float WG_WaterAreaCount;
-    float3 WG_WaterPad;
 };
 
 static_assert( sizeof(WetGroundSSRConstantBuffer) % 16 == 0, "WetGroundSSRConstantBuffer must be 16-byte aligned" );

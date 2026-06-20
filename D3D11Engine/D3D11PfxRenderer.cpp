@@ -94,10 +94,7 @@ XRESULT D3D11PfxRenderer::RenderWetGroundSSR(
     ID3D11RenderTargetView* outputRTV,
     ID3D11ShaderResourceView* sceneSRV,
     ID3D11ShaderResourceView* depthSRV,
-    ID3D11ShaderResourceView* normalsSRV,
-    const std::array<XMFLOAT4, 8>& waterAreas,
-    const std::array<float, 8>& waterHeights,
-    int waterAreaCount ) {
+    ID3D11ShaderResourceView* normalsSRV ) {
     auto* engine = reinterpret_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
     auto& context = engine->GetContext();
     auto* rainShadow = engine->Effects ? engine->Effects->GetRainShadowmap() : nullptr;
@@ -129,15 +126,6 @@ XRESULT D3D11PfxRenderer::RenderWetGroundSSR(
     cb.WG_InvResolution = float2( 1.0f / std::max( resolution.x, 1 ), 1.0f / std::max( resolution.y, 1 ) );
     cb.WG_Strength = Engine::GAPI->GetRendererState().RendererSettings.SSRStrength;
     cb.WG_Time = Engine::GAPI->GetTimeSeconds();
-    cb.WG_WaterAreaCount = static_cast<float>( std::clamp( waterAreaCount, 0, 8 ) );
-    for ( int i = 0; i < std::clamp( waterAreaCount, 0, 8 ); ++i ) {
-        cb.WG_WaterAreas[i] = waterAreas[i];
-        if ( i < 4 ) {
-            reinterpret_cast<float*>( &cb.WG_WaterHeightsA )[i] = waterHeights[i];
-        } else {
-            reinterpret_cast<float*>( &cb.WG_WaterHeightsB )[i - 4] = waterHeights[i];
-        }
-    }
     ps->GetBuffer( "WetGroundSSRConstantBuffer" ).Update( &cb ).Bind();
 
     context->OMSetRenderTargets( 1, &outputRTV, nullptr );
@@ -208,7 +196,7 @@ XRESULT D3D11PfxRenderer::RenderTAA(const Microsoft::WRL::ComPtr<ID3D11ShaderRes
         velocityBuffer.Get() ? velocityBuffer : FX_TAA->GetVelocityBufferSRV()
     );
 
-    // Stelle den DSV wieder her falls noetig
+    // Stelle den DSV wieder her falls nötig
     context->OMSetRenderTargets(1, currentRTV.GetAddressOf(), currentDSV.Get());
     return XR_SUCCESS;
 }
@@ -455,7 +443,7 @@ XRESULT D3D11PfxRenderer::RenderPostFXComposition(
     ID3D11ShaderResourceView* srvs[4] = { backbufferSRV, saoSRV, godraysSRV, depthSRV };
     context->PSSetShaderResources( 0, 4, srvs );
 
-    // No blending - direct overwrite
+    // No blending — direct overwrite
     Engine::GAPI->GetRendererState().BlendState.SetDefault();
     Engine::GAPI->GetRendererState().BlendState.SetDirty();
     Engine::GAPI->GetRendererState().DepthState.DepthBufferCompareFunc =

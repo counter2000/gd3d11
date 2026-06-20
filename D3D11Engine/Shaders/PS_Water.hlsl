@@ -26,11 +26,6 @@ cbuffer RefractionInfo : register( b2 )
 	float RI_Pad2;
 
 	float4x4 RI_ViewProj;
-
-	float4 RI_RipplePositions[8];
-	float RI_RippleCount;
-	float RI_RippleStrength;
-	float2 RI_RipplePad;
 };
 
 //--------------------------------------------------------------------------------------
@@ -59,24 +54,6 @@ struct PS_INPUT
 };
 
 
-float2 ComputeCharacterRipple(float3 worldPosition)
-{
-	float2 ripple = 0.0f;
-	int rippleCount = min((int)RI_RippleCount, 8);
-	[loop]
-	for (int i = 0; i < rippleCount; ++i)
-	{
-		float4 source = RI_RipplePositions[i];
-		float2 delta = worldPosition.xz - source.xz;
-		float distanceXZ = length(delta);
-		float heightMask = 1.0f - smoothstep(90.0f, 260.0f, abs(worldPosition.y - source.y));
-		float rangeMask = (1.0f - smoothstep(80.0f, 620.0f, distanceXZ)) * heightMask * source.w;
-		float phase = distanceXZ * 0.045f - RI_Time * 5.5f;
-		float ring = sin(phase) * exp(-distanceXZ * 0.0045f);
-		ripple += normalize(delta + 0.001f) * ring * rangeMask;
-	}
-	return ripple * RI_RippleStrength;
-}
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
@@ -97,7 +74,6 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	// Camera direction
 	float3 viewDirection = normalize(Input.vWorldPosition - RI_CameraPosition);
 	float enhancedWater = step(0.5f, AC_EnableSSR);
-	float2 characterRipple = ComputeCharacterRipple(Input.vWorldPosition);
 		
 	// Calculate distortion vectors
 	float2 worldTexCoord = Input.vWorldPosition.xz / 1000.0f;
@@ -109,7 +85,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	distortionBig += TX_Distortion.Sample(SS_Linear, worldTexCoord * float2(-1,0.7) * DIST_BIG_SCALE + RI_Time * DIST_BIG_SPEED * 1.2).xyz * 2 - 1;
 	distortionBig *= 0.5f;
 	
-	float2 distUV = screenUV + distortionSmall.xy * DIST_SMALL_AMOUNT + distortionBig.xy * DIST_SMALL_AMOUNT + characterRipple * 0.010f;
+	float2 distUV = screenUV + distortionSmall.xy * DIST_SMALL_AMOUNT + distortionBig.xy * DIST_SMALL_AMOUNT;
 	
 	// Distorted diffuse
 	float3 diffuse = TX_Diffuse.Sample(SS_Linear, Input.vTexcoord + distortionSmall.xy * DIST_SMALL_AMOUNT * 0.5f).rgb;
@@ -122,8 +98,8 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	distUV = saturate(distUV);
 	
 	// Wave vector
-	float3 wavesDist = normalize((distortionSmall + float3(characterRipple.x, 0.0f, characterRipple.y) * 0.75f).xzy * float3(1,100,1));
-	float3 wavesFres = normalize((distortionBig + float3(characterRipple.x, 0.0f, characterRipple.y) * 0.65f).xzy * float3(1,10,1));
+	float3 wavesDist = normalize(distortionSmall.xzy * float3(1,100,1));
+	float3 wavesFres = normalize(distortionBig.xzy * float3(1,10,1));
 	
 	// Scene color
 	float3 scene = TX_Scene.Sample(SS_Linear, distUV).rgb;
