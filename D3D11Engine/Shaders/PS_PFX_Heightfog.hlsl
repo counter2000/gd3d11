@@ -61,7 +61,9 @@ float ComputeVolumetricFog(float3 cameraToWorldPos, float3 posOriginal)
 
 float FogDither(float2 pixelPosition)
 {
-	return frac(52.9829189f * frac(dot(pixelPosition, float2(0.06711056f, 0.00583715f)))) - 0.5f;
+	float n1 = frac(52.9829189f * frac(dot(pixelPosition, float2(0.06711056f, 0.00583715f))));
+	float n2 = frac(52.9829189f * frac(dot(pixelPosition + 37.17f, float2(0.00583715f, 0.06711056f))));
+	return n1 + n2 - 1.0f;
 }
 
 //--------------------------------------------------------------------------------------
@@ -109,7 +111,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	// Never let the fog become a 100% solid wall of color.
 	float maxFogOpacity = 0.85f;
 
-	float3 ditheredFogColor = color / darknessFactor + FogDither(Input.vPosition.xy) / 255.0f;
+	float3 ditheredFogColor = color / darknessFactor + FogDither(Input.vPosition.xy) * (1.5f / 255.0f);
 	return float4(saturate(ditheredFogColor), saturate(fog) * maxFogOpacity);
 }
 

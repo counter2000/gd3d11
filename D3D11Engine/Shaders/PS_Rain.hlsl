@@ -232,6 +232,11 @@ void rainResponse(PS_INPUT input, float3 lightVector, float lightIntensity, floa
         opacity = lerp(hOpacity1,hOpacity2,t);
         opacity = pow(opacity,0.7); // inverse gamma correction (expand dynamic range)
         opacity = 4*lightIntensity * opacity * fallOff;
+#ifndef SNOW_FEATURE
+        float nearCameraFade = lerp(1.0f, 0.35f,
+            (1.0f - smoothstep(120.0f, 1400.0f, length(eyeVector))) * saturate(AR_Pad1.x));
+        opacity *= nearCameraFade;
+#endif
 		
 		opacity = opacity;
     }

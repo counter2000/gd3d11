@@ -83,7 +83,9 @@ float ComputeVolumetricFog( float3 cameraToWorldPos, float3 posOriginal )
 
 float FogDither(float2 pixelPosition)
 {
-    return frac(52.9829189f * frac(dot(pixelPosition, float2(0.06711056f, 0.00583715f)))) - 0.5f;
+    float n1 = frac(52.9829189f * frac(dot(pixelPosition, float2(0.06711056f, 0.00583715f))));
+    float n2 = frac(52.9829189f * frac(dot(pixelPosition + 37.17f, float2(0.00583715f, 0.06711056f))));
+    return n1 + n2 - 1.0f;
 }
 
 float4 ComputeHeightFog( float2 texcoord )
@@ -142,7 +144,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 #if COMPOSE_HEIGHTFOG
     float4 fog = ComputeHeightFog( Input.vTexcoord );
     color.rgb = lerp( color.rgb, fog.rgb, fog.a );
-    color.rgb = saturate(color.rgb + FogDither(Input.vPosition.xy) * (fog.a / 255.0f));
+    color.rgb = saturate(color.rgb + FogDither(Input.vPosition.xy) * (fog.a * 1.5f / 255.0f));
 #endif
 
 #if COMPOSE_GODRAYS

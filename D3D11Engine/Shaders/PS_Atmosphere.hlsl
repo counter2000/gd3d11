@@ -27,6 +27,13 @@ struct PS_INPUT
 	float4 vPosition		: SV_POSITION;
 };
 
+float AtmosphereDither(float2 pixelPosition)
+{
+	float n1 = frac(52.9829189f * frac(dot(pixelPosition, float2(0.06711056f, 0.00583715f))));
+	float n2 = frac(52.9829189f * frac(dot(pixelPosition + 37.17f, float2(0.00583715f, 0.06711056f))));
+	return n1 + n2 - 1.0f;
+}
+
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
@@ -48,6 +55,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	// Apply stars
 	atmoColor += night * 0.4f;
 	
+	atmoColor = saturate(atmoColor + AtmosphereDither(Input.vPosition.xy) * (GetNightWeight() * 1.5f / 255.0f));
 	return float4(atmoColor,1);
 }
 

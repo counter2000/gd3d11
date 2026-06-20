@@ -38,6 +38,19 @@ float LinearizeDepth( float d )
     return LinearizeDepthReverseZInfinite( d );
 }
 
+bool IsSkyDepth( float d )
+{
+    return d <= 1e-7f;
+}
+
+float ComputeCoCFromDepth( float d, float focusDepth )
+{
+    if ( IsSkyDepth( d ) )
+        return 0.0f;
+
+    return saturate( ( LinearizeDepth( d ) - focusDepth ) / DoF_FocusRange );
+}
+
 float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
     float3 sharpColor = TX_Scene.Sample( SS_Linear, Input.vTexcoord ).rgb;
@@ -51,12 +64,15 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
     float2 depthSize;
     TX_Depth.GetDimensions( depthSize.x, depthSize.y );
     float2 dtexel = 1.0 / depthSize;
+    float depthC = TX_Depth.Sample( SS_Linear, Input.vTexcoord ).r;
+    if ( IsSkyDepth( depthC ) )
+        return float4( sharpColor, 1.0 );
 
-    float cocC = saturate( ( LinearizeDepth( TX_Depth.Sample( SS_Linear, Input.vTexcoord ).r ) - focusDepth ) / DoF_FocusRange );
-    float cocL = saturate( ( LinearizeDepth( TX_Depth.Sample( SS_Linear, Input.vTexcoord + float2( -dtexel.x, 0 ) ).r ) - focusDepth ) / DoF_FocusRange );
-    float cocR = saturate( ( LinearizeDepth( TX_Depth.Sample( SS_Linear, Input.vTexcoord + float2(  dtexel.x, 0 ) ).r ) - focusDepth ) / DoF_FocusRange );
-    float cocU = saturate( ( LinearizeDepth( TX_Depth.Sample( SS_Linear, Input.vTexcoord + float2( 0, -dtexel.y ) ).r ) - focusDepth ) / DoF_FocusRange );
-    float cocD = saturate( ( LinearizeDepth( TX_Depth.Sample( SS_Linear, Input.vTexcoord + float2( 0,  dtexel.y ) ).r ) - focusDepth ) / DoF_FocusRange );
+    float cocC = ComputeCoCFromDepth( depthC, focusDepth );
+    float cocL = ComputeCoCFromDepth( TX_Depth.Sample( SS_Linear, Input.vTexcoord + float2( -dtexel.x, 0 ) ).r, focusDepth );
+    float cocR = ComputeCoCFromDepth( TX_Depth.Sample( SS_Linear, Input.vTexcoord + float2(  dtexel.x, 0 ) ).r, focusDepth );
+    float cocU = ComputeCoCFromDepth( TX_Depth.Sample( SS_Linear, Input.vTexcoord + float2( 0, -dtexel.y ) ).r, focusDepth );
+    float cocD = ComputeCoCFromDepth( TX_Depth.Sample( SS_Linear, Input.vTexcoord + float2( 0,  dtexel.y ) ).r, focusDepth );
 
     float minCoC = min( min( cocC, cocL ), min( cocR, min( cocU, cocD ) ) );
 
