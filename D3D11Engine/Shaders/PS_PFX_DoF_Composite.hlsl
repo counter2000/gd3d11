@@ -51,48 +51,38 @@ float ComputeCoCFromDepth( float d, float focusDepth )
     return saturate( ( LinearizeDepth( d ) - focusDepth ) / DoF_FocusRange );
 }
 
-float GetSkyEdgeBlur(float2 texcoord, float2 dtexel, float focusDepth)
+void AccumulateSkyEdgeSample(float2 sampleUV, float focusDepth, float falloff, inout float3 colorAccum, inout float weightAccum)
 {
-    float edgeCoC = 0.0f;
-    float d;
+    float depth = TX_Depth.Sample( SS_Linear, sampleUV ).r;
+    float coc = ComputeCoCFromDepth( depth, focusDepth );
+    float4 blur = TX_Blur.Sample( SS_Linear, sampleUV );
+    float weight = smoothstep(0.18f, 0.65f, coc) * smoothstep(0.05f, 0.60f, blur.a) * falloff;
+    colorAccum += blur.rgb * weight;
+    weightAccum += weight;
+}
 
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2( -dtexel.x, 0 ) ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2(  dtexel.x, 0 ) ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0, -dtexel.y ) ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0,  dtexel.y ) ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+float4 GetSkyEdgeBlurSample(float2 texcoord, float2 dtexel, float focusDepth)
+{
+    float3 colorAccum = 0.0f;
+    float weightAccum = 0.0f;
 
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2( -dtexel.x, -dtexel.y ) * 2.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2(  dtexel.x, -dtexel.y ) * 2.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2( -dtexel.x,  dtexel.y ) * 2.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2(  dtexel.x,  dtexel.y ) * 2.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) );
+    AccumulateSkyEdgeSample(texcoord + float2(-dtexel.x, 0), focusDepth, 1.0f, colorAccum, weightAccum);
+    AccumulateSkyEdgeSample(texcoord + float2( dtexel.x, 0), focusDepth, 1.0f, colorAccum, weightAccum);
+    AccumulateSkyEdgeSample(texcoord + float2(0, -dtexel.y), focusDepth, 1.0f, colorAccum, weightAccum);
+    AccumulateSkyEdgeSample(texcoord + float2(0,  dtexel.y), focusDepth, 1.0f, colorAccum, weightAccum);
 
+    AccumulateSkyEdgeSample(texcoord + float2(-dtexel.x, -dtexel.y) * 2.0f, focusDepth, 0.85f, colorAccum, weightAccum);
+    AccumulateSkyEdgeSample(texcoord + float2( dtexel.x, -dtexel.y) * 2.0f, focusDepth, 0.85f, colorAccum, weightAccum);
+    AccumulateSkyEdgeSample(texcoord + float2(-dtexel.x,  dtexel.y) * 2.0f, focusDepth, 0.85f, colorAccum, weightAccum);
+    AccumulateSkyEdgeSample(texcoord + float2( dtexel.x,  dtexel.y) * 2.0f, focusDepth, 0.85f, colorAccum, weightAccum);
 
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2( -dtexel.x, 0 ) * 4.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2(  dtexel.x, 0 ) * 4.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0, -dtexel.y ) * 4.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0,  dtexel.y ) * 4.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.85f );
+    AccumulateSkyEdgeSample(texcoord + float2(-dtexel.x, 0) * 5.0f, focusDepth, 0.55f, colorAccum, weightAccum);
+    AccumulateSkyEdgeSample(texcoord + float2( dtexel.x, 0) * 5.0f, focusDepth, 0.55f, colorAccum, weightAccum);
+    AccumulateSkyEdgeSample(texcoord + float2(0, -dtexel.y) * 5.0f, focusDepth, 0.55f, colorAccum, weightAccum);
+    AccumulateSkyEdgeSample(texcoord + float2(0,  dtexel.y) * 5.0f, focusDepth, 0.55f, colorAccum, weightAccum);
 
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2( -dtexel.x, 0 ) * 8.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2(  dtexel.x, 0 ) * 8.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0, -dtexel.y ) * 8.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
-    d = TX_Depth.Sample( SS_Linear, texcoord + float2( 0,  dtexel.y ) * 8.0f ).r;
-    edgeCoC = max( edgeCoC, ComputeCoCFromDepth( d, focusDepth ) * 0.55f );
-    return smoothstep(0.18f, 0.65f, edgeCoC);
+    float blend = smoothstep(0.04f, 0.35f, weightAccum);
+    return float4(colorAccum / max(weightAccum, 0.001f), blend);
 }
 float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
@@ -111,8 +101,8 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
     float4 blurSample = TX_Blur.Sample( SS_Linear, Input.vTexcoord );
     if ( IsSkyDepth( depthC ) )
     {
-        float skyEdgeBlur = GetSkyEdgeBlur( Input.vTexcoord, dtexel, focusDepth ) * smoothstep( 0.15f, 0.75f, blurSample.a );
-        return float4( lerp( sharpColor, blurSample.rgb, skyEdgeBlur ), 1.0 );
+        float4 skyEdgeBlur = GetSkyEdgeBlurSample( Input.vTexcoord, dtexel, focusDepth );
+        return float4( lerp( sharpColor, skyEdgeBlur.rgb, skyEdgeBlur.a ), 1.0 );
     }
 
     float cocC = ComputeCoCFromDepth( depthC, focusDepth );

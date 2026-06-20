@@ -24,7 +24,6 @@
 
 #define DIRECTINPUT_VERSION 0x0700
 #include <charconv>
-#include <cmath>
 #include <numeric>
 #include <dinput.h>
 #include "ImGuiShim.h"
@@ -6005,24 +6004,8 @@ float GothicAPI::GetRainFXWeight() {
 
     // This doesn't seem to go as high as 1 or just very slowly. Scale it so it does go up quicker.
     gRainFxWeight = std::min( gRainFxWeight / 0.85f, 1.0f );
-
-    float targetRainFxWeight = std::max( myRainFxWeight, gRainFxWeight );
-
-    // Smooth Gothic's rain weight before it drives wetness, fog color, and rain deformation.
-    // This avoids hard color-temperature jumps when rain effects start or stop.
-    static float s_smoothedRainFxWeight = 0.0f;
-    float deltaTime = std::clamp( GetFrameTimeSec(), 0.0f, 0.1f );
-    if ( deltaTime <= 0.0f )
-        deltaTime = 1.0f / 60.0f;
-
-    const float response = targetRainFxWeight > s_smoothedRainFxWeight ? 2.0f : 1.1f;
-    s_smoothedRainFxWeight += (targetRainFxWeight - s_smoothedRainFxWeight)
-        * (1.0f - std::exp(-response * deltaTime));
-
-    if ( std::abs(targetRainFxWeight - s_smoothedRainFxWeight) < 0.0001f )
-        s_smoothedRainFxWeight = targetRainFxWeight;
-
-    return s_smoothedRainFxWeight;
+    // Return the higher of the two, so we get the chance to overwrite it
+    return std::max( myRainFxWeight, gRainFxWeight );
 }
 
 /** Returns the wetness of the scene. Lasts longer than RainFXWeight */

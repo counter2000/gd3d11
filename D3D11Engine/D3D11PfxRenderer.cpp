@@ -337,15 +337,21 @@ XRESULT D3D11PfxRenderer::RenderPostFXComposition(
         cb.HF_FogHeight = height;
         cb.HF_ProjAB = float2( Engine::GAPI->GetProjectionMatrix()._33, Engine::GAPI->GetProjectionMatrix()._34 );
 
+        GSky* sky = Engine::GAPI->GetSky();
         float rain = Engine::GAPI->GetRainFXWeight();
+        float rainFogColorWeight = std::min( 1.0f, rain * 2.0f );
+        if ( sky ) {
+            float daylightRainFog = std::max( 0.0f, std::min( 1.0f, (sky->GetAtmosphereCB().AC_LightPos.y + 0.05f) * 4.0f ) );
+            daylightRainFog = daylightRainFog * daylightRainFog * (3.0f - 2.0f * daylightRainFog);
+            rainFogColorWeight *= daylightRainFog;
+        }
         XMFLOAT3 FogColorMod;
-        XMStoreFloat3( &FogColorMod, XMVectorLerpV( color, XMLoadFloat3( &settings.RainFogColor ), XMVectorSet( std::min( 1.0f, rain * 2.0f ), std::min( 1.0f, rain * 2.0f ), std::min( 1.0f, rain * 2.0f ), 0 ) ) );
+        XMStoreFloat3( &FogColorMod, XMVectorLerpV( color, XMLoadFloat3( &settings.RainFogColor ), XMVectorSet( rainFogColorWeight, rainFogColorWeight, rainFogColorWeight, 0 ) ) );
         cb.HF_FogColorMod = FogColorMod;
         cb.HF_GlobalDensity = Toolbox::lerp( cb.HF_GlobalDensity, settings.RainFogDensity, rain * fogDensityFactorRain );
 
         compositionPS->GetBuffer( "PFXBuffer" ).Update( &cb ).Bind();
 
-        GSky* sky = Engine::GAPI->GetSky();
         compositionPS->GetBuffer( "Atmosphere" ).Update( &sky->GetAtmosphereCB() ).Bind();
     }
 

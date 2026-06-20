@@ -165,9 +165,7 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 		v3FrontColor += v3Attenuate * (fDepth * fScaledLength);
 		v3SamplePoint += v3SampleRay;
 	}
-	
-	// Shut off blue tint of geometry when raining
-	v3FrontColor =  lerp(v3FrontColor, 0.0f, AC_SceneWettness);
+	// Rain wetness is handled by surface shaders; keep atmospheric night color stable.
 	
 	// Finally, scale the Mie and Rayleigh colors and set up the varying variables for the pixel shader
 	float3 c0 = v3FrontColor * (vInvWavelength * AC_KrESun + AC_KmESun);
@@ -177,8 +175,7 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 	float3 dayColor = c0 + in_color * c1;
 	float nearNightBrightness = lerp(1.0f, max(0.0f, AC_NearNightBrightness), saturate(AC_EnableNightAtmosphere));
 	float3 nightColor = float3(0.095f,0.115f,0.255f) * NIGHT_BRIGHTNESS * nearNightBrightness;
-	nightColor = lerp(nightColor, float3(0.24,0.24,0.24) * NIGHT_BRIGHTNESS * 0.6f * nearNightBrightness, AC_SceneWettness); // Grey fog when raining
-	float moonWeight = saturate((-AC_LightPos.y - 0.08f) * 1.7f) * (1.0f - AC_SceneWettness * 0.5f);
+	float moonWeight = saturate((-AC_LightPos.y - 0.08f) * 1.7f);
 	float midtone = saturate(dot(in_color, float3(0.299f, 0.587f, 0.114f)) * 0.95f + 0.04f);
 	float3 moonColor = float3(0.018f, 0.026f, 0.052f) * moonWeight * midtone * nearNightBrightness;
 	float3 outColor;

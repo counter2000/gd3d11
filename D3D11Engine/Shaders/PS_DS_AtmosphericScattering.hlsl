@@ -180,9 +180,10 @@ void ApplySceneWettness(float3 wsPosition, float3 vsPosition, float3 vsDir, inou
     float surfaceExposure = saturate(dot(wsNormal, float3(0, 1, 0)));
     surfaceExposure *= surfaceExposure;
     pixelWettnes *= surfaceExposure;
+    pixelWettnes *= 0.65f;
     localWettness = pixelWettnes;
 	
-    vsNormal = lerp(vsNormal, nrm, AC_RainFXWeight * pixelWettnes * 0.5f); // Only apply deformation if it's actually raining
+    vsNormal = lerp(vsNormal, nrm, AC_RainFXWeight * pixelWettnes * 0.35f); // Only apply deformation if it's actually raining
 	
 	// Get fresnel-effect
     // float fresnel = pow(1.0f - max(0.0f, dot(vsNormal, -vsDir)), 160.0f);
@@ -226,8 +227,8 @@ void ApplySceneWettness(float3 wsPosition, float3 vsPosition, float3 vsDir, inou
 	
 	
 		// Scale the total amount of spec-lighting by the wetness factor and whether the scene is currently drying out or it's still raining
-    specAdd = reflection * pixelWettnes * lerp(0.08f, 0.10f, AC_RainFXWeight);
-    diffuse = lerp(diffuse, wetPixel, pixelWettnes);
+    specAdd = reflection * pixelWettnes * lerp(0.045f, 0.06f, AC_RainFXWeight);
+    diffuse = lerp(diffuse, wetPixel, pixelWettnes * 0.75f);
 }
 
 //--------------------------------------------------------------------------------------
