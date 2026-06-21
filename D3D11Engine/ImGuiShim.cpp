@@ -950,7 +950,7 @@ void ImGuiShim::RenderSettingsWindow()
                 ImGui::EndCombo();
             }
 
-            ImText( "Dynamic Shadows", buttonWidth ); ImGui::SameLine();
+            ImText( "Pointlight Shadows", buttonWidth ); ImGui::SameLine();
             
             const static std::vector<std::tuple<const char*, GothicRendererSettings::EPointLightShadowMode, const char*>> dynamicShadowValues = {
                 { "Off", GothicRendererSettings::EPointLightShadowMode::PLS_DISABLED, nullptr },

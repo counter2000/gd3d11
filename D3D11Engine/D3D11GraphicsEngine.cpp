@@ -2372,7 +2372,7 @@ bool D3D11GraphicsEngine::BindTextureNRFX( zCTexture* tex, bool bindShader, bool
         auto allocation = PerObjectMaterialInfoPooledBuffer->Allocate( GetContext().Get(), &info->buffer, sizeof( info->buffer ) );
         UINT firstConstant = allocation.offsetInBytes / 16;
         UINT numConstants = allocation.sizeInBytes / 16;
-        GetContext()->PSGetConstantBuffers1( 2, 1, &allocation.pBuffer, &firstConstant, &numConstants );
+        GetContext()->PSSetConstantBuffers1( 2, 1, &allocation.pBuffer, &firstConstant, &numConstants );
     }
 
     if ( D3D11Texture* fxmap = tex->GetSurface()->GetFxMap() ) {
@@ -2381,9 +2381,7 @@ bool D3D11GraphicsEngine::BindTextureNRFX( zCTexture* tex, bool bindShader, bool
     }
     srvs[3] = GetParallaxDisplacementSRV( tex->GetSurface() );
     GetContext()->PSSetShaderResources( 0, 3, srvs );
-    if ( srvs[3] ) {
-        GetContext()->PSSetShaderResources( 13, 1, &srvs[3] );
-    }
+    GetContext()->PSSetShaderResources( 13, 1, &srvs[3] );
 
 
 
@@ -4770,9 +4768,7 @@ XRESULT D3D11GraphicsEngine::DrawMeshInfoListAlphablended(
 
             if (lastTex != texture) {
                 GetContext()->PSSetShaderResources( 0, 3, srv );
-                if ( srv[3] ) {
-                    GetContext()->PSSetShaderResources( 13, 1, &srv[3] );
-                }
+                GetContext()->PSSetShaderResources( 13, 1, &srv[3] );
                 lastTex = texture;
             }
 
@@ -5178,9 +5174,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
 
                 // Bind diffuse/normal/fx like 026; POM displacement uses t13.
                 GetContext()->PSSetShaderResources( 0, 3, srv );
-                if ( srv[3] ) {
-                    GetContext()->PSSetShaderResources( 13, 1, &srv[3] );
-                }
+                GetContext()->PSSetShaderResources( 13, 1, &srv[3] );
 
                 // Get the right shader for it
                 if ( BindShaderForTexture( mesh.first.Texture, false,
@@ -6972,7 +6966,7 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
         auto defaultMaterialAllocation = PerObjectMaterialInfoPooledBuffer->Allocate( GetContext().Get(), &defInfo.buffer, sizeof( defInfo.buffer ) );
         UINT firstConstant = defaultMaterialAllocation.offsetInBytes / 16;
         UINT numConstants = defaultMaterialAllocation.sizeInBytes / 16;
-        GetContext()->PSGetConstantBuffers1( materialInfoSlot, 1, &defaultMaterialAllocation.pBuffer, &firstConstant, &numConstants );
+        GetContext()->PSSetConstantBuffers1( materialInfoSlot, 1, &defaultMaterialAllocation.pBuffer, &firstConstant, &numConstants );
 
         XMMATRIX view = Engine::GAPI->GetViewMatrixXM();
         Engine::GAPI->SetViewTransformXM( view );
@@ -7375,7 +7369,7 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
 
                             if ( wantShader ) {
                                 GetContext()->PSSetShaderResources( 0, isZPrepass ? 1 : 3, srv );
-                                if ( !isZPrepass && srv[3] ) {
+                                if ( !isZPrepass ) {
                                     GetContext()->PSSetShaderResources( 13, 1, &srv[3] );
                                 }
 
@@ -7396,7 +7390,7 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
                                     auto matAllocation = PerObjectMaterialInfoPooledBuffer->Allocate( GetContext().Get(), &info->buffer, sizeof( info->buffer ) );
                                     UINT firstConstant = matAllocation.offsetInBytes / 16;
                                     UINT numConstants = matAllocation.sizeInBytes / 16;
-                                    GetContext()->PSGetConstantBuffers1( materialInfoSlot, 1, &matAllocation.pBuffer, &firstConstant, &numConstants );
+                                    GetContext()->PSSetConstantBuffers1( materialInfoSlot, 1, &matAllocation.pBuffer, &firstConstant, &numConstants );
 
                                     lastMatInfo = info;
                                 }
@@ -7603,9 +7597,7 @@ XRESULT D3D11GraphicsEngine::DrawFrameAlphaMeshes()
 
             // Bind diffuse/normal/fx like 026; POM displacement uses t13.
             GetContext()->PSSetShaderResources( 0, 3, srv );
-            if ( srv[3] ) {
-                GetContext()->PSSetShaderResources( 13, 1, &srv[3] );
-            }
+            GetContext()->PSSetShaderResources( 13, 1, &srv[3] );
 
             if ( (blendAdd || blendBlend) &&
                 !Engine::GAPI->GetRendererState().BlendState.BlendEnabled ) {
@@ -7740,9 +7732,7 @@ XRESULT D3D11GraphicsEngine::DrawPolyStrips( bool noTextures ) {
 
             // Bind diffuse/normal/fx like 026; POM displacement uses t13.
             Context->PSSetShaderResources( 0, 3, srv );
-            if ( srv[3] ) {
-                Context->PSSetShaderResources( 13, 1, &srv[3] );
-            }
+            Context->PSSetShaderResources( 13, 1, &srv[3] );
 
             if ( (blendAdd || blendBlend) && !Engine::GAPI->GetRendererState().BlendState.BlendEnabled ) {
                 if ( blendAdd )

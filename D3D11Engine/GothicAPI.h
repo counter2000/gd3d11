@@ -962,7 +962,7 @@ private:
     /** Map for the material infos */
     gtl::flat_hash_map<zCTexture*, std::unique_ptr<MaterialInfo>> MaterialInfos;
 
-    /** In-memory database of all materials loaded from materials.bin */
+    /** In-memory fallback database loaded from editable materials.json or legacy materials.bin */
     gtl::flat_hash_map<std::string, MaterialInfo::Buffer> MaterialDatabase;
     bool MaterialDatabaseLoaded = false;
     void LoadMaterialDatabase();

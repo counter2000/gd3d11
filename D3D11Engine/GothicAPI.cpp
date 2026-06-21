@@ -52,6 +52,8 @@
 #include "ThreadPool.h"
 #include "zFILE.h"
 #include "zFILE_VDFS.h"
+#include "include/contrib/rapidjson/include/rapidjson/document.h"
+#include "include/contrib/rapidjson/include/rapidjson/error/en.h"
 
 #ifndef PUBLIC_RELEASE
 #define OPT_DBG_NOINLINE __declspec(noinline)
@@ -71,241 +73,331 @@ auto CompareGhostDistance = []( const TransparencyVobInfo& a, const Transparency
 
 extern float vobAnimation_WindStrength;
 
+namespace {
+    constexpr const char* MATERIALS_JSON_PATH = "system\\GD3D11\\textures\\materials.json";
+    constexpr const char* MATERIALS_JSON_VDFS_PATH = R"(\system\GD3D11\textures\materials.json)";
+    constexpr const char* MATERIALS_BIN_PATH = "system\\GD3D11\\textures\\materials.bin";
+    constexpr const char* MATERIALS_BIN_VDFS_PATH = R"(\system\GD3D11\textures\materials.bin)";
+
+    std::string ToLowerMaterialName( std::string name ) {
+        for ( char& c : name ) {
+            c = static_cast<char>(::tolower( static_cast<unsigned char>(c) ));
+        }
+        return name;
+    }
+
+    void ApplyMaterialCompatibility( MaterialInfo::Buffer& buffer, int version ) {
+        if ( version < 2 && buffer.DisplacementFactor == 0.0f ) {
+            buffer.DisplacementFactor = 0.7f;
+        }
+        buffer.Color = float4( 1, 1, 1, 1 );
+    }
+
+    bool ReadVdfsBytes( const char* filePath, std::vector<char>& out ) {
+        auto vdfsFile = zFILE_VDFS::Create( filePath );
+        if ( !vdfsFile->Exists() || vdfsFile->Open( false ) != zERROR_NONE ) {
+            return false;
+        }
+
+        const long size = vdfsFile->Size();
+        if ( size <= 0 || size > 16 * 1024 * 1024 ) {
+            vdfsFile->Close();
+            return false;
+        }
+
+        out.resize( static_cast<size_t>(size) );
+        const auto bytesRead = vdfsFile->Read( out.data(), size );
+        vdfsFile->Close();
+        if ( bytesRead < size ) {
+            out.clear();
+            return false;
+        }
+        return true;
+    }
+
+    bool LoadTextFile( const char* filePath, std::string& out ) {
+        FILE* f = fopen( filePath, "rb" );
+        if ( !f ) {
+            return false;
+        }
+
+        fseek( f, 0, SEEK_END );
+        const long size = ftell( f );
+        fseek( f, 0, SEEK_SET );
+        if ( size <= 0 || size > 16 * 1024 * 1024 ) {
+            fclose( f );
+            return false;
+        }
+
+        out.resize( static_cast<size_t>(size) );
+        const size_t read = fread( out.data(), 1, static_cast<size_t>(size), f );
+        fclose( f );
+        if ( read != static_cast<size_t>(size) ) {
+            out.clear();
+            return false;
+        }
+        return true;
+    }
+
+    bool LoadVdfsTextFile( const char* filePath, std::string& out ) {
+        std::vector<char> bytes;
+        if ( !ReadVdfsBytes( filePath, bytes ) ) {
+            return false;
+        }
+        out.assign( bytes.begin(), bytes.end() );
+        return true;
+    }
+
+    bool ReadJsonFloat( const rapidjson::Value& value, const char* lowerName, const char* upperName, float& out ) {
+        if ( value.HasMember( lowerName ) && value[lowerName].IsNumber() ) {
+            out = value[lowerName].GetFloat();
+            return true;
+        }
+        if ( value.HasMember( upperName ) && value[upperName].IsNumber() ) {
+            out = value[upperName].GetFloat();
+            return true;
+        }
+        return false;
+    }
+
+    bool ReadJsonMaterial( const rapidjson::Value& value, MaterialInfo::Buffer& out ) {
+        if ( !value.IsObject() ) {
+            return false;
+        }
+
+        MaterialInfo defaults;
+        MaterialInfo::Buffer buffer = defaults.buffer;
+        ReadJsonFloat( value, "specularIntensity", "SpecularIntensity", buffer.SpecularIntensity );
+        ReadJsonFloat( value, "specularPower", "SpecularPower", buffer.SpecularPower );
+        ReadJsonFloat( value, "normalmapStrength", "NormalmapStrength", buffer.NormalmapStrength );
+        ReadJsonFloat( value, "displacementFactor", "DisplacementFactor", buffer.DisplacementFactor );
+
+        const rapidjson::Value* colorValue = nullptr;
+        if ( value.HasMember( "color" ) ) {
+            colorValue = &value["color"];
+        } else if ( value.HasMember( "Color" ) ) {
+            colorValue = &value["Color"];
+        }
+        if ( colorValue && colorValue->IsArray() && colorValue->Size() >= 4 ) {
+            if ( (*colorValue)[0].IsNumber() && (*colorValue)[1].IsNumber() && (*colorValue)[2].IsNumber() && (*colorValue)[3].IsNumber() ) {
+                buffer.Color = float4( (*colorValue)[0].GetFloat(), (*colorValue)[1].GetFloat(), (*colorValue)[2].GetFloat(), (*colorValue)[3].GetFloat() );
+            }
+        }
+
+        ApplyMaterialCompatibility( buffer, MATERIALINFO_VERSION );
+        out = buffer;
+        return true;
+    }
+
+    bool ParseMaterialsJson( const std::string& jsonText, gtl::flat_hash_map<std::string, MaterialInfo::Buffer>& database ) {
+        rapidjson::Document doc;
+        doc.Parse( jsonText.c_str(), jsonText.size() );
+        if ( doc.HasParseError() || !doc.IsObject() ) {
+            LogWarn() << "Failed to parse materials.json: " << rapidjson::GetParseError_En( doc.GetParseError() );
+            return false;
+        }
+
+        if ( !doc.HasMember( "materials" ) || !doc["materials"].IsObject() ) {
+            LogWarn() << "materials.json does not contain a materials object";
+            return false;
+        }
+
+        const rapidjson::Value& materials = doc["materials"];
+        uint32_t loaded = 0;
+        for ( auto it = materials.MemberBegin(); it != materials.MemberEnd(); ++it ) {
+            if ( !it->name.IsString() ) {
+                continue;
+            }
+            MaterialInfo::Buffer buffer;
+            if ( !ReadJsonMaterial( it->value, buffer ) ) {
+                continue;
+            }
+            database[ToLowerMaterialName( std::string( it->name.GetString(), it->name.GetStringLength() ) )] = buffer;
+            ++loaded;
+        }
+
+        if ( loaded > 0 ) {
+            LogInfo() << "Loaded " << loaded << " fallback materials from materials.json";
+        }
+        return loaded > 0;
+    }
+
+    bool LoadMaterialsJsonDatabase( gtl::flat_hash_map<std::string, MaterialInfo::Buffer>& database ) {
+        std::string jsonText;
+        if ( LoadTextFile( MATERIALS_JSON_PATH, jsonText ) || LoadVdfsTextFile( MATERIALS_JSON_VDFS_PATH, jsonText ) ) {
+            return ParseMaterialsJson( jsonText, database );
+        }
+        return false;
+    }
+
+    bool ParseMaterialsBinBytes( const std::vector<char>& bytes, gtl::flat_hash_map<std::string, MaterialInfo::Buffer>& database ) {
+        const char* ptr = bytes.data();
+        const char* end = ptr + bytes.size();
+
+        auto canRead = [&]( size_t size ) -> bool {
+            return ptr <= end && size <= static_cast<size_t>(end - ptr);
+        };
+        auto readBytes = [&]( void* dst, size_t size ) -> bool {
+            if ( !canRead( size ) ) {
+                return false;
+            }
+            memcpy( dst, ptr, size );
+            ptr += size;
+            return true;
+        };
+
+        char magic[4];
+        if ( !readBytes( magic, sizeof( magic ) ) || memcmp( magic, "GDMB", 4 ) != 0 ) {
+            return false;
+        }
+
+        int32_t version = 0;
+        if ( !readBytes( &version, sizeof( version ) ) || version != 1 ) {
+            return false;
+        }
+
+        uint32_t numEntries = 0;
+        if ( !readBytes( &numEntries, sizeof( numEntries ) ) ) {
+            return false;
+        }
+
+        uint32_t loaded = 0;
+        for ( uint32_t i = 0; i < numEntries; ++i ) {
+            uint16_t nameLen = 0;
+            if ( !readBytes( &nameLen, sizeof( nameLen ) ) || nameLen == 0 || !canRead( nameLen + sizeof( MaterialInfo::Buffer ) ) ) {
+                LogWarn() << "Ignoring truncated or corrupt materials.bin";
+                return loaded > 0;
+            }
+
+            std::string name( ptr, ptr + nameLen );
+            ptr += nameLen;
+
+            MaterialInfo::Buffer buffer;
+            if ( !readBytes( &buffer, sizeof( buffer ) ) ) {
+                LogWarn() << "Ignoring truncated or corrupt materials.bin";
+                return loaded > 0;
+            }
+            ApplyMaterialCompatibility( buffer, MATERIALINFO_VERSION );
+            database[ToLowerMaterialName( name )] = buffer;
+            ++loaded;
+        }
+
+        if ( loaded > 0 ) {
+            LogInfo() << "Loaded " << loaded << " legacy fallback materials from materials.bin";
+        }
+        return loaded > 0;
+    }
+
+    bool LoadMaterialsBinDatabase( gtl::flat_hash_map<std::string, MaterialInfo::Buffer>& database ) {
+        std::vector<char> bytes;
+        FILE* f = fopen( MATERIALS_BIN_PATH, "rb" );
+        if ( f ) {
+            fseek( f, 0, SEEK_END );
+            const long size = ftell( f );
+            fseek( f, 0, SEEK_SET );
+            if ( size > 12 && size <= 16 * 1024 * 1024 ) {
+                bytes.resize( static_cast<size_t>(size) );
+                if ( fread( bytes.data(), 1, bytes.size(), f ) != bytes.size() ) {
+                    bytes.clear();
+                }
+            }
+            fclose( f );
+        }
+
+        if ( bytes.empty() ) {
+            ReadVdfsBytes( MATERIALS_BIN_VDFS_PATH, bytes );
+        }
+        if ( bytes.empty() ) {
+            return false;
+        }
+        return ParseMaterialsBinBytes( bytes, database );
+    }
+
+    bool ReadMaterialInfoFile( const std::string& filePath, MaterialInfo::Buffer& out ) {
+        char readBuffer[sizeof( int ) + sizeof( MaterialInfo::Buffer )] = {};
+        auto vdfsFile = zFILE_VDFS::Create( filePath.c_str() );
+        if ( !vdfsFile->Exists() || vdfsFile->Open( false ) != zERROR_NONE ) {
+            return false;
+        }
+
+        const auto bytesRead = vdfsFile->Read( readBuffer, sizeof( readBuffer ) );
+        vdfsFile->Close();
+        if ( bytesRead < static_cast<int>(sizeof( int )) ) {
+            return false;
+        }
+
+        int version = MATERIALINFO_VERSION;
+        memcpy( &version, readBuffer, sizeof( int ) );
+
+        MaterialInfo::Buffer buffer = {};
+        const size_t payloadBytes = std::min<size_t>( sizeof( MaterialInfo::Buffer ), static_cast<size_t>(bytesRead) - sizeof( int ) );
+        if ( payloadBytes > 0 ) {
+            memcpy( &buffer, readBuffer + sizeof( int ), payloadBytes );
+        }
+        ApplyMaterialCompatibility( buffer, version );
+        out = buffer;
+        return true;
+    }
+}
+
 /** Writes this info to a file */
 void MaterialInfo::WriteToFile( const std::string& name ) {
-    std::string nameStr = name;
-    for (char &c : nameStr) {
-        c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
+    const std::string filePath = "system\\GD3D11\\textures\\infos\\" + name + ".mi";
+    FILE* f = fopen( filePath.c_str(), "wb" );
+
+    if ( !f ) {
+        LogError() << "Failed to open file '" << filePath << "' for writing! Make sure the game runs in Admin mode "
+            " to get the rights to write to that directory!";
+        return;
     }
-    
-    if ( Engine::GAPI && !Engine::GAPI->MaterialDatabaseLoaded ) {
-        Engine::GAPI->LoadMaterialDatabase();
-    }
-    Engine::GAPI->MaterialDatabase[nameStr] = this->buffer;
-    Engine::GAPI->SaveMaterialDatabase();
+
+    fwrite( &MATERIALINFO_VERSION, sizeof( MATERIALINFO_VERSION ), 1, f );
+    fwrite( &buffer, sizeof( MaterialInfo::Buffer ), 1, f );
+    fclose( f );
 }
 
 /** Loads this info from a file */
 void MaterialInfo::LoadFromFile( const std::string_view name ) {
-    std::string nameStr(name);
-    for (char &c : nameStr) {
-        c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
+    std::string filePath = R"(\system\GD3D11\textures\infos\)";
+    filePath.append( name.data(), name.size() );
+    filePath.append( ".mi" );
+
+    if ( ReadMaterialInfoFile( filePath, buffer ) ) {
+        return;
     }
-    
+
     if ( Engine::GAPI && !Engine::GAPI->MaterialDatabaseLoaded ) {
         Engine::GAPI->LoadMaterialDatabase();
     }
-    auto it = Engine::GAPI->MaterialDatabase.find(nameStr);
-    if (it != Engine::GAPI->MaterialDatabase.end()) {
-        this->buffer = it->second;
-        return;
-    }
-    
-    bool foundFile = false;
-    char ReadBuffer[sizeof( int ) + sizeof( MaterialInfo::Buffer )] = {};
-    
-    std::string filePath = R"(\system\GD3D11\textures\infos\)";
-    filePath = filePath.append( name.data(), name.size() );
-    filePath = filePath.append( ".mi" );
-    {
-        auto vdfsFile = zFILE_VDFS::Create(filePath.c_str());
-        if ( vdfsFile->Exists()
-            && vdfsFile->Open(false) == zERROR_NONE )
-        {
-            vdfsFile->Read(ReadBuffer, sizeof(ReadBuffer));
-            vdfsFile->Close();
-            foundFile = true;
+
+    if ( Engine::GAPI ) {
+        auto it = Engine::GAPI->MaterialDatabase.find( ToLowerMaterialName( std::string( name ) ) );
+        if ( it != Engine::GAPI->MaterialDatabase.end() ) {
+            buffer = it->second;
+            return;
         }
     }
-    
-    if (!foundFile) {
-        return;
-    }
-    // Write the version first
-    int version;
-    memcpy( &version, ReadBuffer, sizeof( int ) );
-
-    // Then the data
-    ZeroMemory( &buffer, sizeof( MaterialInfo::Buffer ) );
-    memcpy( &buffer, ReadBuffer + sizeof( int ), sizeof( MaterialInfo::Buffer ) );
-
-    if ( version < 2 ) {
-        if ( buffer.DisplacementFactor == 0.0f ) {
-            buffer.DisplacementFactor = 0.7f;
-        }
-    }
-
-    buffer.Color = float4( 1, 1, 1, 1 );
-    
-    // Store in database so subsequent lookups are fast
-    Engine::GAPI->MaterialDatabase[nameStr] = this->buffer;
-    
 }
 
 void GothicAPI::LoadMaterialDatabase() {
     if ( MaterialDatabaseLoaded ) {
         return;
     }
+
     MaterialDatabaseLoaded = true;
     MaterialDatabase.clear();
-    std::string filePath = "system\\GD3D11\\textures\\materials.bin";
-    
-    // If materials.bin doesn't exist, try auto-migrating .mi files from system\GD3D11\textures\infos directory.
-    if (!Toolbox::FileExists(filePath)) {
-        std::string infosDir = "system\\GD3D11\\textures\\infos\\";
-        if (Toolbox::FolderExists(infosDir)) {
-            LogInfo() << "materials.bin not found. Migrating existing .mi files...";
-            WIN32_FIND_DATAA findData;
-            HANDLE hFind = FindFirstFileA((infosDir + "*.mi").c_str(), &findData);
-            if (hFind != INVALID_HANDLE_VALUE) {
-                do {
-                    std::string fileName = findData.cFileName;
-                    std::string matName = fileName.substr(0, fileName.size() - 3); // strip ".mi"
-                    
-                    std::string miPath = infosDir + fileName;
-                    FILE* miFile = fopen(miPath.c_str(), "rb");
-                    if (miFile) {
-                        fseek(miFile, 0, SEEK_END);
-                        long fileSize = ftell(miFile);
-                        fseek(miFile, 0, SEEK_SET);
-                        if (fileSize >= 4) {
-                            std::vector<char> fileBytes(fileSize);
-                            if (fread(fileBytes.data(), 1, fileSize, miFile) == fileSize) {
-                                int version = *reinterpret_cast<int*>(fileBytes.data());
-                                MaterialInfo::Buffer buf;
-                                ZeroMemory(&buf, sizeof(MaterialInfo::Buffer));
-                                long bufferBytesToCopy = fileSize - 4;
-                                if (bufferBytesToCopy > (long)sizeof(MaterialInfo::Buffer)) {
-                                    bufferBytesToCopy = (long)sizeof(MaterialInfo::Buffer);
-                                }
-                                if (bufferBytesToCopy > 0) {
-                                    memcpy(&buf, fileBytes.data() + 4, bufferBytesToCopy);
-                                }
-                                if (version < 2 && buf.DisplacementFactor == 0.0f) {
-                                    buf.DisplacementFactor = 0.7f;
-                                }
-                                buf.Color = float4(1, 1, 1, 1);
-                                
-                                std::string matNameLower = matName;
-                                for (char &c : matNameLower) {
-                                    c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
-                                }
-                                MaterialDatabase[matNameLower] = buf;
-                            }
-                        }
-                        fclose(miFile);
-                    }
-                } while (FindNextFileA(hFind, &findData));
-                FindClose(hFind);
-            }
-            if (!MaterialDatabase.empty()) {
-                LogInfo() << "Migrated " << MaterialDatabase.size() << " materials to materials.bin";
-                SaveMaterialDatabase();
-            }
-        }
-    }
-    
-    FILE* f = fopen(filePath.c_str(), "rb");
-    if (!f) {
-        // Try reading via VDFS (if packed in a .VDF volume)
-        auto vdfsFile = zFILE_VDFS::Create(R"(\system\GD3D11\textures\materials.bin)");
-        if (vdfsFile->Exists() && vdfsFile->Open(false) == zERROR_NONE) {
-            long size = vdfsFile->Size();
-            if (size > 12) {
-                std::vector<char> fileData(size);
-                vdfsFile->Read(fileData.data(), size);
-                vdfsFile->Close();
-                
-                char* ptr = fileData.data();
-                if (memcmp(ptr, "GDMB", 4) == 0) {
-                    ptr += 4;
-                    int32_t version = *reinterpret_cast<int32_t*>(ptr);
-                    ptr += 4;
-                    if (version == 1) {
-                        uint32_t numEntries = *reinterpret_cast<uint32_t*>(ptr);
-                        ptr += 4;
-                        for (uint32_t i = 0; i < numEntries; i++) {
-                            uint16_t nameLen = *reinterpret_cast<uint16_t*>(ptr);
-                            ptr += 2;
-                            std::string name(ptr, nameLen);
-                            ptr += nameLen;
-                            MaterialInfo::Buffer buf;
-                            memcpy(&buf, ptr, sizeof(MaterialInfo::Buffer));
-                            ptr += sizeof(MaterialInfo::Buffer);
-                            
-                            std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-                            MaterialDatabase[name] = buf;
-                        }
-                    }
-                }
-            }
-        }
+
+    if ( LoadMaterialsJsonDatabase( MaterialDatabase ) ) {
         return;
     }
-    
-    char magic[4];
-    if (fread(magic, 1, 4, f) != 4 || memcmp(magic, "GDMB", 4) != 0) {
-        fclose(f);
-        return;
-    }
-    
-    int32_t version;
-    if (fread(&version, 4, 1, f) != 1 || version != 1) {
-        fclose(f);
-        return;
-    }
-    
-    uint32_t numEntries;
-    if (fread(&numEntries, 4, 1, f) != 1) {
-        fclose(f);
-        return;
-    }
-    
-    for (uint32_t i = 0; i < numEntries; i++) {
-        uint16_t nameLen;
-        if (fread(&nameLen, 2, 1, f) != 1) break;
-        
-        std::vector<char> nameBuf(nameLen);
-        if (fread(nameBuf.data(), 1, nameLen, f) != nameLen) break;
-        std::string name(nameBuf.data(), nameLen);
-        
-        MaterialInfo::Buffer buf;
-        if (fread(&buf, sizeof(MaterialInfo::Buffer), 1, f) != 1) break;
-        
-        for (char &c : name) {
-            c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
-        }
-        MaterialDatabase[name] = buf;
-    }
-    
-    fclose(f);
+
+    // Legacy fallback only. materials.bin is no longer the editable primary format.
+    LoadMaterialsBinDatabase( MaterialDatabase );
 }
 
 void GothicAPI::SaveMaterialDatabase() {
-    std::string filePath = "system\\GD3D11\\textures\\materials.bin";
-    FILE* f = fopen(filePath.c_str(), "wb");
-    if (!f) {
-        LogError() << "Failed to open materials.bin for writing!";
-        return;
-    }
-    
-    fwrite("GDMB", 1, 4, f);
-    int32_t version = 1;
-    fwrite(&version, 4, 1, f);
-    
-    uint32_t numEntries = static_cast<uint32_t>(MaterialDatabase.size());
-    fwrite(&numEntries, 4, 1, f);
-    
-    for (auto const& [name, buf] : MaterialDatabase) {
-        uint16_t nameLen = static_cast<uint16_t>(name.size());
-        fwrite(&nameLen, 2, 1, f);
-        fwrite(name.data(), 1, nameLen, f);
-        fwrite(&buf, sizeof(MaterialInfo::Buffer), 1, f);
-    }
-    
-    fclose(f);
+    LogInfo() << "SaveMaterialDatabase ignored: material editor writes individual .mi files; materials.json is an editable fallback database.";
 }
-
 GothicAPI::GothicAPI() {
     OriginalGothicWndProc = 0;
 

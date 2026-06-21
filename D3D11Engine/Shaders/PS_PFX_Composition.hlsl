@@ -58,7 +58,7 @@ Texture2D TX_Depth : register( t3 );
 #if COMPOSE_HEIGHTFOG
 float3 VSPositionFromDepth( float depth, float2 vTexCoord )
 {
-    return ReconstructVSPositionFromDepthReverseZInfinite( depth, vTexCoord, HF_ProjParams.xy );
+    return ReconstructVSPositionFromDepthReverseZInfinite( depth, vTexCoord, HF_ProjParams.xy ) * HF_ProjParams.z;
 }
 
 float ComputeVolumetricFog( float3 cameraToWorldPos, float3 posOriginal )
