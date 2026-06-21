@@ -4073,7 +4073,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
                 auto* backBuffer = graph.GetPhysicalTexture( backBufferHandle );
                 auto* normals = graph.GetPhysicalTexture( normalsResource );
                 auto* waterMask = graph.GetPhysicalTexture( waterMaskResource );
-                auto* tempBuffer = PfxRenderer->GetTempBuffer();
+                auto tempBuffer = PfxRenderer->GetTempBuffer();
 
                 GetContext()->CopyResource( tempBuffer->GetTexture().Get(), backBuffer->GetTexture().Get() );
                 PfxRenderer->RenderWetGroundSSR(

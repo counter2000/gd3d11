@@ -328,8 +328,7 @@ XRESULT D3D11PfxRenderer::RenderSAO(
 
 XRESULT D3D11PfxRenderer::RenderSAOCompute(
     ID3D11ShaderResourceView* depthSRV,
-    ID3D11ShaderResourceView* normalsSRV,
-    ID3D11ShaderResourceView* waterMaskSRV ) {
+    ID3D11ShaderResourceView* normalsSRV ) {
     if ( !FX_SAO ) return XR_FAILED;
     return FX_SAO->RenderAO( depthSRV, normalsSRV );
 }
