@@ -848,7 +848,7 @@ XRESULT D3D11GraphicsEngine::Init() {
     SetActiveVertexShader( VShaderID::VS_Ex );
 
     DistortionTexture = std::make_unique<D3D11Texture>();
-    DistortionTexture->Init( "system\\GD3D11\\textures\\distortion2.dds" );
+    DistortionTexture->Init( "system\\GD3D11\\textures\\distortion.dds" );
 
     NoiseTexture = std::make_unique<D3D11Texture>();
     NoiseTexture->Init( "system\\GD3D11\\textures\\noise.dds" );
@@ -1580,11 +1580,10 @@ XRESULT D3D11GraphicsEngine::OnBeginFrame() {
         Resolved_DiffuseNormalmapped = PShaderID::PS_DiffuseNormalmapped;
         Resolved_DiffuseNormalmappedAlphatest = PShaderID::PS_DiffuseNormalmappedAlphaTest;
     } else {
-        const bool isRaining = Engine::GAPI->GetSceneWetness() > 1e-6;
-        Resolved_DiffuseNormalmappedFxMap = isRaining ? PShaderID::PS_DiffuseNormalmappedFxMap : PShaderID::PS_Diffuse;
-        Resolved_DiffuseNormalmappedAlphatestFxMap = isRaining ? PShaderID::PS_DiffuseNormalmappedAlphaTestFxMap : PShaderID::PS_DiffuseAlphaTest;
-        Resolved_DiffuseNormalmapped = isRaining ? PShaderID::PS_DiffuseNormalmapped : PShaderID::PS_Diffuse;
-        Resolved_DiffuseNormalmappedAlphatest = isRaining ? PShaderID::PS_DiffuseNormalmappedAlphaTest : PShaderID::PS_DiffuseAlphaTest;
+        Resolved_DiffuseNormalmappedFxMap = PShaderID::PS_Diffuse;
+        Resolved_DiffuseNormalmappedAlphatestFxMap = PShaderID::PS_DiffuseAlphaTest;
+        Resolved_DiffuseNormalmapped = PShaderID::PS_Diffuse;
+        Resolved_DiffuseNormalmappedAlphatest = PShaderID::PS_DiffuseAlphaTest;
     }
 
     return XR_SUCCESS;
@@ -2348,16 +2347,9 @@ bool D3D11GraphicsEngine::BindTextureNRFX( zCTexture* tex, bool bindShader, bool
         }
     }
 
-    // Bind a default normalmap in case the scene is wet and we currently have none
+    // Bind a normalmap only when the material really has one.
     if ( D3D11Texture* nrm = tex->GetSurface()->GetNormalmap() ) {
-        // Modify the strength of that default normalmap for the material info
         srvs[1] = nrm->GetShaderResourceView().Get();
-    } else {
-        if ( info &&
-            info->buffer.NormalmapStrength != DEFAULT_NORMALMAP_STRENGTH ) {
-            info->buffer.NormalmapStrength = DEFAULT_NORMALMAP_STRENGTH;
-        }
-        srvs[1] = DistortionTexture->GetShaderResourceView().Get();
     }
 
     if ( info && GetActivePS() ) {
@@ -4010,7 +4002,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         } );
     }
     else if ( compositionSAO ) {
-        // SAO compute-only pass — skips the final modulate blit (composition handles it)
+        // SAO compute-only pass â€” skips the final modulate blit (composition handles it)
         graph.AddPass( RG_PASS_NAME("SAO Compute"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( normalsResource );
 
@@ -4172,7 +4164,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
     if (rendererState.RendererSettings.DrawFog &&
                 Engine::GAPI->GetLoadedWorldInfo()->BspTree->GetBspTreeMode() ==
                 zBSP_MODE_OUTDOOR && !compositionActive) {
-        // Standalone heightfog pass — only used when composition is not active (shouldn't happen
+        // Standalone heightfog pass â€” only used when composition is not active (shouldn't happen
         // when DrawFog is on, but kept as fallback for FL10 or edge cases)
         graph.AddPass( RG_PASS_NAME("Draw Heightfog"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( backBufferHandle );
@@ -4250,7 +4242,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         Engine::GAPI->GetLoadedWorldInfo()->BspTree->GetBspTreeMode() ==
         zBSP_MODE_OUTDOOR) {
         if ( compositionActive ) {
-            // GodRays compute-only pass — writes to pool texture, skips the final additive blit
+            // GodRays compute-only pass â€” writes to pool texture, skips the final additive blit
             graph.AddPass( RG_PASS_NAME("GodRays Compute"), [&]( RGBuilder& builder, RenderPass& pass ) {
                 builder.Read( backBufferHandle );
 
@@ -4290,7 +4282,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         }
     }
 
-    // PostFX Composition pass — merges SAO, HeightFog, and GodRays in a single full-screen blit
+    // PostFX Composition pass â€” merges SAO, HeightFog, and GodRays in a single full-screen blit
     if ( compositionActive ) {
         graph.AddPass( RG_PASS_NAME("PostFX Composition"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( backBufferHandle );
@@ -4302,7 +4294,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
 
                 auto backBuffer = graph.GetPhysicalTexture(backBufferHandle);
 
-                // Copy backbuffer to a temp texture — we need to read it as SRV while writing to RTV
+                // Copy backbuffer to a temp texture â€” we need to read it as SRV while writing to RTV
                 auto tempBuffer = PfxRenderer->GetTempBuffer();
                 GetContext()->CopyResource( tempBuffer->GetTexture().Get(), backBuffer->GetTexture().Get() );
 
@@ -4920,7 +4912,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
         Engine::GAPI->CollectVisibleSections( m_FrameGeometryCache.visibleSections, nullptr, true );
         m_FrameGeometryCache.worldMeshBuilt = true;
     }
-    renderList = m_FrameGeometryCache.visibleSections; // shallow copy of pointers — O(N_sections), not O(BSP)
+    renderList = m_FrameGeometryCache.visibleSections; // shallow copy of pointers â€” O(N_sections), not O(BSP)
 
     MeshInfo* meshInfo = Engine::GAPI->GetWrappedWorldMesh();
     DrawVertexBufferIndexedUINT( meshInfo->MeshVertexBuffer, meshInfo->MeshIndexBuffer, 0, 0 );
@@ -5115,12 +5107,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
         }
     }
 
-    const PShaderID defaultShader =
-        Engine::GAPI->GetSceneWetness() > 1e-6
-        ? Resolved_DiffuseNormalmapped
-        : PShaderID::PS_Diffuse;
-
-    SetActivePixelShader( defaultShader );
+    SetActivePixelShader( PShaderID::PS_Diffuse );
     ActivePS->Apply();
 
     MaterialInfo defInfo = {};
@@ -5141,7 +5128,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
         ConstantBufferAllocation lastMatCbAllocation = INVALID_MATERIAL;
         MaterialInfo* lastInfo = nullptr;
 
-        auto sceneIsWet = Engine::GAPI->GetSceneWetness() > 1e-6;
+
         for ( size_t i = 0; i < numMeshes; i++ ) {
             auto const& mesh = meshList[i];
 
@@ -5161,12 +5148,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
                     : nullptr;
                 srv[3] = GetParallaxDisplacementSRV( surface );
 
-                auto needDefaultNormalsStrength = !srv[1] && sceneIsWet;
-                // Bind a default normalmap in case the scene is wet and we currently have
-                // none
-                if ( needDefaultNormalsStrength ) {
-                    srv[1] = DistortionTexture->GetShaderResourceView().Get();
-                }
+                // No fallback normalmap: materials without a real normalmap keep t1 empty.
 
                 // Bind both
                 GetContext()->PSSetShaderResources( 0, 4, srv );
@@ -5178,12 +5160,6 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
                     updatePSBuffers();
                 }
 
-                if ( info &&
-                    needDefaultNormalsStrength &&
-                    info->buffer.NormalmapStrength != DEFAULT_NORMALMAP_STRENGTH ) {
-                    info->buffer.NormalmapStrength = DEFAULT_NORMALMAP_STRENGTH;
-                    // Value override for non-normalmapped textures in case of rain
-                }
 
                 auto materialInfoBufferAllocation = lastMatCbAllocation;
                 if ( info ) {
@@ -7017,7 +6993,7 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
                     auto _scopeCollectVisibleVobs = RecordGraphicsEvent( GE_NAME( "DrawVOBsInstanced::CollectVisibleVobs" ) );
                     Engine::GAPI->CollectVisibleVobs( vobs, m_FrameLights, mobs, EGothicCullFlags::CullAll, (EBspTreeCollectFlags)collect );
                 }
-                // Snapshot mobs into cache — the static 'mobs' vector is cleared at
+                // Snapshot mobs into cache â€” the static 'mobs' vector is cleared at
                 // end of this function, so the lit pass would find it empty otherwise.
                 m_FrameGeometryCache.cachedMobs = mobs;
             }
@@ -7348,19 +7324,7 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
                             : nullptr;
                         srv[3] = GetParallaxDisplacementSRV( surface );
 
-                        // Bind a default normalmap in case the scene is wet and we
-                        // currently have none
-                        if ( !srv[1] && (wantShader && !isZPrepass) ) {
-                            // Modify the strength of that default normalmap for the
-                            // material info
-                            if ( info && info->buffer.NormalmapStrength
-                                != DEFAULT_NORMALMAP_STRENGTH ) {
-                                // update values for distortion texture
-                                info->buffer.NormalmapStrength = DEFAULT_NORMALMAP_STRENGTH;
-                                lastMatInfo = info;
-                            }
-                            srv[1] = DistortionTexture->GetShaderResourceView().Get();
-                        }
+                        // No fallback normalmap: materials without a real normalmap keep t1 empty.
                         if ( lastTex != tx
                             || lastNrmTex != srv[1]
                             || lastFxTex != srv[2]

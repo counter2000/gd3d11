@@ -14,7 +14,7 @@
 struct ShaderInfo {
 public:
     std::string name;				//Shader's name, used for debug logging
-    std::string fileName;			//Shader's filename (without 'system\\GD3D11\\shaders\\')
+    std::string fileName;			//Shader's filename (without 'system\\GD3D11\\Shaders\\')
     ShaderType type;				//Shader's type: Vertex, Pixel, Geometry, HullDomain, Compute
     std::string entryPoint;			//Shader's entry point function name
     size_t shaderIndex;				//Per-type enum index (e.g. VShaderID/PShaderID cast to size_t)

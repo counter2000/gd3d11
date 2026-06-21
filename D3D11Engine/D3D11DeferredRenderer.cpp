@@ -143,6 +143,8 @@ bool D3D11DeferredRenderer::BindShaderForTexture( D3D11ShaderManager& shaderMana
     bool blendAdd = zMatAlphaFunc == zMAT_ALPHA_FUNC_ADD;
     bool blendBlend = zMatAlphaFunc == zMAT_ALPHA_FUNC_BLEND;
     bool linZ = (Engine::GAPI->GetRendererState().GraphicsState.FF_GSwitches & GSWITCH_LINEAR_DEPTH) != 0;
+    const bool hasNormalmap = texture->GetSurface()->GetNormalmap() != nullptr;
+    const bool hasFxMap = hasNormalmap && texture->GetSurface()->GetFxMap();
 
     if ( materialType == MaterialInfo::MT_Portal ) {
         newShader = shaderManager.GetPShader( PShaderID::PS_PortalDiffuse );
@@ -153,17 +155,17 @@ bool D3D11DeferredRenderer::BindShaderForTexture( D3D11ShaderManager& shaderMana
     } else if ( blendAdd || blendBlend ) {
         newShader = shaderManager.GetPShader( PShaderID::PS_Simple_FF );
     } else if ( texture->HasAlphaChannel() || forceAlphaTest ) {
-        if ( texture->GetSurface()->GetFxMap() ) {
+        if ( hasFxMap ) {
             newShader = shaderManager.GetPShader( resolvedDiffuseNormalmappedAlphatestFxMap );
-        } else if ( texture->GetSurface()->GetNormalmap() || Engine::GAPI->GetSceneWetness() > 1e-6 ) {
+        } else if ( hasNormalmap ) {
             newShader = shaderManager.GetPShader( resolvedDiffuseNormalmappedAlphatest ); 
         } else {
             newShader = shaderManager.GetPShader( PShaderID::PS_DiffuseAlphaTest );
         }
     } else {
-        if ( texture->GetSurface()->GetFxMap() ) {
+        if ( hasFxMap ) {
             newShader = shaderManager.GetPShader( resolvedDiffuseNormalmappedFxMap );
-        } else if ( texture->GetSurface()->GetNormalmap() || Engine::GAPI->GetSceneWetness() > 1e-6 ) {
+        } else if ( hasNormalmap ) {
             newShader = shaderManager.GetPShader( resolvedDiffuseNormalmapped );
         } else {
             newShader = shaderManager.GetPShader( PShaderID::PS_Diffuse );

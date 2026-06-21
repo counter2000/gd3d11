@@ -18,7 +18,7 @@ bool D3D11PFX_SMAA::Init() {
     m_Native = std::make_unique<D3D11SMAA>( 
         engine->GetDevice().Get(),
         pContext,
-        Toolbox::ToWideChar( Engine::GAPI->GetStartDirectory() ) + L"\\system\\GD3D11\\shaders\\SMAA_Wrapper.hlsl",
+        Toolbox::ToWideChar( Engine::GAPI->GetStartDirectory() ) + L"\\system\\GD3D11\\Shaders\\SMAA_Wrapper.hlsl",
         Toolbox::ToWideChar( Engine::GAPI->GetStartDirectory() ) + L"\\system\\GD3D11\\Textures\\SMAA_AreaTexDX10.dds",
         Toolbox::ToWideChar( Engine::GAPI->GetStartDirectory() ) + L"\\system\\GD3D11\\Textures\\SMAA_SearchTex.dds");
 

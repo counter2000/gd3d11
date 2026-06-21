@@ -363,19 +363,21 @@ bool D3D11ForwardPlusRenderer::BindShaderForTexture(
 
     auto active = activePS;
     auto newShader = activePS;
+    const bool hasNormalmap = texture->GetSurface()->GetNormalmap() != nullptr;
+    const bool hasFxMap = hasNormalmap && texture->GetSurface()->GetFxMap();
 
     if ( texture->HasAlphaChannel() || forceAlphaTest ) {
-        if ( texture->GetSurface()->GetFxMap() ) {
+        if ( hasFxMap ) {
             newShader = shaderManager.GetPShader( PShaderID::PS_FP_DiffuseNormalmappedAlphaTestFxMap );
-        } else if ( texture->GetSurface()->GetNormalmap() || Engine::GAPI->GetSceneWetness() > 1e-6 ) {
+        } else if ( hasNormalmap ) {
             newShader = shaderManager.GetPShader( PShaderID::PS_FP_DiffuseNormalmappedAlphaTest );
         } else {
             newShader = shaderManager.GetPShader( PShaderID::PS_FP_DiffuseAlphaTest );
         }
     } else {
-        if ( texture->GetSurface()->GetFxMap() ) {
+        if ( hasFxMap ) {
             newShader = shaderManager.GetPShader( PShaderID::PS_FP_DiffuseNormalmappedFxMap );
-        } else if ( texture->GetSurface()->GetNormalmap() || Engine::GAPI->GetSceneWetness() > 1e-6 ) {
+        } else if ( hasNormalmap ) {
             newShader = shaderManager.GetPShader( PShaderID::PS_FP_DiffuseNormalmapped );
         } else {
             newShader = shaderManager.GetPShader( PShaderID::PS_FP_Diffuse );

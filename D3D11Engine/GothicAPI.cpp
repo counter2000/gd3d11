@@ -78,6 +78,9 @@ void MaterialInfo::WriteToFile( const std::string& name ) {
         c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
     }
     
+    if ( Engine::GAPI && !Engine::GAPI->MaterialDatabaseLoaded ) {
+        Engine::GAPI->LoadMaterialDatabase();
+    }
     Engine::GAPI->MaterialDatabase[nameStr] = this->buffer;
     Engine::GAPI->SaveMaterialDatabase();
 }
@@ -89,6 +92,9 @@ void MaterialInfo::LoadFromFile( const std::string_view name ) {
         c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
     }
     
+    if ( Engine::GAPI && !Engine::GAPI->MaterialDatabaseLoaded ) {
+        Engine::GAPI->LoadMaterialDatabase();
+    }
     auto it = Engine::GAPI->MaterialDatabase.find(nameStr);
     if (it != Engine::GAPI->MaterialDatabase.end()) {
         this->buffer = it->second;
@@ -137,6 +143,10 @@ void MaterialInfo::LoadFromFile( const std::string_view name ) {
 }
 
 void GothicAPI::LoadMaterialDatabase() {
+    if ( MaterialDatabaseLoaded ) {
+        return;
+    }
+    MaterialDatabaseLoaded = true;
     MaterialDatabase.clear();
     std::string filePath = "system\\GD3D11\\textures\\materials.bin";
     
@@ -316,7 +326,6 @@ GothicAPI::GothicAPI() {
     AnimatedSkeletalVobs.reserve(300);
     DynamicallyAddedVobs.reserve(100);
 
-    LoadMaterialDatabase();
 }
 
 GothicAPI::~GothicAPI() {

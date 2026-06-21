@@ -11,7 +11,7 @@
 
 void D3D11PFX_ASSAO::Init()
 {
-    std::string fileName = Engine::GAPI->GetStartDirectory() + "\\system\\GD3D11\\shaders\\ASSAO\\ASSAO.hlsl";
+    std::string fileName = Engine::GAPI->GetStartDirectory() + "\\system\\GD3D11\\Shaders\\ASSAO\\ASSAO.hlsl";
     
     auto shaderDataSize = std::filesystem::file_size( fileName );
     std::vector<char> shaderData( shaderDataSize );

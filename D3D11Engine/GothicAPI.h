@@ -964,6 +964,7 @@ private:
 
     /** In-memory database of all materials loaded from materials.bin */
     gtl::flat_hash_map<std::string, MaterialInfo::Buffer> MaterialDatabase;
+    bool MaterialDatabaseLoaded = false;
     void LoadMaterialDatabase();
     void SaveMaterialDatabase();
 

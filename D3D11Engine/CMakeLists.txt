@@ -163,8 +163,8 @@ if(GD3D11_DEPLOY_AFTER_BUILD)
   endif()
 
   add_custom_command(TARGET D3D11Engine POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${_gd3d11_deploy_root}/GD3D11/shaders"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/Shaders" "${_gd3d11_deploy_root}/GD3D11/shaders"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${_gd3d11_deploy_root}/GD3D11/Shaders"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/Shaders" "${_gd3d11_deploy_root}/GD3D11/Shaders"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:D3D11Engine>" "${_gd3d11_deploy_root}/ddraw.dll"
     VERBATIM
   )
