@@ -98,7 +98,7 @@ float4 ComputeHeightFog( float2 texcoord )
     position.y -= HF_FogHeight;
 
     float fog = 1.0f - ComputeVolumetricFog( position, posOriginal );
-    float3 color = ApplyAtmosphericScatteringGround( posOriginal, HF_FogColorMod, true, false );
+    float3 color = ApplyAtmosphericScatteringGround( position, HF_FogColorMod, true, false );
 	float nightTimeBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f));
 	nightTimeBlend *= saturate(AC_EnableNightAtmosphere);
 	float nightFogBrightness = lerp(1.0f, max(0.0f, AC_NightFogBrightness), saturate(AC_EnableNightAtmosphere));

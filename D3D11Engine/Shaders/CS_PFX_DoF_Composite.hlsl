@@ -109,7 +109,6 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
     if ( IsSkyDepth( depthC ) )
     {
         float4 skyEdgeBlur = GetSkyEdgeBlurSample( texcoord, dtexel, focusDepth );
-        skyEdgeBlur.rgb = min( skyEdgeBlur.rgb, sharpColor + 0.035f );
         OutputComposite[DTid.xy] = float4( lerp( sharpColor, skyEdgeBlur.rgb, skyEdgeBlur.a ), 1.0 );
         return;
     }
@@ -123,6 +122,17 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
     float cocR = IsSkyDepth( depthR ) ? cocC : ComputeCoCFromDepth( depthR, focusDepth );
     float cocU = IsSkyDepth( depthU ) ? cocC : ComputeCoCFromDepth( depthU, focusDepth );
     float cocD = IsSkyDepth( depthD ) ? cocC : ComputeCoCFromDepth( depthD, focusDepth );
+
+    float2 inwardShift = float2(
+        (IsSkyDepth(depthL) ? 1.0f : 0.0f) - (IsSkyDepth(depthR) ? 1.0f : 0.0f),
+        (IsSkyDepth(depthU) ? 1.0f : 0.0f) - (IsSkyDepth(depthD) ? 1.0f : 0.0f));
+    float inwardLength = length(inwardShift);
+    if ( inwardLength > 0.0f )
+    {
+        float shiftStrength = saturate((DoF_BokehRadius - 5.0f) / 27.0f);
+        float2 shiftedBlurUV = texcoord + (inwardShift / inwardLength) * dtexel * shiftStrength;
+        blurSample = TX_Blur.SampleLevel( SS_Linear, shiftedBlurUV, 0 );
+    }
 
     float minCoC = min( min( cocC, cocL ), min( cocR, min( cocU, cocD ) ) );
 

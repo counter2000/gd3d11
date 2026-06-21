@@ -4033,13 +4033,17 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
     }
 
     if ( rendererState.RendererSettings.EnableSSR && rendererState.RendererSettings.EnableRain
-        && Engine::GAPI->GetSceneWetness() > 1e-6f && isOutdoor && FrameWaterSurfaces.empty() ) {
+        && Engine::GAPI->GetSceneWetness() > 1e-6f && isOutdoor ) {
         graph.AddPass( RG_PASS_NAME("Wet Ground SSR"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( normalsResource );
             builder.Read( backBufferHandle );
             builder.Write( backBufferHandle );
 
             pass.m_executeCallback = [this, backBufferHandle, normalsResource](const RenderGraph& graph) {
+                if ( !FrameWaterSurfaces.empty() ) {
+                    return;
+                }
+
                 TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Wet Ground SSR" );
                 auto backBuffer = graph.GetPhysicalTexture( backBufferHandle );
                 auto normals = graph.GetPhysicalTexture( normalsResource );
