@@ -4059,7 +4059,9 @@ void GothicAPI::CollectVisibleVobs(
                         // Now check for distances, etc
                         float lightPlayerDist;
                         XMStoreFloat( &lightPlayerDist, XMVector3Length( playerPosition - vi->Vob->GetPositionWorldXM() ) );
-                        if ( vi->Vob->GetLightRange() > minDynamicUpdateLightRange && lightPlayerDist < vi->Vob->GetLightRange() * 1.5f )
+                        bool indoorDynamicLight = vi->IsIndoorVob && !vi->Vob->IsStatic();
+                        if ( (indoorDynamicLight || vi->Vob->GetLightRange() > minDynamicUpdateLightRange)
+                            && lightPlayerDist < vi->Vob->GetLightRange() * 1.5f )
                             vi->UpdateShadows = true;
                     }
                 }
@@ -4593,10 +4595,11 @@ void GothicAPI::BuildBspVobMapCacheHelper( zCBspBase* base ) {
                 vi->IsIndoorVob = vob->IsIndoorVob();
 
                 float minDynamicUpdateLightRange = Engine::GAPI->GetRendererState().RendererSettings.MinLightShadowUpdateRange;
-                bool allowShadow = !vi->IsIndoorVob || !vi->Vob->IsStatic();
+                bool indoorDynamicLight = vi->IsIndoorVob && !vi->Vob->IsStatic();
+                bool allowShadow = !vi->IsIndoorVob || indoorDynamicLight;
                 if ( allowShadow
                     && RendererState.RendererSettings.EnablePointlightShadows >= GothicRendererSettings::PLS_STATIC_ONLY
-                    && vi->Vob->GetLightRange() > minDynamicUpdateLightRange ) {
+                    && (indoorDynamicLight || vi->Vob->GetLightRange() > minDynamicUpdateLightRange) ) {
                     // Create shadowcubemap, if wanted
                     BaseShadowedPointLight* bpl;
                     Engine::GraphicsEngine->CreateShadowedPointLight( &bpl, vi );
@@ -5341,7 +5344,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
             GetPrivateProfileIntA( "Shadows", "ShadowFilterMode",
                 static_cast<int>(ds.ShadowFilterMode), ini.c_str() ));
         s.ShadowMapSize = GetPrivateProfileIntA( "Shadows", "ShadowMapSize", ds.ShadowMapSize, ini.c_str() );
-        s.EnablePointlightShadows = GothicRendererSettings::EPointLightShadowMode( GetPrivateProfileIntA( "Shadows", "PointlightShadows", GothicRendererSettings::EPointLightShadowMode::PLS_STATIC_ONLY, ini.c_str() ) );
+        s.EnablePointlightShadows = GothicRendererSettings::EPointLightShadowMode( GetPrivateProfileIntA( "Shadows", "PointlightShadows", ds.EnablePointlightShadows, ini.c_str() ) );
         s.WorldShadowRangeScale = GetPrivateProfileFloatA( "Shadows", "WorldShadowRangeScale", ds.WorldShadowRangeScale, ini );
         s.NumShadowCascades = GetPrivateProfileIntA( "Shadows", "NumShadowCascades", ds.NumShadowCascades, ini.c_str() );
         s.ShadowCascadePCFLimit = GetPrivateProfileIntA( "Shadows", "ShadowCascadePCFLimit", ds.ShadowCascadePCFLimit, ini.c_str() );

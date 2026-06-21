@@ -127,8 +127,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
     if ( inwardLength > 0.0f )
     {
         float shiftStrength = saturate((DoF_BokehRadius - 5.0f) / 27.0f);
-        float2 shiftedBlurUV = Input.vTexcoord + (inwardShift / inwardLength) * dtexel * shiftStrength;
-        blurSample = TX_Blur.Sample( SS_Linear, shiftedBlurUV );
+        float2 inwardDirection = inwardShift / inwardLength;
+        float2 shiftedBlurUV = Input.vTexcoord + inwardDirection * dtexel * shiftStrength;
+        float2 edgeTangent = float2(-inwardDirection.y, inwardDirection.x) * dtexel * 0.5f;
+        blurSample = 0.5f * (TX_Blur.Sample( SS_Linear, shiftedBlurUV - edgeTangent )
+            + TX_Blur.Sample( SS_Linear, shiftedBlurUV + edgeTangent ));
     }
 
     float minCoC = min( min( cocC, cocL ), min( cocR, min( cocU, cocD ) ) );

@@ -94,6 +94,12 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	position.y -= HF_FogHeight;
 	
 	float fog = 1.0f - ComputeVolumetricFog(position, posOriginal);
+	float dayBlend = smoothstep(-0.05f, 0.15f, AC_LightPos.y);
+	float fogDistance = length(posOriginal - HF_CameraPosition);
+	float stableFadeEnd = max(HF_WeightZFar, 1000.0f);
+	float stableFadeStart = max(HF_WeightZNear, stableFadeEnd * 0.82f);
+	float stableWorldFade = smoothstep(stableFadeStart, stableFadeEnd, fogDistance);
+	fog = max(fog, stableWorldFade * dayBlend);
 		
 	float3 color = ApplyAtmosphericScatteringGround(position, HF_FogColorMod, true, false);
 	float nightTimeBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f));
@@ -108,6 +114,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float darknessFactor = lerp(dayDarknessFactor, 2.0f, nightTimeBlend);
 	float maxFogOpacity = lerp(1.0f, 0.85f, nightTimeBlend);
 
-	float3 ditheredFogColor = color / darknessFactor + FogDither(Input.vPosition.xy) * (1.5f / 255.0f);
+	float ditherStrength = lerp(1.5f, 2.0f, nightTimeBlend) / 255.0f;
+	float3 ditheredFogColor = color / darknessFactor + FogDither(Input.vPosition.xy) * ditherStrength;
 	return float4(saturate(ditheredFogColor), saturate(fog) * maxFogOpacity);
 }

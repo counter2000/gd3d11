@@ -57,8 +57,15 @@ struct PS_INPUT
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
-float4 PSMain( PS_INPUT Input ) : SV_TARGET
+struct PS_OUTPUT
 {
+	float4 color : SV_TARGET0;
+	float waterMask : SV_TARGET1;
+};
+
+PS_OUTPUT PSMain( PS_INPUT Input )
+{
+	PS_OUTPUT output;
 	float2 screenUV = Input.vPosition.xy / RI_ViewportSize;
 	
 	// Linear depth
@@ -73,7 +80,6 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 		
 	// Camera direction
 	float3 viewDirection = normalize(Input.vWorldPosition - RI_CameraPosition);
-	float waterTopSide = smoothstep(-0.05f, 0.12f, dot(-viewDirection, normalize(Input.vNormalWS)));
 	float enhancedWater = step(0.5f, AC_EnableSSR);
 		
 	// Calculate distortion vectors
@@ -175,7 +181,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	// Suppress unstable self-reflections where the player intersects nearby water.
 	float ssrNearFade = smoothstep(350.0f, 1000.0f, abs(Input.vTexcoord2.y));
-	ssrWeight *= ssrNearFade * waterTopSide;
+	ssrWeight *= ssrNearFade;
 	// Darken the scene, to make a wet surface
 	float f = 1-saturate(pow(1-shallowDepth, 8.0f) + clamp(pow(distortionSmall.y, 2), 0.5f, 1.0f));
 	float nightAmount = saturate((-AC_LightPos.y + 0.12f) * 2.2f);
@@ -186,7 +192,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float pxDistance = Input.vTexcoord2.y;
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
 	float cubeWeight = (AC_EnableSSR > 0.5f) ? lerp(0.45f, 0.95f, nightAmount) : 1.0f;
-	scene.rgb += reflection * cubeWeight * waterTopSide * (1.0f - ssrWeight * lerp(0.75f, 0.90f, nightAmount)) * fresnel * lerp(1.0f, diffuse, 0.6f);
+	scene.rgb += reflection * cubeWeight * (1.0f - ssrWeight * lerp(0.75f, 0.90f, nightAmount)) * fresnel * lerp(1.0f, diffuse, 0.6f);
 	float ssrFresnel = lerp(0.55f, 0.80f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));
@@ -213,5 +219,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	darknessFactor -= AC_LightPos.y;
 	darknessFactor = lerp(darknessFactor, max(1.22f, darknessFactor * 0.58f), nightAmount * enhancedWater);
 
-	return float4(color / darknessFactor, 1);
+	output.color = float4(color / darknessFactor, 1);
+	output.waterMask = 1.0f;
+	return output;
 }

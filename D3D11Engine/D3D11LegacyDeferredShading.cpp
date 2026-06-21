@@ -88,7 +88,7 @@ XRESULT D3D11LegacyDeferredShading::DrawPointlightLights(
         plcb.PL_Range = vob->GetLightRange();
         plcb.Pl_PositionWorld = vob->GetPositionWorld();
         plcb.PL_Outdoor = light->IsIndoorVob ? 0.0f : 1.0f;
-        plcb.PL_ShadowStrength = (light->IsIndoorVob && !vob->IsStatic()) ? 0.45f : 1.0f;
+        plcb.PL_ShadowStrength = 1.0f;
 
         float dist;
         XMStoreFloat( &dist, XMVector3Length( XMLoadFloat3( plcb.Pl_PositionWorld.toXMFLOAT3() ) - Engine::GAPI->GetCameraPositionXM() ) );

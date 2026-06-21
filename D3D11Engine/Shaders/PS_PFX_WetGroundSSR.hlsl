@@ -27,6 +27,7 @@ Texture2D TX_Depth : register(t1);
 Texture2D TX_Normals : register(t2);
 Texture2D TX_RainShadow : register(t3);
 Texture2D TX_Distortion : register(t4);
+Texture2D TX_WaterMask : register(t5);
 
 struct PS_INPUT
 {
@@ -65,6 +66,9 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
 {
     float2 uv = input.vTexcoord;
     float3 sceneColor = TX_Scene.SampleLevel(SS_Linear, uv, 0).rgb;
+    if (TX_WaterMask.SampleLevel(SS_Linear, uv, 0).r > 0.5f)
+        return float4(sceneColor, 1.0f);
+
     float depth = TX_Depth.SampleLevel(SS_Linear, uv, 0).r;
     if (depth <= 1e-7f || WG_Wetness <= 0.001f || WG_Strength <= 0.001f)
         return float4(sceneColor, 1.0f);

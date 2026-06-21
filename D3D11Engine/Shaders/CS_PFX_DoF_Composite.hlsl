@@ -130,8 +130,11 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
     if ( inwardLength > 0.0f )
     {
         float shiftStrength = saturate((DoF_BokehRadius - 5.0f) / 27.0f);
-        float2 shiftedBlurUV = texcoord + (inwardShift / inwardLength) * dtexel * shiftStrength;
-        blurSample = TX_Blur.SampleLevel( SS_Linear, shiftedBlurUV, 0 );
+        float2 inwardDirection = inwardShift / inwardLength;
+        float2 shiftedBlurUV = texcoord + inwardDirection * dtexel * shiftStrength;
+        float2 edgeTangent = float2(-inwardDirection.y, inwardDirection.x) * dtexel * 0.5f;
+        blurSample = 0.5f * (TX_Blur.SampleLevel( SS_Linear, shiftedBlurUV - edgeTangent, 0 )
+            + TX_Blur.SampleLevel( SS_Linear, shiftedBlurUV + edgeTangent, 0 ));
     }
 
     float minCoC = min( min( cocC, cocL ), min( cocR, min( cocU, cocD ) ) );

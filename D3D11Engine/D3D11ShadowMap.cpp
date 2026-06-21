@@ -940,8 +940,8 @@ XRESULT D3D11ShadowMap::DrawPointlightShadows( std::vector<VobLightInfo*>& light
     bool partialShadowUpdate = settings.PartialDynamicShadowUpdates;
     const bool staticOnlyMode = settings.EnablePointlightShadows == GothicRendererSettings::PLS_STATIC_ONLY;
 
-    // Indoor ambient lights are marked static by Gothic. Only a small set of nearby
-    // non-static lamp lights may cast soft character shadows.
+    // Indoor ambient lights are static. Prioritize nearby non-static lamp lights
+    // for full dynamic point-light shadows.
     std::vector<std::pair<float, VobLightInfo*>> indoorShadowCandidates;
     indoorShadowCandidates.reserve( 8 );
     for ( auto* light : lights ) {
@@ -959,8 +959,8 @@ XRESULT D3D11ShadowMap::DrawPointlightShadows( std::vector<VobLightInfo*>& light
     }
     std::sort( indoorShadowCandidates.begin(), indoorShadowCandidates.end(),
         []( const auto& left, const auto& right ) { return left.first < right.first; } );
-    if ( indoorShadowCandidates.size() > 4 ) {
-        indoorShadowCandidates.resize( 4 );
+    if ( indoorShadowCandidates.size() > 8 ) {
+        indoorShadowCandidates.resize( 8 );
     }
     auto allowIndoorShadow = [&indoorShadowCandidates]( VobLightInfo* light ) {
         if ( !light->IsIndoorVob ) return true;
