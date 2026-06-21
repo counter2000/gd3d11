@@ -90,6 +90,14 @@ static ID3D11ShaderResourceView* GetParallaxDisplacementSRV( MyDirectDrawSurface
     return surface->GetDisplacementmap()->GetShaderResourceView().Get();
 }
 
+static ID3D11ShaderResourceView* GetWetNormalFallbackSRV( MyDirectDrawSurface7* surface ) {
+    if ( !surface || surface->GetNormalmap() || Engine::GAPI->GetSceneWetness() <= 1e-6f ) {
+        return nullptr;
+    }
+
+    return Engine::GraphicsEngine->GetDistortionTexture()->GetShaderResourceView().Get();
+}
+
 static void UpdateRefractionViewProjection( RefractionInfoConstantBuffer& buffer ) {
     XMMATRIX view = Engine::GAPI->GetViewMatrixXM();
     XMMATRIX proj = XMLoadFloat4x4( &Engine::GAPI->GetProjectionMatrix() );
@@ -2347,9 +2355,17 @@ bool D3D11GraphicsEngine::BindTextureNRFX( zCTexture* tex, bool bindShader, bool
         }
     }
 
-    // Bind a normalmap only when the material really has one.
+    // Bind a normalmap only when the material really has one. Wet scenes keep
+    // the old rain distortion fallback, but dry materials without normalmaps
+    // stay without a fallback texture.
     if ( D3D11Texture* nrm = tex->GetSurface()->GetNormalmap() ) {
         srvs[1] = nrm->GetShaderResourceView().Get();
+    } else if ( ID3D11ShaderResourceView* wetFallback = GetWetNormalFallbackSRV( tex->GetSurface() ) ) {
+        if ( info &&
+            info->buffer.NormalmapStrength != DEFAULT_NORMALMAP_STRENGTH ) {
+            info->buffer.NormalmapStrength = DEFAULT_NORMALMAP_STRENGTH;
+        }
+        srvs[1] = wetFallback;
     }
 
     if ( info && GetActivePS() ) {
@@ -2363,9 +2379,12 @@ bool D3D11GraphicsEngine::BindTextureNRFX( zCTexture* tex, bool bindShader, bool
         srvs[2] = fxmap->GetShaderResourceView().Get();
         fxmap->BindToPixelShader( 2 );
     }
-
     srvs[3] = GetParallaxDisplacementSRV( tex->GetSurface() );
-    GetContext()->PSSetShaderResources( 0, 4, srvs );
+    GetContext()->PSSetShaderResources( 0, 3, srvs );
+    if ( srvs[3] ) {
+        GetContext()->PSSetShaderResources( 13, 1, &srvs[3] );
+    }
+
 
 
     return true;
@@ -4002,7 +4021,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         } );
     }
     else if ( compositionSAO ) {
-        // SAO compute-only pass â€” skips the final modulate blit (composition handles it)
+        // SAO compute-only pass ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â skips the final modulate blit (composition handles it)
         graph.AddPass( RG_PASS_NAME("SAO Compute"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( normalsResource );
 
@@ -4164,7 +4183,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
     if (rendererState.RendererSettings.DrawFog &&
                 Engine::GAPI->GetLoadedWorldInfo()->BspTree->GetBspTreeMode() ==
                 zBSP_MODE_OUTDOOR && !compositionActive) {
-        // Standalone heightfog pass â€” only used when composition is not active (shouldn't happen
+        // Standalone heightfog pass ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â only used when composition is not active (shouldn't happen
         // when DrawFog is on, but kept as fallback for FL10 or edge cases)
         graph.AddPass( RG_PASS_NAME("Draw Heightfog"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( backBufferHandle );
@@ -4242,7 +4261,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         Engine::GAPI->GetLoadedWorldInfo()->BspTree->GetBspTreeMode() ==
         zBSP_MODE_OUTDOOR) {
         if ( compositionActive ) {
-            // GodRays compute-only pass â€” writes to pool texture, skips the final additive blit
+            // GodRays compute-only pass ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â writes to pool texture, skips the final additive blit
             graph.AddPass( RG_PASS_NAME("GodRays Compute"), [&]( RGBuilder& builder, RenderPass& pass ) {
                 builder.Read( backBufferHandle );
 
@@ -4282,7 +4301,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         }
     }
 
-    // PostFX Composition pass â€” merges SAO, HeightFog, and GodRays in a single full-screen blit
+    // PostFX Composition pass ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â merges SAO, HeightFog, and GodRays in a single full-screen blit
     if ( compositionActive ) {
         graph.AddPass( RG_PASS_NAME("PostFX Composition"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( backBufferHandle );
@@ -4294,7 +4313,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
 
                 auto backBuffer = graph.GetPhysicalTexture(backBufferHandle);
 
-                // Copy backbuffer to a temp texture â€” we need to read it as SRV while writing to RTV
+                // Copy backbuffer to a temp texture ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â we need to read it as SRV while writing to RTV
                 auto tempBuffer = PfxRenderer->GetTempBuffer();
                 GetContext()->CopyResource( tempBuffer->GetTexture().Get(), backBuffer->GetTexture().Get() );
 
@@ -4737,6 +4756,9 @@ XRESULT D3D11GraphicsEngine::DrawMeshInfoListAlphablended(
                 ? surface->GetFxMap()->GetShaderResourceView().Get()
                 : nullptr;
             srv[3] = GetParallaxDisplacementSRV( surface );
+            if ( !srv[1] ) {
+                srv[1] = GetWetNormalFallbackSRV( surface );
+            }
 
             int alphaFunc = meshKey.Material->GetAlphaFunc();
 
@@ -4747,7 +4769,10 @@ XRESULT D3D11GraphicsEngine::DrawMeshInfoListAlphablended(
             }
 
             if (lastTex != texture) {
-                GetContext()->PSSetShaderResources( 0, 4, srv  );
+                GetContext()->PSSetShaderResources( 0, 3, srv );
+                if ( srv[3] ) {
+                    GetContext()->PSSetShaderResources( 13, 1, &srv[3] );
+                }
                 lastTex = texture;
             }
 
@@ -4912,7 +4937,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
         Engine::GAPI->CollectVisibleSections( m_FrameGeometryCache.visibleSections, nullptr, true );
         m_FrameGeometryCache.worldMeshBuilt = true;
     }
-    renderList = m_FrameGeometryCache.visibleSections; // shallow copy of pointers â€” O(N_sections), not O(BSP)
+    renderList = m_FrameGeometryCache.visibleSections; // shallow copy of pointers ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â O(N_sections), not O(BSP)
 
     MeshInfo* meshInfo = Engine::GAPI->GetWrappedWorldMesh();
     DrawVertexBufferIndexedUINT( meshInfo->MeshVertexBuffer, meshInfo->MeshIndexBuffer, 0, 0 );
@@ -5147,11 +5172,15 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
                     ? surface->GetFxMap()->GetShaderResourceView().Get()
                     : nullptr;
                 srv[3] = GetParallaxDisplacementSRV( surface );
+                if ( !srv[1] ) {
+                    srv[1] = GetWetNormalFallbackSRV( surface );
+                }
 
-                // No fallback normalmap: materials without a real normalmap keep t1 empty.
-
-                // Bind both
-                GetContext()->PSSetShaderResources( 0, 4, srv );
+                // Bind diffuse/normal/fx like 026; POM displacement uses t13.
+                GetContext()->PSSetShaderResources( 0, 3, srv );
+                if ( srv[3] ) {
+                    GetContext()->PSSetShaderResources( 13, 1, &srv[3] );
+                }
 
                 // Get the right shader for it
                 if ( BindShaderForTexture( mesh.first.Texture, false,
@@ -6993,7 +7022,7 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
                     auto _scopeCollectVisibleVobs = RecordGraphicsEvent( GE_NAME( "DrawVOBsInstanced::CollectVisibleVobs" ) );
                     Engine::GAPI->CollectVisibleVobs( vobs, m_FrameLights, mobs, EGothicCullFlags::CullAll, (EBspTreeCollectFlags)collect );
                 }
-                // Snapshot mobs into cache â€” the static 'mobs' vector is cleared at
+                // Snapshot mobs into cache ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â the static 'mobs' vector is cleared at
                 // end of this function, so the lit pass would find it empty otherwise.
                 m_FrameGeometryCache.cachedMobs = mobs;
             }
@@ -7323,8 +7352,17 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
                             ? surface->GetFxMap()->GetShaderResourceView().Get()
                             : nullptr;
                         srv[3] = GetParallaxDisplacementSRV( surface );
+                        if ( !srv[1] && ( wantShader && !isZPrepass ) ) {
+                            if ( ID3D11ShaderResourceView* wetFallback = GetWetNormalFallbackSRV( surface ) ) {
+                                if ( info && info->buffer.NormalmapStrength != DEFAULT_NORMALMAP_STRENGTH ) {
+                                    info->buffer.NormalmapStrength = DEFAULT_NORMALMAP_STRENGTH;
+                                    lastMatInfo = info;
+                                }
+                                srv[1] = wetFallback;
+                            }
+                        }
 
-                        // No fallback normalmap: materials without a real normalmap keep t1 empty.
+                        // Wet scenes can use the distortion texture as a temporary normalmap fallback.
                         if ( lastTex != tx
                             || lastNrmTex != srv[1]
                             || lastFxTex != srv[2]
@@ -7336,7 +7374,10 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
                             lastDispTex = srv[3];
 
                             if ( wantShader ) {
-                                GetContext()->PSSetShaderResources( 0, isZPrepass ? 1 : 4, srv );
+                                GetContext()->PSSetShaderResources( 0, isZPrepass ? 1 : 3, srv );
+                                if ( !isZPrepass && srv[3] ) {
+                                    GetContext()->PSSetShaderResources( 13, 1, &srv[3] );
+                                }
 
                                 if ( BindShaderForTexture( tx,
                                     tx->HasAlphaChannel()
@@ -7556,9 +7597,15 @@ XRESULT D3D11GraphicsEngine::DrawFrameAlphaMeshes()
                 ? surface->GetFxMap()->GetShaderResourceView().Get()
                 : nullptr;
             srv[3] = GetParallaxDisplacementSRV( surface );
+            if ( !srv[1] ) {
+                srv[1] = GetWetNormalFallbackSRV( surface );
+            }
 
-            // Bind both
-            GetContext()->PSSetShaderResources( 0, 4, srv );
+            // Bind diffuse/normal/fx like 026; POM displacement uses t13.
+            GetContext()->PSSetShaderResources( 0, 3, srv );
+            if ( srv[3] ) {
+                GetContext()->PSSetShaderResources( 13, 1, &srv[3] );
+            }
 
             if ( (blendAdd || blendBlend) &&
                 !Engine::GAPI->GetRendererState().BlendState.BlendEnabled ) {
@@ -7687,9 +7734,15 @@ XRESULT D3D11GraphicsEngine::DrawPolyStrips( bool noTextures ) {
             srv[1] = surface->GetNormalmap() ? surface->GetNormalmap()->GetShaderResourceView().Get() : NULL;
             srv[2] = surface->GetFxMap() ? surface->GetFxMap()->GetShaderResourceView().Get() : NULL;
             srv[3] = GetParallaxDisplacementSRV( surface );
+            if ( !srv[1] ) {
+                srv[1] = GetWetNormalFallbackSRV( surface );
+            }
 
-            // Bind both
-            Context->PSSetShaderResources( 0, 4, srv );
+            // Bind diffuse/normal/fx like 026; POM displacement uses t13.
+            Context->PSSetShaderResources( 0, 3, srv );
+            if ( srv[3] ) {
+                Context->PSSetShaderResources( 13, 1, &srv[3] );
+            }
 
             if ( (blendAdd || blendBlend) && !Engine::GAPI->GetRendererState().BlendState.BlendEnabled ) {
                 if ( blendAdd )

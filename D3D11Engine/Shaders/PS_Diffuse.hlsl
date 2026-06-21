@@ -30,7 +30,7 @@ SamplerState SS_samMirror : register( s1 );
 Texture2D	TX_Texture0 : register( t0 );
 Texture2D	TX_Texture1 : register( t1 );
 Texture2D	TX_Texture2 : register( t2 );
-Texture2D	TX_Displacement : register( t3 );
+Texture2D	TX_Displacement : register( t13 );
 TextureCube	TX_ReflectionCube : register( t4 );
 
 #ifdef FORWARD_PLUS
