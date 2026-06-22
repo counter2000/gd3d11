@@ -207,7 +207,7 @@ void rainResponse(PS_INPUT input, float3 lightVector, float lightIntensity, floa
         float3 tex3 = float3(textureCoordsH1, input.vTexcoord.y, texIndicesV2.x);        
         float3 tex4 = float3(textureCoordsH2, input.vTexcoord.y, texIndicesV2.y);
 
-		const float v2MaxFactor = 0.010f; 
+		const float v2MaxFactor = 0.012f;
 		
         // Sample opacity from the textures
         float rainBlurBias = 0.0f;
@@ -231,7 +231,7 @@ void rainResponse(PS_INPUT input, float3 lightVector, float lightIntensity, floa
 					
         opacity = lerp(hOpacity1,hOpacity2,t);
         opacity = pow(opacity,0.7); // inverse gamma correction (expand dynamic range)
-        opacity = 4*lightIntensity * opacity * fallOff;
+        opacity = 4.35f * lightIntensity * opacity * fallOff;
 #ifndef SNOW_FEATURE
         float nearCameraFade = lerp(1.0f, 0.35f,
             (1.0f - smoothstep(120.0f, 1400.0f, length(eyeVector))) * saturate(AR_Pad1.x));

@@ -90,7 +90,7 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
     if (wetMask <= 0.01f)
         return float4(sceneColor, 1.0f);
 
-    float wetDistortionScale = 1100.0f * max(abs(WG_ProjParams.z), 1.0f);
+    float wetDistortionScale = 9000.0f;
     float2 wetUV = wsPosition.xz / wetDistortionScale;
     float2 distortion = TX_Distortion.SampleLevel(SS_Linear, wetUV + WG_Time * float2(0.013f, -0.009f), 0).xy * 2.0f - 1.0f;
     distortion += (TX_Distortion.SampleLevel(SS_Linear, wetUV * 0.63f + WG_Time * float2(-0.007f, 0.011f), 0).xy * 2.0f - 1.0f) * 0.5f;

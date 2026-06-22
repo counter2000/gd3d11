@@ -23,7 +23,7 @@ constexpr float snowSpeedFactor = 0.15f;
 
 namespace {
     const float2 snowScale( 3.0f, 3.0f );
-    const float2 rainScale( 30.0f / 10.0f, 30.0f / 8.0f );
+    const float2 rainScale( 30.0f / 10.0f, 30.0f / 7.1f );
 }
 
 D3D11Effect::D3D11Effect() {

@@ -40,6 +40,17 @@ TextureCube	TX_ReflectionCube : register( t3 );
 Texture2D	TX_Distortion : register( t4 );
 Texture2D	TX_Scene : register( t5 );
 
+float3 SampleWaterSSRReflection(float2 uv, float2 invResolution, float roughness)
+{
+	float2 spread = invResolution * lerp(1.5f, 5.0f, saturate(roughness));
+	float3 color = TX_Scene.SampleLevel(SS_Linear, uv, 0).rgb * 0.44f;
+	color += TX_Scene.SampleLevel(SS_Linear, saturate(uv + float2(spread.x, 0.0f)), 0).rgb * 0.14f;
+	color += TX_Scene.SampleLevel(SS_Linear, saturate(uv - float2(spread.x, 0.0f)), 0).rgb * 0.14f;
+	color += TX_Scene.SampleLevel(SS_Linear, saturate(uv + float2(0.0f, spread.y)), 0).rgb * 0.14f;
+	color += TX_Scene.SampleLevel(SS_Linear, saturate(uv - float2(0.0f, spread.y)), 0).rgb * 0.14f;
+	return color;
+}
+
 //--------------------------------------------------------------------------------------
 // Input / Output structures
 //--------------------------------------------------------------------------------------
@@ -192,7 +203,8 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 					float edgeTolerance = clamp(abs(finalSceneZ) * 0.012f, 18.0f, 120.0f);
 
 					if (abs(projFinal.w - finalSceneZ) <= hitTolerance && depthEdge <= edgeTolerance) {
-						reflectionSSR = TX_Scene.SampleLevel(SS_Linear, uv, 0).xyz;
+						float ssrRoughness = saturate(abs(Input.vTexcoord2.y) / 18000.0f + length(distortionSmall.xz) * 0.35f);
+						reflectionSSR = SampleWaterSSRReflection(uv, rcp(max(RI_ViewportSize, float2(1.0f, 1.0f))), ssrRoughness);
 						float2 edgeFade = saturate(abs(uv - 0.5f) * 2.0f);
 						float edgeDistance = max(edgeFade.x, edgeFade.y);
 						ssrWeight = 1.0f - smoothstep(0.78f, 1.0f, edgeDistance);
