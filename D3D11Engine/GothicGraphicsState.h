@@ -783,6 +783,7 @@ struct GothicRendererSettings {
         LimitLightIntesity = false;
         AllowNormalmaps = false;
         EnableParallaxOcclusionMapping = false;
+        ParallaxOcclusionStrength = 1.0f;
 
         AllowNumpadKeys = false;
         EnableDebugLog = true;
@@ -1019,6 +1020,7 @@ struct GothicRendererSettings {
     bool LimitLightIntesity;
     bool AllowNormalmaps;
     bool EnableParallaxOcclusionMapping;
+    float ParallaxOcclusionStrength;
 
     bool AllowNumpadKeys;
     bool EnableDebugLog;

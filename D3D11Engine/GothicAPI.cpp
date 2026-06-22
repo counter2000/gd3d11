@@ -5447,6 +5447,7 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "General", "DoFMaxBlur", float_to_string( s.DoFMaxBlur, 1 ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "AllowNormalmaps", std::to_string( s.AllowNormalmaps ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableParallaxOcclusionMapping", std::to_string( s.EnableParallaxOcclusionMapping ? TRUE : FALSE ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "ParallaxOcclusionStrength", float_to_string( s.ParallaxOcclusionStrength, 2 ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "AllowNumpadKeys", std::to_string( s.AllowNumpadKeys ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableInactiveFpsLock", std::to_string( s.EnableInactiveFpsLock ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "MultiThreadResourceManager", std::to_string( s.MTResoureceManager ? TRUE : FALSE ).c_str(), ini.c_str() );
@@ -5574,6 +5575,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.DoFMaxBlur = GetPrivateProfileFloatA( "General", "DoFMaxBlur", ds.DoFMaxBlur, ini );
         s.AllowNormalmaps = GetPrivateProfileBoolA( "General", "AllowNormalmaps", ds.AllowNormalmaps, ini );
         s.EnableParallaxOcclusionMapping = GetPrivateProfileBoolA( "General", "EnableParallaxOcclusionMapping", ds.EnableParallaxOcclusionMapping, ini );
+        s.ParallaxOcclusionStrength = std::clamp( GetPrivateProfileFloatA( "General", "ParallaxOcclusionStrength", ds.ParallaxOcclusionStrength, ini ), 0.0f, 4.0f );
         s.AllowNumpadKeys = GetPrivateProfileBoolA( "General", "AllowNumpadKeys", ds.AllowNumpadKeys, ini );
         s.EnableInactiveFpsLock = GetPrivateProfileBoolA( "General", "EnableInactiveFpsLock", ds.EnableInactiveFpsLock, ini );
         s.MTResoureceManager = GetPrivateProfileBoolA( "General", "MultiThreadResourceManager", ds.MTResoureceManager, ini );

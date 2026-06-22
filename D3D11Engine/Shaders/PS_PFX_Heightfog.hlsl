@@ -95,10 +95,17 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	position.y -= HF_FogHeight;
 	
 	float fog = 1.0f - ComputeVolumetricFog(position, posOriginal);
+	float fogDistance = length(posOriginal - HF_CameraPosition);
+	float stableFadeEnd = max(HF_WeightZFar, 1000.0f);
+	float stableFadeStart = max(HF_WeightZNear, stableFadeEnd * 0.82f);
+	float stableWorldFade = smoothstep(stableFadeStart, stableFadeEnd, fogDistance);
+	float rainFogBlend = max(saturate(AC_SceneWettness), saturate(AC_RainFXWeight));
+	float nightFogBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f)) * saturate(AC_EnableNightAtmosphere);
+	float weatherNightFogBlend = saturate(max(rainFogBlend, nightFogBlend));
+	fog = max(fog, stableWorldFade * weatherNightFogBlend);
 		
 	float3 color = ApplyAtmosphericScatteringGround(position, HF_FogColorMod, true, false);
-	float nightTimeBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f));
-	nightTimeBlend *= saturate(AC_EnableNightAtmosphere);
+	float nightTimeBlend = nightFogBlend;
 	float nightFogBrightness = lerp(1.0f, max(0.0f, AC_NightFogBrightness), saturate(AC_EnableNightAtmosphere));
 	float3 nightFogColor = float3(0.12f, 0.18f, 0.27f) * nightFogBrightness;
 	color = lerp(color, nightFogColor, nightTimeBlend);

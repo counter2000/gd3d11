@@ -90,6 +90,23 @@ static ID3D11ShaderResourceView* GetParallaxDisplacementSRV( MyDirectDrawSurface
     return surface->GetDisplacementmap()->GetShaderResourceView().Get();
 }
 
+static MaterialInfo::Buffer GetEffectiveMaterialBuffer( const MaterialInfo* info, MyDirectDrawSurface7* surface ) {
+    MaterialInfo defaults;
+    MaterialInfo::Buffer buffer = info ? info->buffer : defaults.buffer;
+
+    const auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
+    if ( surface && surface->GetDisplacementmap() ) {
+        // A present *_disp.dds is the primary opt-in for POM. If old material data
+        // contains displacementFactor=0, keep the map testable by falling back to
+        // the default material strength instead of silently disabling POM.
+        if ( buffer.DisplacementFactor <= 0.0001f ) {
+            buffer.DisplacementFactor = defaults.buffer.DisplacementFactor;
+        }
+        buffer.DisplacementFactor *= std::clamp( settings.ParallaxOcclusionStrength, 0.0f, 4.0f );
+    }
+
+    return buffer;
+}
 static ID3D11ShaderResourceView* GetWetNormalFallbackSRV( MyDirectDrawSurface7* surface, D3D11Texture* distortionTexture ) {
     if ( !surface || !distortionTexture || Engine::GAPI->GetSceneWetness() <= 1e-6f ) {
         return nullptr;
@@ -2374,7 +2391,8 @@ bool D3D11GraphicsEngine::BindTextureNRFX( zCTexture* tex, bool bindShader, bool
     }
 
     if ( info && GetActivePS() ) {
-        auto allocation = PerObjectMaterialInfoPooledBuffer->Allocate( GetContext().Get(), &info->buffer, sizeof( info->buffer ) );
+        auto materialBuffer = GetEffectiveMaterialBuffer( info, tex->GetSurface() );
+        auto allocation = PerObjectMaterialInfoPooledBuffer->Allocate( GetContext().Get(), &materialBuffer, sizeof( materialBuffer ) );
         UINT firstConstant = allocation.offsetInBytes / 16;
         UINT numConstants = allocation.sizeInBytes / 16;
         GetContext()->PSSetConstantBuffers1( 2, 1, &allocation.pBuffer, &firstConstant, &numConstants );
@@ -5202,7 +5220,8 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
                     if ( info->IsSame( lastInfo ) ) {
                         materialInfoBufferAllocation = lastMatCbAllocation;
                     } else {
-                        materialInfoBufferAllocation = PerObjectMaterialInfoPooledBuffer->Allocate( GetContext().Get(), &info->buffer, sizeof( info->buffer ) );
+                        auto materialBuffer = GetEffectiveMaterialBuffer( info, surface );
+                        materialInfoBufferAllocation = PerObjectMaterialInfoPooledBuffer->Allocate( GetContext().Get(), &materialBuffer, sizeof( materialBuffer ) );
                     }
                 }
                 lastInfo = info;
@@ -7400,7 +7419,8 @@ XRESULT D3D11GraphicsEngine::DrawVOBsInstanced() {
                                 }
 
                                 if ( info && !info->IsSame( lastMatInfo ) ) {
-                                    auto matAllocation = PerObjectMaterialInfoPooledBuffer->Allocate( GetContext().Get(), &info->buffer, sizeof( info->buffer ) );
+                                    auto materialBuffer = GetEffectiveMaterialBuffer( info, tx->GetSurface() );
+                                    auto matAllocation = PerObjectMaterialInfoPooledBuffer->Allocate( GetContext().Get(), &materialBuffer, sizeof( materialBuffer ) );
                                     UINT firstConstant = matAllocation.offsetInBytes / 16;
                                     UINT numConstants = matAllocation.sizeInBytes / 16;
                                     GetContext()->PSSetConstantBuffers1( materialInfoSlot, 1, &matAllocation.pBuffer, &firstConstant, &numConstants );
@@ -7762,7 +7782,8 @@ XRESULT D3D11GraphicsEngine::DrawPolyStrips( bool noTextures ) {
             }
 
             MaterialInfo* info = Engine::GAPI->GetMaterialInfoFrom( tx );
-            materialInfoBuffer.Update( &info->buffer, sizeof( info->buffer ) );
+            auto materialBuffer = GetEffectiveMaterialBuffer( info, tx->GetSurface() );
+            materialInfoBuffer.Update( &materialBuffer, sizeof( materialBuffer ) );
 
         } else {
             //Don't draw if texture is not yet cached (I have no idea how can I preload it in advance)

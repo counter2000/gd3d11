@@ -660,10 +660,12 @@ void ImGuiShim::RenderSettingsWindow()
                 Engine::GAPI->UpdateTextureMaxSize();
             }
             ImGui::BeginDisabled( !settings.AllowNormalmaps );
-            if ( ImGui::Checkbox( "Parallax Occlusion Mapping", &settings.EnableParallaxOcclusionMapping ) ) {
-                Engine::GAPI->UpdateTextureMaxSize();
-            }
-            ImGui::SetItemTooltip( "Uses *_disp.dds height maps from Displacementmaps_* folders. Only loaded while enabled." );
+            ImGui::Checkbox( "Parallax Occlusion Mapping", &settings.EnableParallaxOcclusionMapping );
+            ImGui::SetItemTooltip( "Uses *_disp.dds height maps from textures/replacements/Displacementmaps_* folders. Maps are loaded with normalmaps and only used while POM is enabled." );
+            ImGui::BeginDisabled( !settings.EnableParallaxOcclusionMapping );
+            ImGui::SliderFloat( "POM Strength", &settings.ParallaxOcclusionStrength, 0.0f, 4.0f, "%.2f" );
+            ImGui::SetItemTooltip( "Global POM multiplier. 1.0 is material default, 4.0 is useful for testing." );
+            ImGui::EndDisabled();
             ImGui::EndDisabled();
 
             static std::vector<std::tuple<const char*, AOMode, const char*>> aoModes = {

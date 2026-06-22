@@ -234,7 +234,7 @@ void MyDirectDrawSurface7::LoadAdditionalResources( zCTexture* ownedTexture ) {
         }
     }
 
-    if ( nrmmapTexture && Engine::GAPI->GetRendererState().RendererSettings.EnableParallaxOcclusionMapping ) {
+    if ( nrmmapTexture ) {
         j = 0;
         replacementsFolder.clear();
         replacementsFolder.append("system\\GD3D11\\textures\\replacements\\Displacementmaps_").append(std::to_string(j));
