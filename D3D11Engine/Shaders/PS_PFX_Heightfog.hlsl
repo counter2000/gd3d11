@@ -95,12 +95,6 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	position.y -= HF_FogHeight;
 	
 	float fog = 1.0f - ComputeVolumetricFog(position, posOriginal);
-	float dayBlend = smoothstep(-0.05f, 0.15f, AC_LightPos.y);
-	float fogDistance = length(posOriginal - HF_CameraPosition);
-	float stableFadeEnd = max(HF_WeightZFar, 1000.0f);
-	float stableFadeStart = max(HF_WeightZNear, stableFadeEnd * 0.82f);
-	float stableWorldFade = smoothstep(stableFadeStart, stableFadeEnd, fogDistance);
-	fog = max(fog, stableWorldFade * dayBlend);
 		
 	float3 color = ApplyAtmosphericScatteringGround(position, HF_FogColorMod, true, false);
 	float nightTimeBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f));
@@ -109,8 +103,6 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float3 nightFogColor = float3(0.12f, 0.18f, 0.27f) * nightFogBrightness;
 	color = lerp(color, nightFogColor, nightTimeBlend);
 
-	// Restore the stable 17.9.7 blue daytime distance fog while keeping the
-	// enhanced-night fog response unchanged.
 	float dayDarknessFactor = max(1.0f, 2.0f - max(0.0f, AC_LightPos.y));
 	float darknessFactor = lerp(dayDarknessFactor, 2.0f, nightTimeBlend);
 	float maxFogOpacity = lerp(1.0f, 0.85f, nightTimeBlend);

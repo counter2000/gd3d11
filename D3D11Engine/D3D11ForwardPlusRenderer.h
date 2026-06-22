@@ -44,7 +44,8 @@ public:
         PShaderID resolvedDiffuseNormalmapped,
         PShaderID resolvedDiffuseNormalmappedFxMap,
         PShaderID resolvedDiffuseNormalmappedAlphatest,
-        PShaderID resolvedDiffuseNormalmappedAlphatestFxMap ) override;
+        PShaderID resolvedDiffuseNormalmappedAlphatestFxMap,
+        bool allowWetNormalFallback ) override;
 
 private:
     D3D11DeferredRenderer& m_DeferredFallback;

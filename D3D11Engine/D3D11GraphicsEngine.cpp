@@ -91,7 +91,12 @@ static ID3D11ShaderResourceView* GetParallaxDisplacementSRV( MyDirectDrawSurface
 }
 
 static ID3D11ShaderResourceView* GetWetNormalFallbackSRV( MyDirectDrawSurface7* surface, D3D11Texture* distortionTexture ) {
-    if ( !surface || !distortionTexture || surface->GetNormalmap() || Engine::GAPI->GetSceneWetness() <= 1e-6f ) {
+    if ( !surface || !distortionTexture || Engine::GAPI->GetSceneWetness() <= 1e-6f ) {
+        return nullptr;
+    }
+
+    const auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
+    if ( settings.AllowNormalmaps && surface->GetNormalmap() ) {
         return nullptr;
     }
 
@@ -4747,7 +4752,7 @@ XRESULT D3D11GraphicsEngine::DrawMeshInfoListAlphablended(
             // Get diffuse and normalmap
             srv[0] = surface->GetEngineTexture()
                 ->GetShaderResourceView().Get();
-            srv[1] = surface->GetNormalmap()
+            srv[1] = Engine::GAPI->GetRendererState().RendererSettings.AllowNormalmaps && surface->GetNormalmap()
                 ? surface->GetNormalmap()->GetShaderResourceView().Get()
                 : nullptr;
             srv[2] = surface->GetFxMap()
@@ -4756,6 +4761,10 @@ XRESULT D3D11GraphicsEngine::DrawMeshInfoListAlphablended(
             srv[3] = GetParallaxDisplacementSRV( surface );
             if ( !srv[1] ) {
                 srv[1] = GetWetNormalFallbackSRV( surface, DistortionTexture.get() );
+                if ( srv[1] && meshKey.Info &&
+                    meshKey.Info->buffer.NormalmapStrength != DEFAULT_NORMALMAP_STRENGTH ) {
+                    meshKey.Info->buffer.NormalmapStrength = DEFAULT_NORMALMAP_STRENGTH;
+                }
             }
 
             int alphaFunc = meshKey.Material->GetAlphaFunc();
@@ -4774,7 +4783,7 @@ XRESULT D3D11GraphicsEngine::DrawMeshInfoListAlphablended(
 
             if (lastMat != meshKey.Material) {
                 //Get the right shader for it
-                BindShaderForTexture( texture, false, alphaFunc, meshKey.Info->MaterialType );
+                BindShaderForTexture( texture, false, alphaFunc, meshKey.Info->MaterialType, true );
                 lastMat = meshKey.Material;
             }
 
@@ -5161,7 +5170,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
 
                 // Get diffuse and normalmap
                 srv[0] = surface->GetEngineTexture()->GetShaderResourceView().Get();
-                srv[1] = surface->GetNormalmap()
+                srv[1] = Engine::GAPI->GetRendererState().RendererSettings.AllowNormalmaps && surface->GetNormalmap()
                     ? surface->GetNormalmap()->GetShaderResourceView().Get()
                     : nullptr;
                 srv[2] = surface->GetFxMap()
@@ -5170,6 +5179,10 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
                 srv[3] = GetParallaxDisplacementSRV( surface );
                 if ( !srv[1] ) {
                     srv[1] = GetWetNormalFallbackSRV( surface, DistortionTexture.get() );
+                    if ( srv[1] && info &&
+                        info->buffer.NormalmapStrength != DEFAULT_NORMALMAP_STRENGTH ) {
+                        info->buffer.NormalmapStrength = DEFAULT_NORMALMAP_STRENGTH;
+                    }
                 }
 
                 // Bind diffuse/normal/fx like 026; POM displacement uses t13.
@@ -5178,7 +5191,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
 
                 // Get the right shader for it
                 if ( BindShaderForTexture( mesh.first.Texture, false,
-                    zMAT_ALPHA_FUNC_MAT_DEFAULT ) ) { // default alpha stuff, we defer blend/add
+                    zMAT_ALPHA_FUNC_MAT_DEFAULT, MaterialInfo::MT_None, true ) ) { // default alpha stuff, we defer blend/add
                     // shader changed? update buffers.
                     updatePSBuffers();
                 }
@@ -8265,13 +8278,15 @@ void D3D11GraphicsEngine::GetBackbufferData( bool thumbnail, byte** data, INT2& 
 bool D3D11GraphicsEngine::BindShaderForTexture( zCTexture* texture,
     bool forceAlphaTest,
     int zMatAlphaFunc,
-    MaterialInfo::EMaterialType materialInfo ) {
+    MaterialInfo::EMaterialType materialInfo,
+    bool allowWetNormalFallback ) {
     return ActiveSceneRenderer->BindShaderForTexture( GetShaderManager(), ActivePS,
         texture, forceAlphaTest, zMatAlphaFunc, materialInfo,
         Resolved_DiffuseNormalmapped,
         Resolved_DiffuseNormalmappedFxMap,
         Resolved_DiffuseNormalmappedAlphatest,
-        Resolved_DiffuseNormalmappedAlphatestFxMap );
+        Resolved_DiffuseNormalmappedAlphatestFxMap,
+        allowWetNormalFallback );
 }
 
 /** Draws the given list of decals */

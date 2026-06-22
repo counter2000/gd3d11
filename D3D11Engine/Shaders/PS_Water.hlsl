@@ -180,7 +180,7 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	}
 	
 	// Suppress unstable self-reflections where the player intersects nearby water.
-	float ssrNearFade = smoothstep(350.0f, 1000.0f, abs(Input.vTexcoord2.y));
+	float ssrNearFade = smoothstep(100.0f, 450.0f, abs(Input.vTexcoord2.y));
 	ssrWeight *= ssrNearFade;
 	// Darken the scene, to make a wet surface
 	float f = 1-saturate(pow(1-shallowDepth, 8.0f) + clamp(pow(distortionSmall.y, 2), 0.5f, 1.0f));
@@ -196,9 +196,9 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	float ssrFresnel = lerp(0.55f, 0.80f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));
-	reflectionSSRColor *= rcp(1.0f + max(0.0f, reflectionLuma - 1.0f) * 0.8f);
+	// Preserve HDR light-source reflections; only tame extreme outliers.
+	reflectionSSRColor *= rcp(1.0f + max(0.0f, reflectionLuma - 6.0f) * 0.12f);
 	float ssrBlend = saturate(ssrWeight * ssrFresnel * max(0.0f, AC_SSRStrength) * 0.78f * lerp(0.85f, 1.10f, nightAmount));
-	scene.rgb = lerp(scene.rgb, reflectionSSRColor, ssrBlend);
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
 	color = lerp(color, sceneWet, (1-shallowDepth));
 
@@ -219,7 +219,11 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	darknessFactor -= AC_LightPos.y;
 	darknessFactor = lerp(darknessFactor, max(1.22f, darknessFactor * 0.58f), nightAmount * enhancedWater);
 
-	output.color = float4(color / darknessFactor, 1);
+	// TX_Scene already contains the fully lit and atmospherically shaded scene.
+	// Blend SSR last so shallow-water coloring and water darkening cannot erase light reflections.
+	float3 finalColor = color / darknessFactor;
+	finalColor = lerp(finalColor, reflectionSSRColor, ssrBlend);
+	output.color = float4(finalColor, 1);
 	output.waterMask = 1.0f;
 	return output;
 }

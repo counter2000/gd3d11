@@ -344,7 +344,8 @@ bool D3D11ForwardPlusRenderer::BindShaderForTexture(
     PShaderID resolvedDiffuseNormalmapped,
     PShaderID resolvedDiffuseNormalmappedFxMap,
     PShaderID resolvedDiffuseNormalmappedAlphatest,
-    PShaderID resolvedDiffuseNormalmappedAlphatestFxMap ) {
+    PShaderID resolvedDiffuseNormalmappedAlphatestFxMap,
+    bool allowWetNormalFallback ) {
 
     // Special material types fall through to deferred (non-lit) shaders
     bool blendAdd = zMatAlphaFunc == zMAT_ALPHA_FUNC_ADD; 
@@ -358,13 +359,15 @@ bool D3D11ForwardPlusRenderer::BindShaderForTexture(
         return m_DeferredFallback.BindShaderForTexture( shaderManager, activePS,
             texture, forceAlphaTest, zMatAlphaFunc, materialType,
             resolvedDiffuseNormalmapped, resolvedDiffuseNormalmappedFxMap,
-            resolvedDiffuseNormalmappedAlphatest, resolvedDiffuseNormalmappedAlphatestFxMap );
+            resolvedDiffuseNormalmappedAlphatest, resolvedDiffuseNormalmappedAlphatestFxMap,
+            allowWetNormalFallback );
     }
 
     auto active = activePS;
     auto newShader = activePS;
-    const bool hasNormalmap = texture->GetSurface()->GetNormalmap() != nullptr;
-    const bool useWetNormalFallback = !hasNormalmap && Engine::GAPI->GetSceneWetness() > 1e-6f;
+    const bool normalmapsEnabled = Engine::GAPI->GetRendererState().RendererSettings.AllowNormalmaps;
+    const bool hasNormalmap = normalmapsEnabled && texture->GetSurface()->GetNormalmap() != nullptr;
+    const bool useWetNormalFallback = allowWetNormalFallback && !hasNormalmap && Engine::GAPI->GetSceneWetness() > 1e-6f;
     const bool useNormalmapShader = hasNormalmap || useWetNormalFallback;
     const bool hasFxMap = hasNormalmap && texture->GetSurface()->GetFxMap();
 
@@ -387,7 +390,7 @@ bool D3D11ForwardPlusRenderer::BindShaderForTexture(
     }
 
     // When normalmaps are disabled, fall back to non-normalmap variants
-    if ( !Engine::GAPI->GetRendererState().RendererSettings.AllowNormalmaps ) {
+    if ( !Engine::GAPI->GetRendererState().RendererSettings.AllowNormalmaps && !useWetNormalFallback ) {
         if ( texture->HasAlphaChannel() || forceAlphaTest ) {
             newShader = shaderManager.GetPShader( PShaderID::PS_FP_DiffuseAlphaTest );
         } else {

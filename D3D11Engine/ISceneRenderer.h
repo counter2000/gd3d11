@@ -55,5 +55,6 @@ public:
         PShaderID resolvedDiffuseNormalmapped,
         PShaderID resolvedDiffuseNormalmappedFxMap,
         PShaderID resolvedDiffuseNormalmappedAlphatest,
-        PShaderID resolvedDiffuseNormalmappedAlphatestFxMap ) = 0;
+        PShaderID resolvedDiffuseNormalmappedAlphatestFxMap,
+        bool allowWetNormalFallback ) = 0;
 };

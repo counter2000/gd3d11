@@ -43,5 +43,6 @@ public:
         PShaderID resolvedDiffuseNormalmapped,
         PShaderID resolvedDiffuseNormalmappedFxMap,
         PShaderID resolvedDiffuseNormalmappedAlphatest,
-        PShaderID resolvedDiffuseNormalmappedAlphatestFxMap ) override;
+        PShaderID resolvedDiffuseNormalmappedAlphatestFxMap,
+        bool allowWetNormalFallback ) override;
 };
