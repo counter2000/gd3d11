@@ -38,7 +38,7 @@ struct PS_INPUT
 
 float3 ReconstructVS(float depth, float2 uv)
 {
-    return ReconstructVSPositionFromDepthReverseZInfinite(depth, uv, WG_ProjParams.xy);
+    return ReconstructVSPositionFromDepthReverseZInfinite(depth, uv, WG_ProjParams.xy) * WG_ProjParams.z;
 }
 
 float GetRainExposure(float3 wsPosition)

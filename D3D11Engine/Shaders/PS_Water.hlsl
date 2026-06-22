@@ -77,6 +77,14 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	//	discard;
 		
 	float shallowDepth = saturate((depth - Input.vTexcoord2.x) * 0.01f);
+	float waterDepth = Input.vTexcoord2.x;
+	float2 depthPixel = rcp(max(RI_ViewportSize, float2(1.0f, 1.0f)));
+	float depthLeft = RI_Projection._43 / (TX_Depth.SampleLevel(SS_Linear, screenUV + float2(-depthPixel.x, 0.0f), 0).r - RI_Projection._33);
+	float depthRight = RI_Projection._43 / (TX_Depth.SampleLevel(SS_Linear, screenUV + float2(depthPixel.x, 0.0f), 0).r - RI_Projection._33);
+	float depthUp = RI_Projection._43 / (TX_Depth.SampleLevel(SS_Linear, screenUV + float2(0.0f, -depthPixel.y), 0).r - RI_Projection._33);
+	float depthDown = RI_Projection._43 / (TX_Depth.SampleLevel(SS_Linear, screenUV + float2(0.0f, depthPixel.y), 0).r - RI_Projection._33);
+	float nearestSceneDepth = min(min(depth, depthLeft), min(min(depthRight, depthUp), depthDown));
+	float waterContactGap = nearestSceneDepth - waterDepth;
 		
 	// Camera direction
 	float3 viewDirection = normalize(Input.vWorldPosition - RI_CameraPosition);
@@ -180,10 +188,11 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 		}
 	}
 
-	// Suppress unstable self-reflections only in very shallow/intersecting water.
-	float ssrShallowFade = smoothstep(0.08f, 0.35f, shallowDepth);
+	// Suppress unstable self-reflections at water/object contact edges (shoreline / wading NPCs).
+	float ssrShallowFade = smoothstep(0.12f, 0.55f, shallowDepth);
+	float ssrContactFade = smoothstep(35.0f, 180.0f, waterContactGap);
 	float ssrNearFade = smoothstep(100.0f, 450.0f, abs(Input.vTexcoord2.y));
-	ssrWeight *= ssrShallowFade * ssrNearFade;
+	ssrWeight *= ssrShallowFade * ssrContactFade * ssrNearFade;
 	// Darken the scene, to make a wet surface
 	float f = 1-saturate(pow(1-shallowDepth, 8.0f) + clamp(pow(distortionSmall.y, 2), 0.5f, 1.0f));
 	float nightAmount = saturate((-AC_LightPos.y + 0.12f) * 2.2f);
