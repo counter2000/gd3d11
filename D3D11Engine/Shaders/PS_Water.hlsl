@@ -125,93 +125,65 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	bool waterSSRActive = AC_EnableSSR > 0.5f && AC_SSRStrength > 0.001f;
 
 	if (waterSSRActive) {
-		float3 rayDir = normalize(reflect(viewDirection, wavesFres));
+		float3 rayPos = Input.vWorldPosition;
+		float3 rayDir = reflect(viewDirection, wavesFres);
+		float stepSize = 40.0f;
+		int maxSteps = 40;
 
-		// A valid reflection ray on an upward-facing water surface must leave the water.
-		if (rayDir.y > 0.01f) {
-			// Move away from the water plane before the first depth test to avoid self-hits.
-			float3 rayPos = Input.vWorldPosition + wavesFres * 20.0f + rayDir * 20.0f;
-			float3 previousRayPos = rayPos;
-			float previousDepthDiff = 0.0f;
-			bool havePreviousSample = false;
-			float stepSize = 40.0f;
+		for (int i = 1; i <= maxSteps; i++) {
+			rayPos += rayDir * stepSize;
+			stepSize *= 1.1f;
 
-			[loop]
-			for (int i = 0; i < 40; i++) {
-				rayPos += rayDir * stepSize;
-				stepSize = min(stepSize * 1.08f, 180.0f);
+			float4 projPos = mul(float4(rayPos, 1.0f), RI_ViewProj);
+			projPos.xyz /= projPos.w;
 
-				float4 projPos = mul(float4(rayPos, 1.0f), RI_ViewProj);
-				if (projPos.w <= 1e-4f)
-					break;
-				projPos.xyz /= projPos.w;
+			float2 uv = projPos.xy * float2(0.5f, -0.5f) + 0.5f;
+			if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || projPos.z < 0.0f || projPos.z > 1.0f)
+				break;
 
-				float2 uv = projPos.xy * float2(0.5f, -0.5f) + 0.5f;
-				if (uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || projPos.z < 0.0f || projPos.z > 1.0f)
-					break;
+			float depthSample = TX_Depth.SampleLevel(SS_Linear, uv, 0).r;
+			float sampleZ = RI_Projection._43 / (depthSample - RI_Projection._33);
+			float rayZ = projPos.w;
+			float depthDiff = rayZ - sampleZ;
 
-				float depthSample = TX_Depth.SampleLevel(SS_Linear, uv, 0).r;
-				if (depthSample <= 1e-7f) {
-					havePreviousSample = false;
-					continue;
+			if (depthDiff > 0.0f && depthDiff < (stepSize * 2.0f)) {
+				float3 minPos = rayPos - rayDir * stepSize;
+				float3 maxPos = rayPos;
+				float3 midPos = rayPos;
+
+				[unroll]
+				for (int j = 0; j < 5; j++) {
+					midPos = (minPos + maxPos) * 0.5f;
+					float4 projMid = mul(float4(midPos, 1.0f), RI_ViewProj);
+					projMid.xyz /= projMid.w;
+					float2 uvMid = projMid.xy * float2(0.5f, -0.5f) + 0.5f;
+					float dMid = TX_Depth.SampleLevel(SS_Linear, uvMid, 0).r;
+					float zMid = RI_Projection._43 / (dMid - RI_Projection._33);
+
+					if (projMid.w - zMid > 0.0f) {
+						maxPos = midPos;
+					} else {
+						minPos = midPos;
+					}
 				}
 
-				float sampleZ = RI_Projection._43 / (depthSample - RI_Projection._33);
-				float depthDiff = projPos.w - sampleZ;
+				float4 projFinal = mul(float4(midPos, 1.0f), RI_ViewProj);
+				projFinal.xyz /= projFinal.w;
+				uv = projFinal.xy * float2(0.5f, -0.5f) + 0.5f;
 
-				// Refine only a proven front-to-back crossing of the visible depth surface.
-				if (havePreviousSample && previousDepthDiff <= 0.0f && depthDiff > 0.0f) {
-					float3 minPos = previousRayPos;
-					float3 maxPos = rayPos;
-
-					[unroll]
-					for (int j = 0; j < 6; j++) {
-						float3 midPos = (minPos + maxPos) * 0.5f;
-						float4 projMid = mul(float4(midPos, 1.0f), RI_ViewProj);
-						projMid.xyz /= projMid.w;
-						float2 uvMid = projMid.xy * float2(0.5f, -0.5f) + 0.5f;
-						float dMid = TX_Depth.SampleLevel(SS_Linear, uvMid, 0).r;
-						float zMid = RI_Projection._43 / (dMid - RI_Projection._33);
-
-						if (projMid.w - zMid > 0.0f)
-							maxPos = midPos;
-						else
-							minPos = midPos;
-					}
-
-					float3 hitPos = (minPos + maxPos) * 0.5f;
-					float4 projFinal = mul(float4(hitPos, 1.0f), RI_ViewProj);
-					if (projFinal.w > 1e-4f) {
-						projFinal.xyz /= projFinal.w;
-						float2 hitUV = projFinal.xy * float2(0.5f, -0.5f) + 0.5f;
-
-						if (hitUV.x >= 0.0f && hitUV.x <= 1.0f && hitUV.y >= 0.0f && hitUV.y <= 1.0f) {
-							float finalDepth = TX_Depth.SampleLevel(SS_Linear, hitUV, 0).r;
-							if (finalDepth > 1e-7f) {
-								float finalSceneZ = RI_Projection._43 / (finalDepth - RI_Projection._33);
-								float hitTolerance = clamp(abs(projFinal.w) * 0.0015f, 8.0f, 60.0f);
-
-								if (abs(projFinal.w - finalSceneZ) <= hitTolerance) {
-									reflectionSSR = TX_Scene.SampleLevel(SS_Linear, hitUV, 0).xyz;
-									float2 edgeFade = saturate(abs(hitUV - 0.5f) * 2.0f);
-									float edgeDistance = max(edgeFade.x, edgeFade.y);
-									ssrWeight = 1.0f - smoothstep(0.78f, 1.0f, edgeDistance);
-								}
-							}
-						}
-					}
-					break;
-				}
-
-				previousRayPos = rayPos;
-				previousDepthDiff = depthDiff;
-				havePreviousSample = true;
+				reflectionSSR = TX_Scene.SampleLevel(SS_Linear, uv, 0).xyz;
+				float2 edgeFade = saturate(abs(uv - 0.5f) * 2.0f);
+				float edgeDistance = max(edgeFade.x, edgeFade.y);
+				ssrWeight = 1.0f - smoothstep(0.78f, 1.0f, edgeDistance);
+				break;
 			}
 		}
 	}
-		// Suppress unstable self-reflections where the player intersects nearby water.
-	float ssrNearFade = smoothstep(40.0f, 160.0f, abs(Input.vTexcoord2.y));
-	ssrWeight *= ssrNearFade;
+
+	// Suppress unstable self-reflections only in very shallow/intersecting water.
+	float ssrShallowFade = smoothstep(0.08f, 0.35f, shallowDepth);
+	float ssrNearFade = smoothstep(100.0f, 450.0f, abs(Input.vTexcoord2.y));
+	ssrWeight *= ssrShallowFade * ssrNearFade;
 	// Darken the scene, to make a wet surface
 	float f = 1-saturate(pow(1-shallowDepth, 8.0f) + clamp(pow(distortionSmall.y, 2), 0.5f, 1.0f));
 	float nightAmount = saturate((-AC_LightPos.y + 0.12f) * 2.2f);
@@ -221,8 +193,8 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	
 	float pxDistance = Input.vTexcoord2.y;
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
-	float cubeWeight = max(0.0f, AC_WaterCubemapStrength);
-	scene.rgb += reflection * cubeWeight * fresnel * lerp(1.0f, diffuse, 0.6f);
+	float cubeWeight = (waterSSRActive ? lerp(0.45f, 0.95f, nightAmount) : 1.0f) * max(0.0f, AC_WaterCubemapStrength);
+	scene.rgb += reflection * cubeWeight * (1.0f - ssrWeight * lerp(0.75f, 0.90f, nightAmount)) * fresnel * lerp(1.0f, diffuse, 0.6f);
 	float ssrFresnel = lerp(0.55f, 0.80f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));
@@ -252,7 +224,7 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	// TX_Scene already contains the fully lit and atmospherically shaded scene.
 	// Blend SSR last so shallow-water coloring and water darkening cannot erase light reflections.
 	float3 finalColor = color / darknessFactor;
-	finalColor = lerp(finalColor, max(finalColor, reflectionSSRColor), ssrBlend);
+	finalColor = lerp(finalColor, reflectionSSRColor, ssrBlend);
 	output.color = float4(finalColor, 1);
 	output.waterMask = 1.0f;
 	return output;

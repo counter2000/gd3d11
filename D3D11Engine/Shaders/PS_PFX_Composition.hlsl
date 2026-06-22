@@ -104,8 +104,7 @@ float4 ComputeHeightFog( float2 texcoord )
     float stableWorldFade = smoothstep(stableFadeStart, stableFadeEnd, fogDistance);
     float rainFogBlend = max(saturate(AC_SceneWettness), saturate(AC_RainFXWeight));
     float nightFogBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f));
-    float weatherNightFogBlend = saturate(max(rainFogBlend, nightFogBlend));
-    fog = max(fog, stableWorldFade * weatherNightFogBlend);
+    fog = max(fog, stableWorldFade * rainFogBlend);
     float3 color = ApplyAtmosphericScatteringGround( position, HF_FogColorMod, true, false );
 	float nightTimeBlend = nightFogBlend;
 	float nightFogBrightness = lerp(1.0f, max(0.0f, AC_NightFogBrightness), saturate(AC_EnableNightAtmosphere));
