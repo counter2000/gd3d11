@@ -5456,6 +5456,8 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "General", "SunLightStrength", std::to_string( s.SunLightStrength ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DrawG1ForestPortals", std::to_string( s.DrawG1ForestPortals ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DrawRainThroughTransformFeedback", std::to_string( s.DrawRainThroughTransformFeedback ? TRUE : FALSE ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "SSRStrength", std::to_string( s.SSRStrength ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "WaterCubemapStrength", std::to_string( s.WaterCubemapStrength ).c_str(), ini.c_str() );
 
     /*
     * Draw-distance is saved on a per World basis using SaveRendererWorldSettings
@@ -5581,6 +5583,8 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.SunLightStrength = GetPrivateProfileFloatA( "General", "SunLightStrength", ds.SunLightStrength, ini );
         s.DrawG1ForestPortals = GetPrivateProfileBoolA( "General", "DrawG1ForestPortals", ds.DrawG1ForestPortals, ini );
         s.DrawRainThroughTransformFeedback = GetPrivateProfileBoolA( "General", "DrawRainThroughTransformFeedback", ds.DrawRainThroughTransformFeedback, ini );
+        s.SSRStrength = std::clamp( GetPrivateProfileFloatA( "General", "SSRStrength", ds.SSRStrength, ini ), 0.0f, 2.0f );
+        s.WaterCubemapStrength = std::clamp( GetPrivateProfileFloatA( "General", "WaterCubemapStrength", ds.WaterCubemapStrength, ini ), 0.0f, 2.0f );
 
         /*
         * Draw-distance is Loaded on a per World basis using LoadRendererWorldSettings

@@ -38,7 +38,7 @@ cbuffer Atmosphere : register( b1 )
 	float AC_SSRStrength;
 	float AC_SSSIntensity;
 
-	float AC_AtmospherePad1;
+	float AC_WaterCubemapStrength;
 	float AC_EnableNightAtmosphere;
 	float AC_NearNightBrightness;
 	float AC_NightFogBrightness;
@@ -165,10 +165,14 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 		v3FrontColor += v3Attenuate * (fDepth * fScaledLength);
 		v3SamplePoint += v3SampleRay;
 	}
-	// Rain wetness is handled by surface shaders; keep atmospheric night color stable.
+	// Suppress daytime atmospheric in-scattering during rain, as in the established renderer path.
+	v3FrontColor *= 1.0f - saturate(AC_SceneWettness);
 	
-	// Finally, scale the Mie and Rayleigh colors and set up the varying variables for the pixel shader
+	// Finally, scale the Mie and Rayleigh colors and set up the varying variables for the pixel shader.
 	float3 c0 = v3FrontColor * (vInvWavelength * AC_KrESun + AC_KmESun);
+	// Fade residual daytime scattering only at night and only toward the far-distance boundary.
+	float nightDistanceFade = GetNightDistanceFade(worldPosition);
+	c0 *= 1.0f - nightDistanceFade;
 	//c0 = lerp(dot(float3(0.333f,0.333f,0.333f), c0), c0, 0.5f);
 	float3 c1 = v3Attenuate;
 	

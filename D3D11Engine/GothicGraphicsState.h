@@ -720,7 +720,8 @@ struct GothicRendererSettings {
         SortRenderQueue = false;
         DrawThreaded = false;
         EnableSSR = true;
-        SSRStrength = 1.0f;
+        SSRStrength = 1.0f; // UI-normalized: 1.0 equals 0.6 effective shader strength.
+        WaterCubemapStrength = 1.0f;
         EnableSSS = true;
         SSSIntensity = 1.0f;
         EnableDoF = true;
@@ -924,6 +925,7 @@ struct GothicRendererSettings {
     bool EnableAutoupdates;
     bool EnableSSR;
     float SSRStrength;
+    float WaterCubemapStrength;
     bool EnableSSS;
     float SSSIntensity;
     bool EnableDoF;

@@ -72,7 +72,7 @@ struct PS_INPUT
 
 float3 VSPositionFromDepth(float depth, float2 vTexCoord)
 {
-    return ReconstructVSPositionFromDepthReverseZInfinite( depth, vTexCoord, SQ_ProjParams.xy );
+    return ReconstructVSPositionFromDepthReverseZInfinite( depth, vTexCoord, SQ_ProjParams.xy ) * SQ_ProjParams.z;
 }
 
 //--------------------------------------------------------------------------------------
