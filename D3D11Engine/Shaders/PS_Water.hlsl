@@ -246,10 +246,14 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	float3 sunOrange = float3(0.6,0.3,0.1) * 2.0f;
 	float3 sunColor = lerp(sunOrange, 1.0f, AC_LightPos.y) * 5.0f;
 	
-	float3 reflect_vecSmall = reflect(-viewDirection, normalize(distortionSmall.xzy * float3(1,10,1)));
+	float3 distortionFine = TX_Distortion.Sample(SS_Linear, worldTexCoord * 0.9f + RI_Time * -0.018f).xyz * 2 - 1;
+	distortionFine += TX_Distortion.Sample(SS_Linear, worldTexCoord * float2(-1, 0.7f) * 1.25f + RI_Time * float2(0.014f, -0.019f)).xyz * 2 - 1;
+	distortionFine *= 0.5f;
+	float3 specNormal = normalize(lerp(distortionSmall.xzy, distortionFine.xzy, 0.65f) * float3(1,16,1));
+	float3 reflect_vecSmall = reflect(-viewDirection, specNormal);
 	
 	float cos_spec = clamp(dot(reflect_vecSmall, -AC_LightPos.xyz * float3(1,1,1)), 0, 1);
-	float sun_spot = pow(cos_spec, 500.0f) * 0.5f;
+	float sun_spot = pow(cos_spec, 820.0f) * 0.42f + pow(cos_spec, 180.0f) * 0.045f;
 	color.rgb += lerp(sunColor * sun_spot, float3(0.0f, 0.0f, 0.0f), step(step(0.0f, AC_LightPos.y) * Input.vDiffuse.y, 0.5f));
 
 	//darken / lighten water based on the day / night cycle
