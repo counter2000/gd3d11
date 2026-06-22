@@ -53,12 +53,15 @@ float GetRainExposure(float3 wsPosition)
 
 float3 SampleRoughReflection(float2 uv, float2 distortion)
 {
-    float2 spread = WG_InvResolution * 2.0f + abs(distortion) * 0.0015f;
-    float3 color = TX_Scene.SampleLevel(SS_Linear, uv, 0).rgb * 0.40f;
-    color += TX_Scene.SampleLevel(SS_Linear, uv + float2(spread.x, 0), 0).rgb * 0.15f;
-    color += TX_Scene.SampleLevel(SS_Linear, uv - float2(spread.x, 0), 0).rgb * 0.15f;
-    color += TX_Scene.SampleLevel(SS_Linear, uv + float2(0, spread.y), 0).rgb * 0.15f;
-    color += TX_Scene.SampleLevel(SS_Linear, uv - float2(0, spread.y), 0).rgb * 0.15f;
+    // Keep the rain ripple movement visible in the final screen-space reflection sample.
+    // Without this offset the reflection can look geometrically correct but frozen.
+    float2 rippleUV = saturate(uv + distortion * (WG_InvResolution * 5.0f + 0.0020f));
+    float2 spread = WG_InvResolution * 2.0f + abs(distortion) * 0.0020f;
+    float3 color = TX_Scene.SampleLevel(SS_Linear, rippleUV, 0).rgb * 0.40f;
+    color += TX_Scene.SampleLevel(SS_Linear, rippleUV + float2(spread.x, 0), 0).rgb * 0.15f;
+    color += TX_Scene.SampleLevel(SS_Linear, rippleUV - float2(spread.x, 0), 0).rgb * 0.15f;
+    color += TX_Scene.SampleLevel(SS_Linear, rippleUV + float2(0, spread.y), 0).rgb * 0.15f;
+    color += TX_Scene.SampleLevel(SS_Linear, rippleUV - float2(0, spread.y), 0).rgb * 0.15f;
     return color;
 }
 

@@ -85,6 +85,7 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	float depthDown = RI_Projection._43 / (TX_Depth.SampleLevel(SS_Linear, screenUV + float2(0.0f, depthPixel.y), 0).r - RI_Projection._33);
 	float nearestSceneDepth = min(min(depth, depthLeft), min(min(depthRight, depthUp), depthDown));
 	float waterContactGap = nearestSceneDepth - waterDepth;
+	float waterEdgeFade = smoothstep(80.0f, 260.0f, waterContactGap);
 		
 	// Camera direction
 	float3 viewDirection = normalize(Input.vWorldPosition - RI_CameraPosition);
@@ -119,6 +120,7 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	// Scene color
 	float3 scene = TX_Scene.Sample(SS_Linear, distUV).rgb;
 	float3 sceneClean = TX_Scene.Sample(SS_Linear, lerp(distUV, screenUV, pow(1-shallowDepth, 20.0f))).rgb;
+	scene = lerp(sceneClean, scene, waterEdgeFade);
 	
 	// Fresnel from waves
 	float fresnel = min(0.5f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 10.0f)));
@@ -190,20 +192,20 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 
 	// Suppress unstable self-reflections at water/object contact edges (shoreline / wading NPCs).
 	float ssrShallowFade = smoothstep(0.12f, 0.55f, shallowDepth);
-	float ssrContactFade = smoothstep(35.0f, 180.0f, waterContactGap);
+	float ssrContactFade = smoothstep(80.0f, 260.0f, waterContactGap);
 	float ssrNearFade = smoothstep(100.0f, 450.0f, abs(Input.vTexcoord2.y));
 	ssrWeight *= ssrShallowFade * ssrContactFade * ssrNearFade;
 	// Darken the scene, to make a wet surface
-	float f = 1-saturate(pow(1-shallowDepth, 8.0f) + clamp(pow(distortionSmall.y, 2), 0.5f, 1.0f));
+	float f = (1-saturate(pow(1-shallowDepth, 8.0f) + clamp(pow(distortionSmall.y, 2), 0.5f, 1.0f))) * waterEdgeFade;
 	float nightAmount = saturate((-AC_LightPos.y + 0.12f) * 2.2f);
 
 	float3 sceneWet = lerp(sceneClean, sceneClean * lerp(0.01f, 0.38f, nightAmount * enhancedWater), f); // Darken border-scene
 	scene = lerp(scene, scene * float3(4, 0.2f, 0.1f) * 0.05f, f); // Darken distorted scene
 	
 	float pxDistance = Input.vTexcoord2.y;
-	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
+	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f) * waterEdgeFade);
 	float cubeWeight = (waterSSRActive ? lerp(0.45f, 0.95f, nightAmount) : 1.0f) * max(0.0f, AC_WaterCubemapStrength);
-	scene.rgb += reflection * cubeWeight * (1.0f - ssrWeight * lerp(0.75f, 0.90f, nightAmount)) * fresnel * lerp(1.0f, diffuse, 0.6f);
+	scene.rgb += reflection * cubeWeight * waterEdgeFade * (1.0f - ssrWeight * lerp(0.75f, 0.90f, nightAmount)) * fresnel * lerp(1.0f, diffuse, 0.6f);
 	float ssrFresnel = lerp(0.55f, 0.80f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));
