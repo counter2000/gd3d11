@@ -3,10 +3,11 @@
 //--------------------------------------------------------------------------------------
 
 #include <AtmosphericScattering.h>
+#include "DepthReconstruction.h"
 
 cbuffer PFXBuffer : register( b0 )
 {
-	matrix HF_InvProj;
+	float4 HF_ProjParams; // x = 1/P._11, y = 1/P._22, z = P._43, w = P._33
 	matrix HF_InvView;
 	float3 HF_CameraPosition;
 	float HF_FogHeight;
@@ -33,9 +34,7 @@ Texture2D	TX_Depth : register( t1 );
 
 float3 VSPositionFromDepth(float depth, float2 vTexCoord)
 {
-	float4 vProjectedPos = float4(vTexCoord * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f), depth, 1.0f);
-	float4 vPositionVS = mul(vProjectedPos, HF_InvProj);
-	return vPositionVS.xyz / vPositionVS.www;
+	return ReconstructVSPositionFromDepthReverseZInfinite( depth, vTexCoord, HF_ProjParams.xy );
 }
 
 float ComputeVolumetricFog(float3 cameraToWorldPos, float3 posOriginal)
@@ -100,7 +99,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float stableFadeStart = max(HF_WeightZNear, stableFadeEnd * 0.82f);
 	float stableWorldFade = smoothstep(stableFadeStart, stableFadeEnd, fogDistance);
 	float rainFogBlend = max(saturate(AC_SceneWettness), saturate(AC_RainFXWeight));
-	float nightFogBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f)) * saturate(AC_EnableNightAtmosphere);
+	float nightFogBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f));
 	float weatherNightFogBlend = saturate(max(rainFogBlend, nightFogBlend));
 	fog = max(fog, stableWorldFade * weatherNightFogBlend);
 		

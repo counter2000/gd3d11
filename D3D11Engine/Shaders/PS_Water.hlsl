@@ -221,8 +221,8 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	
 	float pxDistance = Input.vTexcoord2.y;
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
-	float cubeWeight = (waterSSRActive ? lerp(0.45f, 0.95f, nightAmount) : 1.0f) * max(0.0f, AC_WaterCubemapStrength);
-	scene.rgb += reflection * cubeWeight * (1.0f - ssrWeight * lerp(0.75f, 0.90f, nightAmount)) * fresnel * lerp(1.0f, diffuse, 0.6f);
+	float cubeWeight = max(0.0f, AC_WaterCubemapStrength);
+	scene.rgb += reflection * cubeWeight * fresnel * lerp(1.0f, diffuse, 0.6f);
 	float ssrFresnel = lerp(0.55f, 0.80f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));
@@ -252,7 +252,7 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	// TX_Scene already contains the fully lit and atmospherically shaded scene.
 	// Blend SSR last so shallow-water coloring and water darkening cannot erase light reflections.
 	float3 finalColor = color / darknessFactor;
-	finalColor = lerp(finalColor, reflectionSSRColor, ssrBlend);
+	finalColor = lerp(finalColor, max(finalColor, reflectionSSRColor), ssrBlend);
 	output.color = float4(finalColor, 1);
 	output.waterMask = 1.0f;
 	return output;

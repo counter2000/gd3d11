@@ -766,7 +766,7 @@ struct GothicRendererSettings {
         GodRayDensity = 0.70f;
         GodRayColorMod = float3( 1.0f, 0.8f, 0.6f );
 
-        AoMode = AOMode::AO_HBAO;
+        AoMode = AOMode::AO_ASSAO;
 
         RECT desktopRect;
         GetClientRect( GetDesktopWindow(), &desktopRect );

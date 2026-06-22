@@ -512,9 +512,8 @@ void ApplyGraphicsPresets( GothicRendererSettings& s ) {
         s.EnableDynamicLighting = true;
         s.EnablePointlightShadows = GothicRendererSettings::EPointLightShadowMode::PLS_UPDATE_DYNAMIC;
 
-        s.AoMode = AOMode::AO_HBAO;
-        s.HbaoSettings.SsaoStepCount = 4;
-        s.HbaoSettings.SsaoBlurRadius = 4;
+        s.AoMode = AOMode::AO_ASSAO;
+        s.ApplyAssaoPreset( 1 );
 
         s.textureMaxSize = static_cast<int>(TX_QUALITY::High);
 
@@ -548,9 +547,8 @@ void ApplyGraphicsPresets( GothicRendererSettings& s ) {
         s.EnableDynamicLighting = true;
         s.EnablePointlightShadows = GothicRendererSettings::EPointLightShadowMode::PLS_UPDATE_DYNAMIC;
 
-        s.AoMode = AOMode::AO_HBAO;
-        s.HbaoSettings.SsaoStepCount = 8;
-        s.HbaoSettings.SsaoBlurRadius = 4;
+        s.AoMode = AOMode::AO_ASSAO;
+        s.ApplyAssaoPreset( 1 );
 
         s.textureMaxSize = static_cast<int>(TX_QUALITY::VeryHigh);
 
@@ -662,10 +660,6 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::BeginDisabled( !settings.AllowNormalmaps );
             ImGui::Checkbox( "Parallax Occlusion Mapping", &settings.EnableParallaxOcclusionMapping );
             ImGui::SetItemTooltip( "Uses *_disp.dds height maps from textures/replacements/Displacementmaps_* folders. Maps are loaded with normalmaps and only used while POM is enabled." );
-            ImGui::BeginDisabled( !settings.EnableParallaxOcclusionMapping );
-            ImGui::SliderFloat( "POM Strength", &settings.ParallaxOcclusionStrength, 0.0f, 4.0f, "%.2f" );
-            ImGui::SetItemTooltip( "Global POM multiplier. 1.0 is material default, 4.0 is useful for testing." );
-            ImGui::EndDisabled();
             ImGui::EndDisabled();
 
             static std::vector<std::tuple<const char*, AOMode, const char*>> aoModes = {
@@ -1644,6 +1638,15 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
                 ImGui::PopID();
             }
 
+        ImGui::SeparatorText( "Parallax Occlusion Mapping" );
+        {
+            ImGui::PushID( "POMAdvancedSettings" );
+            ImGui::BeginDisabled( !settings.AllowNormalmaps || !settings.EnableParallaxOcclusionMapping );
+            ImGui::SliderFloat( "Strength", &settings.ParallaxOcclusionStrength, 0.0f, 4.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+            ImGui::SetItemTooltip( "Global POM multiplier. 1.0 is the default material strength, 4.0 is useful for testing." );
+            ImGui::EndDisabled();
+            ImGui::PopID();
+        }
         ImGui::SeparatorText( "Water Effects" );
         {
             ImGui::PushID( "EnhancedWaterEffectsSettings" );
@@ -1656,7 +1659,7 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             ImGui::BeginDisabled( !settings.EnableSSR );
             {
                 ImGui::SliderFloat( "SSR Strength", &settings.SSRStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
-                ImGui::SliderFloat( "Cubemap Strength", &settings.WaterCubemapStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+
                 ImGui::EndDisabled();
             }
             ImGui::PopID();
