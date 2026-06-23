@@ -123,8 +123,9 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	float3 reflectionSSR = float3(0.0f, 0.0f, 0.0f);
 	float ssrWeight = 0.0f;
 	float ssrHitQuality = 0.0f;
+	bool waterSSRActive = AC_EnableSSR > 0.5f && AC_SSRStrength > 0.001f;
 
-	if (AC_EnableSSR > 0.5f) {
+	if (waterSSRActive) {
 		float3 rayPos = Input.vWorldPosition;
 		float3 rayDir = reflect(viewDirection, wavesFres);
 		float stepSize = 40.0f;
@@ -205,7 +206,7 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 
 	float pxDistance = Input.vTexcoord2.y;
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
-	float cubeWeight = (AC_EnableSSR > 0.5f) ? lerp(0.45f, 0.95f, nightAmount) : 1.0f;
+	float cubeWeight = waterSSRActive ? lerp(0.45f, 0.95f, nightAmount) : 1.0f;
 	float ssrFresnel = lerp(0.55f, 0.80f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));

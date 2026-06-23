@@ -274,6 +274,25 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_CameraPos = XMFLOAT3( 0, -Atmosphere.SphereOffsetY, 0 );
     AtmosphereCB.AC_Time = Engine::GAPI->GetTimeSeconds();
     AtmosphereCB.AC_LightPos = LightDir;
+
+    XMVECTOR lightDirVec = XMVector3Normalize( XMLoadFloat3( &LightDir ) );
+    XMVECTOR lightWorld = Engine::GAPI->GetCameraPositionXM() + lightDirVec * std::max( 10000.0f, Engine::GAPI->GetFarPlane() );
+    XMMATRIX lightViewProj = Engine::GAPI->GetViewMatrixXM() * XMLoadFloat4x4( &Engine::GAPI->GetProjectionMatrix() );
+    XMFLOAT4 lightClip;
+    XMStoreFloat4( &lightClip, XMVector4Transform( XMVectorSet( XMVectorGetX( lightWorld ), XMVectorGetY( lightWorld ), XMVectorGetZ( lightWorld ), 1.0f ), lightViewProj ) );
+    float lightVisible = 0.0f;
+    float lightScreenX = 0.5f;
+    float lightScreenY = 0.5f;
+    if ( fabsf( lightClip.w ) > 0.0001f ) {
+        float invW = 1.0f / lightClip.w;
+        float ndcX = lightClip.x * invW;
+        float ndcY = lightClip.y * invW;
+        float ndcZ = lightClip.z * invW;
+        lightScreenX = ndcX * 0.5f + 0.5f;
+        lightScreenY = -ndcY * 0.5f + 0.5f;
+        lightVisible = (lightClip.w > 0.0f && ndcZ >= 0.0f && ndcZ <= 1.0f && lightScreenX >= -0.25f && lightScreenX <= 1.25f && lightScreenY >= -0.25f && lightScreenY <= 1.25f) ? 1.0f : 0.0f;
+    }
+    AtmosphereCB.AC_LightScreenPos = XMFLOAT4( lightScreenX, lightScreenY, lightVisible, 0.0f );
     AtmosphereCB.AC_CameraHeight = -Atmosphere.SphereOffsetY;
     AtmosphereCB.AC_InnerRadius = Atmosphere.InnerRadius;
     AtmosphereCB.AC_OuterRadius = Atmosphere.OuterRadius;

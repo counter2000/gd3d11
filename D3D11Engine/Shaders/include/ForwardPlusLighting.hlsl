@@ -110,6 +110,9 @@ struct TiledPointLight
     float4 Color;
     float3 PositionWorld;
     int ShadowCubeIndex;
+    float ShadowStrength;
+    float IsIndoor;
+    float2 Padding;
 };
 
 struct LightGrid
@@ -129,7 +132,7 @@ TextureCubeArray FP_ShadowCubeArray : register( t11 );
 
 float3 FP_ComputePointLighting(
     float3 wsPosition, float3 vsPosition, float3 normal,
-    float3 diffuseColor, float specIntensity, float specPower,
+    float4 diffuseColor, float specIntensity, float specPower,
     float2 screenPos )
 {
     uint tileX = (uint)screenPos.x / FP_TILE_SIZE;
@@ -142,7 +145,7 @@ float3 FP_ComputePointLighting(
 
     // These only need to be calculated once per pixel
     float3 V = normalize( -vsPosition );
-    float specMod = PLS_ComputeSpecMod( diffuseColor );
+    float specMod = PLS_ComputeSpecMod( diffuseColor.rgb );
     float3 wsNormal = normalize( mul( float4( normal, 0 ), SQ_InvView ).xyz );
     
     for ( uint i = 0; i < grid.Count; i++ )
@@ -165,14 +168,17 @@ float3 FP_ComputePointLighting(
 
         float3 H = normalize( lightDir + V );
         float spec = PLS_CalcBlinnPhongLighting( normal, H );
-        float3 lighting = PLS_ComputePointLightLighting( diffuseColor, light.Color.rgb, ndl, falloff, spec, specIntensity, specPower, specMod );
+        float3 lighting = PLS_ComputePointLightLighting( diffuseColor.rgb, light.Color.rgb, ndl, falloff, spec, specIntensity, specPower, specMod );
 
         // Don't fetch shadows if the light contribution is effectively zero.
         if ( light.ShadowCubeIndex >= 0 && any(lighting > 0.001f) )
         {
             float shadow = PLS_SampleShadowCubeArray( FP_ShadowCubeArray, SS_Comp, wsPosition, wsNormal, light.PositionWorld, light.Range, light.ShadowCubeIndex );
-            lighting *= shadow;
+            lighting *= lerp(1.0f, shadow, saturate(light.ShadowStrength));
         }
+
+        float indoorPixel = diffuseColor.a < 0.5f ? 1.0f : 0.0f;
+        lighting *= saturate( (1.0f - light.IsIndoor) + light.IsIndoor * indoorPixel );
 
         lighting = saturate( lighting );
         totalLighting += lighting;

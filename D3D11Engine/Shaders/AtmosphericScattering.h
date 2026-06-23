@@ -59,6 +59,8 @@ cbuffer Atmosphere : register( b1 )
 	float AC_EnableParticleLighting;
 	float AC_ParticleLightingStrength;
 	float2 AC_AtmospherePad3;
+
+	float4 AC_LightScreenPos;
 };
 
 // The scale equation calculated by Vernier's Graphical Analysis

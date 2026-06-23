@@ -11,6 +11,7 @@
 #include "Engine.h"
 #include "GothicAPI.h"
 #include "GothicGraphicsState.h"
+#include "GSky.h"
 
 static ID3D11ShaderResourceView* s_nullSRVs[16] = { nullptr };
 
@@ -180,10 +181,15 @@ bool D3D11DeferredRenderer::BindShaderForTexture( D3D11ShaderManager& shaderMana
         }
     }
 
-    if ( active != newShader ) {
+    bool changed = active != newShader;
+    if ( changed ) {
         activePS = newShader;
         activePS->Apply();
-        return true;
     }
-    return false;
+    if ( materialType == MaterialInfo::MT_WaterfallFoam ) {
+        if ( GSky* sky = Engine::GAPI->GetSky() ) {
+            activePS->GetBuffer( "Atmosphere" ).Update( &sky->GetAtmosphereCB() ).Bind();
+        }
+    }
+    return changed;
 }

@@ -234,6 +234,7 @@ XRESULT D3D11ShaderManager::Init() {
         .with_category( ShaderCategory::Water ) );
 
     Shaders.push_back( ShaderInfo::make<PShaderID::PS_ParticleDistortion>( "PS_ParticleDistortion.hlsl" )  );
+    Shaders.push_back( ShaderInfo::make<PShaderID::PS_ParticleSimple>( "PS_ParticleSimple.hlsl" )  );
 
     Shaders.push_back( ShaderInfo::make<PShaderID::PS_PFX_ApplyParticleDistortion>( "PS_PFX_ApplyParticleDistortion.hlsl" ) );
 

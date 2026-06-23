@@ -11,7 +11,8 @@ struct TiledPointLight {
     float3 PositionWorld;
     int ShadowCubeIndex; // -1 = no shadow, else index into TextureCubeArray
     float ShadowStrength;
-    float3 Padding;
+    float IsIndoor;
+    float2 Padding;
 };
 
 struct LightGrid {
@@ -106,6 +107,9 @@ void CSMain( uint3 groupID : SV_GroupID, uint3 threadID : SV_GroupThreadID, uint
             float shadow = PLS_SampleShadowCubeArray( TX_ShadowCubeArray, SS_Comp, wsPosition, wsNormal, light.PositionWorld, light.Range, light.ShadowCubeIndex );
             lighting *= lerp(1.0f, shadow, saturate(light.ShadowStrength));
         }
+
+        float indoorPixel = diffuse.a < 0.5f ? 1.0f : 0.0f;
+        lighting *= saturate( (1.0f - light.IsIndoor) + light.IsIndoor * indoorPixel );
 
         lighting = saturate( lighting );
 

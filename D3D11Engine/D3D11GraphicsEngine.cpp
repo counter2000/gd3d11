@@ -9021,8 +9021,11 @@ void D3D11GraphicsEngine::DrawFrameParticles(
     }
 
     // Set usual rendering for everything else. Alphablending mostly.
-    SetActivePixelShader( PShaderID::PS_Simple );
-    ShaderManager->GetPShader( PShaderID::PS_Simple )->Apply();
+    SetActivePixelShader( PShaderID::PS_ParticleSimple );
+    ActivePS->Apply();
+    if ( auto sky = Engine::GAPI->GetSky() ) {
+        ActivePS->GetBuffer( "Atmosphere" ).Update( &sky->GetAtmosphereCB() ).Bind();
+    }
 
     Context->OMSetRenderTargets( 1, HDRBackBuffer->GetRenderTargetView().GetAddressOf(),
         DepthStencilBuffer->GetDepthStencilView().Get() );
