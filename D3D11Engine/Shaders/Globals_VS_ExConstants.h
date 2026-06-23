@@ -12,6 +12,7 @@ struct VS_ExConstantBuffer_PerFrame
 
 struct VS_ExConstantBuffer_PerInstance {
 	matrix M_World;
+	float4 M_Color;
 };
 
 struct VS_ExConstantBuffer_PerInstanceNode {

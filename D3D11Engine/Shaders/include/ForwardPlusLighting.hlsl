@@ -125,6 +125,15 @@ StructuredBuffer<TiledPointLight> FP_Lights : register( t8 );
 StructuredBuffer<LightGrid> FP_LightGrid : register( t9 );
 StructuredBuffer<uint> FP_LightIndexList : register( t10 );
 TextureCubeArray FP_ShadowCubeArray : register( t11 );
+float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 lightPosWorld, float lightRange)
+{
+	float outdoorPixel = 1.0f - indoorPixel;
+	float floorMask = smoothstep(0.55f, 0.85f, wsNormal.y);
+	float belowLight = smoothstep(-80.0f, 160.0f, lightPosWorld.y - wsPosition.y);
+	float closeToDoorLight = saturate(1.0f - length(lightPosWorld - wsPosition) / max(lightRange * 0.55f, 1.0f));
+	closeToDoorLight *= closeToDoorLight;
+	return outdoorPixel * floorMask * belowLight * closeToDoorLight * 0.28f;
+}
 
 // ============================================
 // Point Light Accumulation (matches CS_TiledShading.hlsl)
@@ -178,7 +187,8 @@ float3 FP_ComputePointLighting(
         }
 
         float indoorPixel = diffuseColor.a < 0.5f ? 1.0f : 0.0f;
-        lighting *= saturate( (1.0f - light.IsIndoor) + light.IsIndoor * indoorPixel );
+        float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, light.PositionWorld, light.Range);
+        lighting *= saturate( (1.0f - light.IsIndoor) + light.IsIndoor * max(indoorPixel, doorFloorBleed) );
 
         lighting = saturate( lighting );
         totalLighting += lighting;

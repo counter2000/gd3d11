@@ -4663,6 +4663,7 @@ void D3D11GraphicsEngine::SetupVS_ExPerInstanceConstantBuffer() {
 
     VS_ExConstantBuffer_PerInstance cb = {};
     cb.World = world;
+    cb.Color = float4( 1.0f, 1.0f, 1.0f, 1.0f );
 
     ActiveVS->GetBuffer(1).Update(&cb).Bind();
 }
@@ -4750,7 +4751,10 @@ XRESULT D3D11GraphicsEngine::DrawMeshInfoListAlphablended(
         .Bind();
 
     const XMMATRIX identityMatrix = XMMatrixIdentity();
-    ActiveVS->GetBuffer( "Matrices_PerInstances" ).Update( &identityMatrix ).Bind();
+    VS_ExConstantBuffer_PerInstance cbInstance = {};
+    cbInstance.World = identityMatrix;
+    cbInstance.Color = float4( 1.0f, 1.0f, 1.0f, 1.0f );
+    ActiveVS->GetBuffer( "Matrices_PerInstances" ).Update( &cbInstance, sizeof( cbInstance ) ).Bind();
 
     InfiniteRangeConstantBuffer->BindToPixelShader( 3 );
 
@@ -4942,8 +4946,11 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
 
     // Set constant buffer
     const XMMATRIX identityMatrix = XMMatrixIdentity();
+    VS_ExConstantBuffer_PerInstance cbInstance = {};
+    cbInstance.World = identityMatrix;
+    cbInstance.Color = float4( 1.0f, 1.0f, 1.0f, 1.0f );
     ActiveVS->GetBuffer( "Matrices_PerInstances" )
-        .Update( &identityMatrix )
+        .Update( &cbInstance, sizeof( cbInstance ) )
         .Bind();
 
     auto updatePSBuffers = [this] {
@@ -5419,8 +5426,14 @@ void D3D11GraphicsEngine::DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRT
 
         ActivePS->GetBuffer( "RefractionInfo" ).Update( &ricb ).Bind();
 
-        // Bind reflection cube
-        GetContext()->PSSetShaderResources( 3, 1, ReflectionCube.GetAddressOf() );
+        // Bind reflection cube. With Water Effects/SSR active, use SkyCubemap2 as the
+        // old landscape/sky fallback; reflect_cube.dds remains the simple-water fallback.
+        const auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
+        if ( settings.EnableSSR ) {
+            GetContext()->PSSetShaderResources( 3, 1, ReflectionCube2.GetAddressOf() );
+        } else {
+            GetContext()->PSSetShaderResources( 3, 1, ReflectionCube.GetAddressOf() );
+        }
 
         if ( !FeatureLevel10Compatibility ) {
             // MDI path: one MDI call per texture batch
@@ -5498,7 +5511,10 @@ void XM_CALLCONV D3D11GraphicsEngine::DrawWorldAround(
     SetupVS_ExConstantBuffer();
 
     const XMMATRIX identityMatrix = XMMatrixIdentity();
-    ActiveVS->GetBuffer( "Matrices_PerInstances" ).Update( &identityMatrix ).Bind();
+    VS_ExConstantBuffer_PerInstance cbInstance = {};
+    cbInstance.World = identityMatrix;
+    cbInstance.Color = float4( 1.0f, 1.0f, 1.0f, 1.0f );
+    ActiveVS->GetBuffer( "Matrices_PerInstances" ).Update( &cbInstance, sizeof( cbInstance ) ).Bind();
 
     // Update and bind buffer of PS
     PerObjectState ocb;
@@ -5527,7 +5543,7 @@ void XM_CALLCONV D3D11GraphicsEngine::DrawWorldAround(
     const bool drawAnimatedCasters = (casterMask & SHADOW_CASTER_ANIMATED) != 0;
 
     if ( drawWorldCasters && Engine::GAPI->GetRendererState().RendererSettings.DrawWorldMesh ) {
-        vsBufMPI.Update( &identityMatrix ).Bind();
+        vsBufMPI.Update( &identityMatrix, sizeof( identityMatrix ) ).Bind();
 
         // Only use cache if we haven't already collected the vobs
         // TODO: Collect vobs in a different way than using the drawn sections!
@@ -5843,7 +5859,10 @@ void XM_CALLCONV D3D11GraphicsEngine::DrawWorldAround_Layered(
     SetupVS_ExConstantBuffer();
 
     const XMMATRIX identityMatrix = XMMatrixIdentity();
-    ActiveVS->GetBuffer( "Matrices_PerInstances" ).Update( &identityMatrix ).Bind();
+    VS_ExConstantBuffer_PerInstance cbInstance = {};
+    cbInstance.World = identityMatrix;
+    cbInstance.Color = float4( 1.0f, 1.0f, 1.0f, 1.0f );
+    ActiveVS->GetBuffer( "Matrices_PerInstances" ).Update( &cbInstance, sizeof( cbInstance ) ).Bind();
 
     // Update and bind buffer of PS
     PerObjectState ocb;
@@ -5877,7 +5896,7 @@ void XM_CALLCONV D3D11GraphicsEngine::DrawWorldAround_Layered(
 
     void* lastTex = nullptr;
     if ( drawWorldCasters && Engine::GAPI->GetRendererState().RendererSettings.DrawWorldMesh ) {
-        ActiveVS->GetBuffer( "Matrices_PerInstances" ).Update( &identityMatrix ).Bind();
+        ActiveVS->GetBuffer( "Matrices_PerInstances" ).Update( &identityMatrix, sizeof( identityMatrix ) ).Bind();
         auto _ = RecordGraphicsEvent( GE_NAME( "DrawWorldMesh::Layered" ) );
         // Only use cache if we haven't already collected the vobs
         // TODO: Collect vobs in a different way than using the drawn sections!
@@ -6453,7 +6472,7 @@ void XM_CALLCONV D3D11GraphicsEngine::DrawWorldAroundForWorldShadow( FXMVECTOR p
 
     const XMMATRIX identityMatrix = XMMatrixIdentity();
     auto cbMatrices_PerInstances = ActiveVS->GetBuffer( "Matrices_PerInstances" )
-        .Update( &identityMatrix )
+        .Update( &identityMatrix, sizeof( identityMatrix ) )
         .Bind();
 
     float3 fPosition; XMStoreFloat3( fPosition.toXMFLOAT3(), position );
@@ -6485,7 +6504,7 @@ void XM_CALLCONV D3D11GraphicsEngine::DrawWorldAroundForWorldShadow( FXMVECTOR p
     if ( Engine::GAPI->GetRendererState().RendererSettings.DrawWorldMesh ) {
         TracyD3D11ZoneCGX( "Shadows::DrawWorldMesh" );
         auto _1 = RecordGraphicsEvent( GE_NAME( "Shadows::DrawWorldMesh" ) );
-        cbMatrices_PerInstances.Update( &identityMatrix ).Bind();
+        cbMatrices_PerInstances.Update( &identityMatrix, sizeof( identityMatrix ) ).Bind();
 
         static thread_local std::vector<WorldMeshSectionInfo*> visibleSections;
         visibleSections.clear();
@@ -7746,7 +7765,7 @@ XRESULT D3D11GraphicsEngine::DrawPolyStrips( bool noTextures ) {
 
         //vob->GetWorldMatrix(&id);
         const XMMATRIX identityMatrix = XMMatrixIdentity();
-        vsBufMPI.Update( &identityMatrix ).Bind();
+        vsBufMPI.Update( &identityMatrix, sizeof( identityMatrix ) ).Bind();
 
         // Check for alphablending on world mesh
         bool blendAdd = mat->GetAlphaFunc() == zMAT_ALPHA_FUNC_ADD;
@@ -7902,10 +7921,11 @@ XRESULT D3D11GraphicsEngine::DrawSky() {
         .Update(&sky->GetAtmosphereCB())
         .Bind();
 
-    VS_ExConstantBuffer_PerInstance cbi;
+    VS_ExConstantBuffer_PerInstance cbi = {};
     XMStoreFloat4x4( &cbi.World, world );
+    cbi.Color = float4( 1.0f, 1.0f, 1.0f, 1.0f );
     ActiveVS->GetBuffer("Matrices_PerInstances")
-        .Update(&cbi)
+        .Update(&cbi, sizeof( cbi ))
         .Bind();
 
     rendererState.BlendState.SetDefault();
@@ -8085,7 +8105,10 @@ void D3D11GraphicsEngine::DrawVobSingle( VobInfo* vob, zCCamera& camera ) {
     SetupVS_ExMeshDrawCall();
     SetupVS_ExConstantBuffer();
 
-    ActiveVS->GetBuffer( "Matrices_PerInstances" ).Update( vob->Vob->GetWorldMatrixPtr() ).Bind();
+    VS_ExConstantBuffer_PerInstance cbInstance = {};
+    cbInstance.World = *vob->Vob->GetWorldMatrixPtr();
+    cbInstance.Color = float4( 1.0f, 1.0f, 1.0f, 1.0f );
+    ActiveVS->GetBuffer( "Matrices_PerInstances" ).Update( &cbInstance, sizeof( cbInstance ) ).Bind();
 
     for ( auto const& itm : vob->VisualInfo->Meshes ) {
         // Cache & bind texture

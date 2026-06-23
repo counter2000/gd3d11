@@ -55,6 +55,7 @@ VS_OUTPUT VSMain( VS_INPUT Input )
 	Output.vTexcoord2 = Input.vTex2;
 	Output.vTexcoord = Input.vTex1;
 	Output.vDiffuse  = Input.vDiffuse;
+	Output.vDiffuse.a = Input.vDiffuse.a * cbInstance.M_Color.a;
 	Output.vNormalVS = mul(Input.vNormal, (float3x3)mul(cbInstance.M_World, frame.M_View));
 	Output.vViewPosition = mul(float4(positionWorld,1), frame.M_View);
 	//Output.vWorldPosition = positionWorld;

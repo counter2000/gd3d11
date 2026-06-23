@@ -47,6 +47,15 @@ float3 VSPositionFromDepth(float depth, float2 vTexCoord)
 {
 	return ReconstructVSPositionFromDepthReverseZInfinite( depth, vTexCoord, PL_ProjParams.xy ) * PL_ProjParams.z;
 }
+float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 lightPosWorld, float lightRange)
+{
+	float outdoorPixel = 1.0f - indoorPixel;
+	float floorMask = smoothstep(0.55f, 0.85f, wsNormal.y);
+	float belowLight = smoothstep(-80.0f, 160.0f, lightPosWorld.y - wsPosition.y);
+	float closeToDoorLight = saturate(1.0f - length(lightPosWorld - wsPosition) / max(lightRange * 0.55f, 1.0f));
+	closeToDoorLight *= closeToDoorLight;
+	return outdoorPixel * floorMask * belowLight * closeToDoorLight * 0.28f;
+}
 
 //--------------------------------------------------------------------------------------
 // Blinn-Phong Lighting Reflection Model
@@ -109,9 +118,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float specIntensity = gb3.x;
 	float specPower = gb3.y < 0.0f ? max(-gb3.y - 1.0f, 1.0f) : gb3.y;
 	
-	// Reconstruct VS World Position from depth
+	// Reconstruct VS/WS position from depth
 	float expDepth = TX_Depth.Sample(SS_Linear, uv).r;
 	float3 vsPosition = VSPositionFromDepth(expDepth, uv);
+	float3 wsPosition = mul(float4(vsPosition, 1), PL_InvView).xyz;
+	float3 wsNormal = normalize(mul(float4(normal, 0), PL_InvView).xyz);
 	
 	// Get direction and distance from the light to that position
 	float3 lightDir = Pl_PositionView - vsPosition;
@@ -134,10 +145,12 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	// Blend this with the light color, world diffuse and specular term.
 	float3 lighting = PLS_ComputePointLightLighting(diffuse.rgb, PL_Color.rgb, ndl, falloff, spec, specIntensity, specPower, specMod);
 	
-	// Keep indoor point lights from leaking onto outdoor pixels.
+	// Keep indoor point lights from leaking onto outdoor pixels, but allow a small
+	// floor-only doorway bleed so thresholds do not form a hard black line.
 	float indoor = 1.0f - PL_Outdoor;
 	float indoorPixel = diffuse.a < 0.5f ? 1.0f : 0.0f;
-	lighting *= saturate(PL_Outdoor + indoor * indoorPixel);
+	float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, Pl_PositionWorld, PL_Range);
+	lighting *= saturate(PL_Outdoor + indoor * max(indoorPixel, doorFloorBleed));
 	return float4(saturate(lighting),1);
 }
 

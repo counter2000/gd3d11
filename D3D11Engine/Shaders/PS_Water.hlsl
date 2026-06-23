@@ -208,15 +208,15 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 
 	float pxDistance = Input.vTexcoord2.y;
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
-	float cubeWeight = waterSSRActive ? 0.0f : 1.0f;
+	float cubeWeight = waterSSRActive ? lerp(0.45f, 0.95f, nightAmount) : 1.0f;
 	float ssrFresnel = lerp(0.55f, 0.80f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));
 	float3 reflectionBaseColor = reflectionSSRColor * rcp(1.0f + max(0.0f, reflectionLuma - 1.25f) * 0.65f);
 	// Preserve HDR light-source reflections; only tame extreme outliers on the dynamic layer.
 	reflectionSSRColor *= rcp(1.0f + max(0.0f, reflectionLuma - 6.0f) * 0.12f);
-	// Cubemap is only the fallback when Water Effects are disabled. With Water Effects enabled,
-	// the base fallback is the old screen-space water reflection without the strong HDR/light layer.
+	// SkyCubemap2/ReflectionCube2 remains the old landscape/sky fallback when Water Effects are active.
+	// Dynamic SSR is blended on top and may be masked near actors or on weak hits.
 	scene.rgb += reflection * cubeWeight * fresnel * lerp(1.0f, diffuse, 0.6f);
 	float baseSSRBlend = waterSSRActive ? saturate(ssrBaseWeight * ssrFresnel * 0.62f * lerp(0.85f, 1.05f, nightAmount)) : 0.0f;
 	float ssrBlend = saturate(ssrWeight * ssrFresnel * max(0.0f, AC_SSRStrength) * 0.78f * lerp(0.85f, 1.10f, nightAmount));

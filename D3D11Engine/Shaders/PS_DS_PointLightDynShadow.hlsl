@@ -49,6 +49,15 @@ float3 VSPositionFromDepth(float depth, float2 vTexCoord)
 {
 	return ReconstructVSPositionFromDepthReverseZInfinite( depth, vTexCoord, PL_ProjParams.xy ) * PL_ProjParams.z;
 }
+float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 lightPosWorld, float lightRange)
+{
+	float outdoorPixel = 1.0f - indoorPixel;
+	float floorMask = smoothstep(0.55f, 0.85f, wsNormal.y);
+	float belowLight = smoothstep(-80.0f, 160.0f, lightPosWorld.y - wsPosition.y);
+	float closeToDoorLight = saturate(1.0f - length(lightPosWorld - wsPosition) / max(lightRange * 0.55f, 1.0f));
+	closeToDoorLight *= closeToDoorLight;
+	return outdoorPixel * floorMask * belowLight * closeToDoorLight * 0.28f;
+}
 
 //--------------------------------------------------------------------------------------
 // Pixel Shader
@@ -117,10 +126,12 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	//lighting = GetShadow(uv);
 	
-	// Keep indoor point lights from leaking onto outdoor pixels.
+	// Keep indoor point lights from leaking onto outdoor pixels, but allow a small
+	// floor-only doorway bleed so thresholds do not form a hard black line.
 	float indoor = 1.0f - PL_Outdoor;
 	float indoorPixel = diffuse.a < 0.5f ? 1.0f : 0.0f;
-	lighting *= saturate(PL_Outdoor + indoor * indoorPixel);
+	float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, Pl_PositionWorld, PL_Range);
+	lighting *= saturate(PL_Outdoor + indoor * max(indoorPixel, doorFloorBleed));
 	//return float4(0.2f,0.2f,0.2f,1);
 	//return float4(ndl.rrr,1);
 	return float4(saturate(lighting),1);
