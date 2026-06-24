@@ -333,9 +333,9 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_EnableScreenSpaceGI = (Engine::GAPI->GetRendererState().RendererSettings.EnableScreenSpaceGI && Engine::GAPI->GetRendererState().RendererSettings.ScreenSpaceGIStrength > 0.0f) ? 1.0f : 0.0f;
     AtmosphereCB.AC_VolumetricLightShaftStrength = Engine::GAPI->GetRendererState().RendererSettings.VolumetricLightShaftStrength;
     AtmosphereCB.AC_ContactShadowStrength = Engine::GAPI->GetRendererState().RendererSettings.ContactShadowStrength;
-    AtmosphereCB.AC_ScreenSpaceGIStrength = Engine::GAPI->GetRendererState().RendererSettings.ScreenSpaceGIStrength;
+    AtmosphereCB.AC_ScreenSpaceGIStrength = Engine::GAPI->GetRendererState().RendererSettings.ScreenSpaceGIStrength * 0.25f;
     AtmosphereCB.AC_EnableParticleLighting = Engine::GAPI->GetRendererState().RendererSettings.EnableParticleLighting ? 1.0f : 0.0f;
-    AtmosphereCB.AC_ParticleLightingStrength = Engine::GAPI->GetRendererState().RendererSettings.ParticleLightingStrength;
+    AtmosphereCB.AC_ParticleLightingStrength = Engine::GAPI->GetRendererState().RendererSettings.ParticleLightingStrength * 0.75f;
 
     //Engine::GraphicsEngine->DrawSky();
 

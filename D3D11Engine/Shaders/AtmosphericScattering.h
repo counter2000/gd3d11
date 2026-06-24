@@ -104,7 +104,7 @@ float3 GetAtmosphericSunTerm(float3 normal)
 
 float GetNightWeight()
 {
-	return saturate(((-AC_LightPos.y) + 0.2f) * 10.0f);
+	return saturate((-AC_LightPos.y) * 10.0f);
 }
 
 float GetNightDistanceFade(float3 worldPosition)

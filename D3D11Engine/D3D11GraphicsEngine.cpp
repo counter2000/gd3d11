@@ -4232,20 +4232,44 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         if ( FeatureLevel10Compatibility || Engine::GAPI->GetRendererState().RendererSettings.DrawRainThroughTransformFeedback ) {
             graph.AddPass( RG_PASS_NAME("Draw Rain"), [&]( RGBuilder& builder, RenderPass& pass ) {
                 builder.Read( backBufferHandle );
+                builder.Read( reactiveMaskResource );
                 builder.Write( backBufferHandle );
+                builder.Write( reactiveMaskResource );
 
-                pass.m_executeCallback = [this](const RenderGraph&) {
+                pass.m_executeCallback = [this, backBufferHandle, reactiveMaskResource](const RenderGraph& graph) {
                     TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Draw Rain" );
+                    auto backBuffer = graph.GetPhysicalTexture( backBufferHandle );
+                    auto reactiveMask = graph.GetPhysicalTexture( reactiveMaskResource );
+                    ID3D11RenderTargetView* rtvs[5] = {
+                        backBuffer ? backBuffer->GetRenderTargetView().Get() : nullptr,
+                        nullptr,
+                        nullptr,
+                        nullptr,
+                        reactiveMask ? reactiveMask->GetRenderTargetView().Get() : nullptr,
+                    };
+                    GetContext()->OMSetRenderTargets( 5, rtvs, DepthStencilBuffer->GetDepthStencilView().Get() );
                     Effects->DrawRain();
                 };
             });
         } else {
             graph.AddPass( RG_PASS_NAME("Draw Rain CS"), [&]( RGBuilder& builder, RenderPass& pass ) {
                 builder.Read( backBufferHandle );
+                builder.Read( reactiveMaskResource );
                 builder.Write( backBufferHandle );
+                builder.Write( reactiveMaskResource );
 
-                pass.m_executeCallback = [this](const RenderGraph&) {
+                pass.m_executeCallback = [this, backBufferHandle, reactiveMaskResource](const RenderGraph& graph) {
                     TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Draw Rain (CS)" );
+                    auto backBuffer = graph.GetPhysicalTexture( backBufferHandle );
+                    auto reactiveMask = graph.GetPhysicalTexture( reactiveMaskResource );
+                    ID3D11RenderTargetView* rtvs[5] = {
+                        backBuffer ? backBuffer->GetRenderTargetView().Get() : nullptr,
+                        nullptr,
+                        nullptr,
+                        nullptr,
+                        reactiveMask ? reactiveMask->GetRenderTargetView().Get() : nullptr,
+                    };
+                    GetContext()->OMSetRenderTargets( 5, rtvs, DepthStencilBuffer->GetDepthStencilView().Get() );
                     Effects->DrawRain_CS();
                 };
             });
@@ -5425,10 +5449,10 @@ void D3D11GraphicsEngine::DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRT
         UpdateRefractionViewProjection( ricb );
 
         ActivePS->GetBuffer( "RefractionInfo" ).Update( &ricb ).Bind();
-        // Bind the simple reflection cube only when Water Effects are disabled.
-        // With Water Effects active, the shader uses screen-space base/dynamic reflection only.
-        const auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
-        ID3D11ShaderResourceView* reflectionCubeSrv = settings.EnableSSR ? nullptr : ReflectionCube.Get();
+        // Bind the simple reflection cube as a safe fallback. The water shader controls
+        // its visibility: full strength when Water Effects or dynamic SSR are off,
+        // and only in masked/missing SSR areas when dynamic SSR is active.
+        ID3D11ShaderResourceView* reflectionCubeSrv = ReflectionCube.Get();
         GetContext()->PSSetShaderResources( 3, 1, &reflectionCubeSrv );
 
         if ( !FeatureLevel10Compatibility ) {

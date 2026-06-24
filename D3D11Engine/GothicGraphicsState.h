@@ -729,7 +729,7 @@ struct GothicRendererSettings {
         EnableContactShadows = true;
         ContactShadowStrength = 0.35f;
         EnableScreenSpaceGI = false;
-        ScreenSpaceGIStrength = 0.60f;
+        ScreenSpaceGIStrength = 1.0f;
         EnableParticleLighting = true;
         ParticleLightingStrength = 1.0f;
         EnableDoF = true;

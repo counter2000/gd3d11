@@ -5602,7 +5602,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.EnableContactShadows = GetPrivateProfileBoolA( "General", "EnableContactShadows", ds.EnableContactShadows, ini );
         s.ContactShadowStrength = std::clamp( GetPrivateProfileFloatA( "General", "ContactShadowStrength", ds.ContactShadowStrength, ini ), 0.0f, 2.0f );
         s.EnableScreenSpaceGI = GetPrivateProfileBoolA( "General", "EnableScreenSpaceGI", ds.EnableScreenSpaceGI, ini );
-        s.ScreenSpaceGIStrength = std::clamp( GetPrivateProfileFloatA( "General", "ScreenSpaceGIStrength", ds.ScreenSpaceGIStrength, ini ), 0.0f, 1.0f );
+        s.ScreenSpaceGIStrength = std::clamp( GetPrivateProfileFloatA( "General", "ScreenSpaceGIStrength", ds.ScreenSpaceGIStrength, ini ), 0.0f, 2.0f );
         s.EnableParticleLighting = GetPrivateProfileBoolA( "General", "EnableParticleLighting", ds.EnableParticleLighting, ini );
         s.ParticleLightingStrength = std::clamp( GetPrivateProfileFloatA( "General", "ParticleLightingStrength", ds.ParticleLightingStrength, ini ), 0.0f, 2.0f );
 

@@ -49,12 +49,32 @@ float3 VSPositionFromDepth(float depth, float2 vTexCoord)
 {
 	return ReconstructVSPositionFromDepthReverseZInfinite( depth, vTexCoord, PL_ProjParams.xy ) * PL_ProjParams.z;
 }
-float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 lightPosWorld, float lightRange)
+float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 lightPosWorld, float lightRange, float2 uv, float currentDepth)
 {
 	float outdoorPixel = 1.0f - indoorPixel;
 	float floorMask = smoothstep(0.40f, 0.70f, wsNormal.y);
 	float belowLight = smoothstep(-80.0f, 160.0f, lightPosWorld.y - wsPosition.y);
-	return outdoorPixel * floorMask * belowLight;
+	float baseMask = outdoorPixel * floorMask * belowLight;
+	if (baseMask <= 0.0f)
+		return 0.0f;
+
+	float2 probeDir = PL_LightScreenPos.xy - uv;
+	float probeLen = max(length(probeDir), 1e-5f);
+	probeDir /= probeLen;
+
+	float doorwayProbe = 0.0f;
+	[unroll] for (int i = 1; i <= 3; ++i)
+	{
+		float sampleFade = 1.0f - (i - 1) * 0.33f;
+		float2 sampleUV = saturate(uv + probeDir * (float)i * 4.0f / PL_ViewportSize);
+		float4 sampleDiffuse = TX_Diffuse.SampleLevel(SS_Linear, sampleUV, 0);
+		float sampleIndoor = sampleDiffuse.a < 0.5f ? 1.0f : 0.0f;
+		float sampleDepth = TX_Depth.SampleLevel(SS_Linear, sampleUV, 0).r;
+		float depthOk = 1.0f - smoothstep(0.0025f, 0.0100f, abs(sampleDepth - currentDepth));
+		doorwayProbe = max(doorwayProbe, sampleIndoor * depthOk * sampleFade);
+	}
+
+	return baseMask * doorwayProbe;
 }
 
 //--------------------------------------------------------------------------------------
@@ -128,7 +148,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	// floor-only doorway bleed so thresholds do not form a hard black line.
 	float indoor = 1.0f - PL_Outdoor;
 	float indoorPixel = diffuse.a < 0.5f ? 1.0f : 0.0f;
-	float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, Pl_PositionWorld, PL_Range);
+	float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, Pl_PositionWorld, PL_Range, uv, expDepth);
 	lighting *= saturate(PL_Outdoor + indoor * max(indoorPixel, doorFloorBleed));
 	//return float4(0.2f,0.2f,0.2f,1);
 	//return float4(ndl.rrr,1);

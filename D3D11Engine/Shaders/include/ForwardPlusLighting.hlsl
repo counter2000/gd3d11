@@ -130,7 +130,9 @@ float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 w
 	float outdoorPixel = 1.0f - indoorPixel;
 	float floorMask = smoothstep(0.40f, 0.70f, wsNormal.y);
 	float belowLight = smoothstep(-80.0f, 160.0f, lightPosWorld.y - wsPosition.y);
-	return outdoorPixel * floorMask * belowLight;
+	float horizontalDistance = length(lightPosWorld.xz - wsPosition.xz);
+	float doorwayRange = smoothstep(160.0f, 25.0f, horizontalDistance);
+	return outdoorPixel * floorMask * belowLight * doorwayRange;
 }
 
 // ============================================

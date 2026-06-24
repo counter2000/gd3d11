@@ -1688,7 +1688,7 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             bool reloadScreenSpaceLightFX = false;
             reloadScreenSpaceLightFX |= ImGui::SliderFloat( "Light Shafts", &settings.VolumetricLightShaftStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
             reloadScreenSpaceLightFX |= ImGui::SliderFloat( "Contact Shadows", &settings.ContactShadowStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
-            reloadScreenSpaceLightFX |= ImGui::SliderFloat( "Indirect Light", &settings.ScreenSpaceGIStrength, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+            reloadScreenSpaceLightFX |= ImGui::SliderFloat( "Indirect Light", &settings.ScreenSpaceGIStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
             if ( reloadScreenSpaceLightFX ) Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
             ImGui::EndDisabled();
             ImGui::PopID();
