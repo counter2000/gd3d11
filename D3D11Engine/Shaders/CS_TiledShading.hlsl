@@ -44,11 +44,10 @@ TextureCubeArray TX_ShadowCubeArray : register( t11 );
 float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 lightPosWorld, float lightRange)
 {
 	float outdoorPixel = 1.0f - indoorPixel;
-	float floorMask = smoothstep(0.55f, 0.85f, wsNormal.y);
+	float floorMask = smoothstep(0.40f, 0.70f, wsNormal.y);
 	float belowLight = smoothstep(-80.0f, 160.0f, lightPosWorld.y - wsPosition.y);
-	float closeToDoorLight = saturate(1.0f - length(lightPosWorld - wsPosition) / max(lightRange * 0.55f, 1.0f));
-	closeToDoorLight *= closeToDoorLight;
-	return outdoorPixel * floorMask * belowLight * closeToDoorLight * 0.28f;
+	float closeToDoorLight = saturate(1.0f - length(lightPosWorld - wsPosition) / max(lightRange * 0.92f, 1.0f));
+	return outdoorPixel * floorMask * belowLight * closeToDoorLight * 0.70f;
 }
 
 RWTexture2D<float4> RW_HDR : register( u0 );

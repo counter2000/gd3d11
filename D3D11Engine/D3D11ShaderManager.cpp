@@ -283,9 +283,9 @@ XRESULT D3D11ShaderManager::Init() {
             list.push_back( { "COMPOSE_SAO", (s.AoMode == AOMode::AO_SAO) ? "1" : "0" } );
             list.push_back( { "COMPOSE_GODRAYS", s.EnableGodRays ? "1" : "0" } );
             list.push_back( { "COMPOSE_HEIGHTFOG", s.DrawFog ? "1" : "0" } );
-            list.push_back( { "COMPOSE_LIGHTSHAFTS", s.EnableVolumetricLightShafts ? "1" : "0" } );
-            list.push_back( { "COMPOSE_CONTACT_SHADOWS", s.EnableContactShadows ? "1" : "0" } );
-            list.push_back( { "COMPOSE_SSGI", s.EnableScreenSpaceGI ? "1" : "0" } );
+            list.push_back( { "COMPOSE_LIGHTSHAFTS", (s.EnableVolumetricLightShafts && s.VolumetricLightShaftStrength > 0.0f) ? "1" : "0" } );
+            list.push_back( { "COMPOSE_CONTACT_SHADOWS", (s.EnableContactShadows && s.ContactShadowStrength > 0.0f) ? "1" : "0" } );
+            list.push_back( { "COMPOSE_SSGI", (s.EnableScreenSpaceGI && s.ScreenSpaceGIStrength > 0.0f) ? "1" : "0" } );
         } ) );
 
     Shaders.push_back( ShaderInfo::make<PShaderID::PS_PFX_Tonemap>( "PS_PFX_Tonemap.hlsl" )

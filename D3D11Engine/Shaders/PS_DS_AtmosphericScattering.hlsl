@@ -337,13 +337,15 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 							diffuse.rgb * lightColor.rgb * lightColor.a * worldAO, sun)
 				  + specColored;
 
-	float sssDayWeight = saturate((AC_LightPos.y - 0.03f) * 4.0f);
+	float sssSunWeight = saturate((AC_LightPos.y + 0.08f) * 3.0f);
 	float vegetationMask = vegetationMaterial * saturate(diffuse.g * 1.25f - diffuse.r * 0.45f - diffuse.b * 0.25f);
-	if (AC_EnableSSS > 0.5f && sssDayWeight > 0.001f && vegetationMask > 0.001f) {
+	if (AC_EnableSSS > 0.5f && sssSunWeight > 0.001f && vegetationMask > 0.001f) {
 		float backlight = saturate(dot(normalize(SQ_LightDirectionVS), -V));
-		float sssShadow = lerp(0.4f, 1.0f, shadow);
-		float sss = pow(backlight, 2.0f) * AC_SSSIntensity * 4.0f * sssShadow;
-		litPixel += diffuse.rgb * lightColor.rgb * sss * vertLighting * sssDayWeight * vegetationMask;
+		float rimBacklight = pow(backlight, 2.0f);
+		float sssShadow = lerp(0.55f, 1.0f, saturate(shadow));
+		float sssVertexGate = lerp(0.35f, 1.0f, saturate(vertLighting * 1.5f));
+		float sss = rimBacklight * AC_SSSIntensity * 2.8f * sssShadow * sssVertexGate;
+		litPixel += diffuse.rgb * lightColor.rgb * sss * sssSunWeight * vegetationMask;
 	}
 	
     float f = 1.0f - saturate(dot(normal, V));

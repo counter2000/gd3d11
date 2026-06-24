@@ -147,6 +147,15 @@ float2 GetScreenPixelSize(float2 uv)
 {
     return max(abs(ddx(uv)) + abs(ddy(uv)), float2(1.0f / 3840.0f, 1.0f / 2160.0f));
 }
+
+float DepthSimilarity(float centerDepth, float sampleDepth, float nearScale, float farScale)
+{
+    float depthScale = max(centerDepth, 0.00008f);
+    float delta = abs(sampleDepth - centerDepth);
+    float nearLimit = max(depthScale * nearScale, 0.000015f);
+    float farLimit = max(depthScale * farScale, 0.00018f);
+    return (1.0f - smoothstep(nearLimit, farLimit, delta)) * IsGeometryPixel(sampleDepth);
+}
 #endif
 
 #if COMPOSE_CONTACT_SHADOWS
@@ -154,27 +163,46 @@ float ComputeContactShadow(float2 uv, float centerDepth)
 {
     float geom = IsGeometryPixel(centerDepth);
     float2 px = GetScreenPixelSize(uv);
-    float2 lightDir = AC_LightScreenPos.xy - uv;
-    float lightLen = length(lightDir);
-    lightDir = lightLen > 0.0001f ? lightDir / lightLen : normalize(float2(0.35f, -0.55f));
+
+    float2 projectedLight = AC_LightScreenPos.xy - uv;
+    float projectedLen = length(projectedLight);
+    float2 fallbackDir = normalize(float2(AC_LightPos.x, -AC_LightPos.z) + float2(0.001f, -0.001f));
+    float2 lightDir = projectedLen > 0.03f ? projectedLight / projectedLen : fallbackDir;
+
+    // Suppress silhouette outlines: contact shadows should live on locally coherent surfaces.
+    float localSurface = 0.0f;
+    localSurface += DepthSimilarity(centerDepth, GetDepthRaw(uv + float2( px.x, 0.0f)), 0.04f, 0.22f);
+    localSurface += DepthSimilarity(centerDepth, GetDepthRaw(uv + float2(-px.x, 0.0f)), 0.04f, 0.22f);
+    localSurface += DepthSimilarity(centerDepth, GetDepthRaw(uv + float2(0.0f,  px.y)), 0.04f, 0.22f);
+    localSurface += DepthSimilarity(centerDepth, GetDepthRaw(uv + float2(0.0f, -px.y)), 0.04f, 0.22f);
+    localSurface = saturate(localSurface * 0.25f);
 
     float shadow = 0.0f;
     float weightSum = 0.0001f;
     [unroll]
-    for (int i = 1; i <= 5; ++i)
+    for (int i = 1; i <= 7; ++i)
     {
         float fi = (float)i;
-        float2 suv = uv + lightDir * px * fi * 3.0f;
+        float2 suv = uv + lightDir * px * (fi * 2.25f + fi * fi * 0.35f);
         float sd = GetDepthRaw(suv);
-        float closer = smoothstep(0.00004f, 0.0012f, sd - centerDepth) * IsGeometryPixel(sd);
-        float weight = 1.0f - fi * 0.13f;
-        shadow += closer * weight;
+
+        // Reverse-Z: a larger sampled depth is closer to the camera and can occlude this pixel.
+        float delta = sd - centerDepth;
+        float depthScale = max(centerDepth, 0.00008f);
+        float minDelta = max(depthScale * 0.025f, 0.000018f);
+        float maxDelta = max(depthScale * 0.28f, 0.00032f);
+        float occluder = smoothstep(minDelta, maxDelta, delta) * (1.0f - smoothstep(maxDelta, maxDelta * 3.5f, delta));
+        occluder *= IsGeometryPixel(sd);
+
+        float weight = 1.0f - fi * 0.09f;
+        shadow += occluder * weight;
         weightSum += weight;
     }
 
-    shadow = saturate(shadow / weightSum);
-    float lightVisibility = saturate(AC_LightScreenPos.z + 0.35f);
-    return 1.0f - shadow * geom * lightVisibility * saturate(AC_ContactShadowStrength) * 0.28f;
+    shadow = saturate(shadow / weightSum) * localSurface;
+    float lightVisibility = saturate(AC_LightScreenPos.z + 0.65f);
+    float strength = saturate(AC_ContactShadowStrength);
+    return 1.0f - shadow * geom * lightVisibility * strength * 0.62f;
 }
 #endif
 
@@ -188,28 +216,30 @@ float3 ComputeScreenSpaceGILight(float2 uv, float centerDepth, float3 baseColor)
     const float2 dirs[8] = {
         float2( 1.0f,  0.0f), float2(-1.0f,  0.0f),
         float2( 0.0f,  1.0f), float2( 0.0f, -1.0f),
-        float2( 0.7f,  0.7f), float2(-0.7f, -0.7f),
-        float2( 0.7f, -0.7f), float2(-0.7f,  0.7f)
+        float2( 0.707f,  0.707f), float2(-0.707f, -0.707f),
+        float2( 0.707f, -0.707f), float2(-0.707f,  0.707f)
     };
 
     [unroll]
     for (int i = 0; i < 8; ++i)
     {
-        float2 suvNear = saturate(uv + dirs[i] * px * 7.0f);
-        float2 suvFar = saturate(uv + dirs[i] * px * 15.0f);
+        float2 suvNear = saturate(uv + dirs[i] * px * 6.0f);
+        float2 suvFar = saturate(uv + dirs[i] * px * 14.0f);
         float sd0 = GetDepthRaw(suvNear);
         float sd1 = GetDepthRaw(suvFar);
-        float w0 = saturate(1.0f - abs(sd0 - centerDepth) * 450.0f) * IsGeometryPixel(sd0);
-        float w1 = saturate(1.0f - abs(sd1 - centerDepth) * 260.0f) * IsGeometryPixel(sd1) * 0.55f;
+        float w0 = DepthSimilarity(centerDepth, sd0, 0.10f, 0.75f);
+        float w1 = DepthSimilarity(centerDepth, sd1, 0.18f, 1.15f) * 0.55f;
         bounce += TX_Backbuffer.SampleLevel(SS_Linear, suvNear, 0).rgb * w0;
         bounce += TX_Backbuffer.SampleLevel(SS_Linear, suvFar, 0).rgb * w1;
         weightSum += w0 + w1;
     }
 
     bounce /= weightSum;
-    float3 indirect = max(bounce - baseColor * 0.28f, 0.0f);
-    float luma = dot(indirect, float3(0.2126f, 0.7152f, 0.0722f));
-    return indirect * saturate(luma * 1.4f) * saturate(AC_ScreenSpaceGIStrength) * geom * 0.55f;
+
+    // This is intentionally a conservative screen-space indirect light/bleed, not fake bloom-only.
+    float3 chromaBleed = max(bounce - baseColor * 0.18f, 0.0f);
+    float3 softLift = bounce * saturate(1.0f - dot(baseColor, float3(0.2126f, 0.7152f, 0.0722f))) * 0.10f;
+    return (chromaBleed * 0.72f + softLift) * saturate(AC_ScreenSpaceGIStrength) * geom * 0.72f;
 }
 #endif
 
@@ -219,30 +249,37 @@ float3 ComputeVolumetricLightShafts(float2 uv, float depth)
     float day = saturate(AC_LightPos.y * 2.0f + 0.15f);
     float night = saturate((-AC_LightPos.y + 0.05f) * 1.5f);
     float weather = max(saturate(AC_RainFXWeight), saturate(AC_SceneWettness));
-    float atmosphereWeight = saturate(day + night * 0.35f + weather * 0.55f);
-    float lightVisibility = saturate(AC_LightScreenPos.z);
+    float atmosphereWeight = saturate(day + night * 0.28f + weather * 0.65f);
+
     float2 lightCenter = saturate(AC_LightScreenPos.xy);
-    float2 dir = lightCenter - uv;
-    float distToLight = length(dir);
-    dir /= max(distToLight, 0.0001f);
+    float2 toLight = lightCenter - uv;
+    float distToLight = length(toLight);
+    float2 dir = toLight / max(distToLight, 0.0001f);
 
     float visibility = 0.0f;
     [unroll]
-    for (int i = 1; i <= 8; ++i)
+    for (int i = 1; i <= 10; ++i)
     {
-        float2 suv = saturate(uv + dir * (float)i * 0.015f);
+        float t = (float)i / 10.0f;
+        float2 suv = saturate(uv + dir * t * 0.22f);
         float sd = GetDepthRaw(suv);
-        visibility += 1.0f - IsGeometryPixel(sd);
+        float sky = 1.0f - IsGeometryPixel(sd);
+        // Do not fully kill shafts on landscape; foggy air should still show a weak beam over geometry.
+        visibility += lerp(0.38f, 1.0f, sky) * (1.0f - t * 0.045f);
     }
-    visibility /= 8.0f;
+    visibility /= 10.0f;
 
-    float mistOnGeometry = lerp(0.28f, 1.0f, 1.0f - IsGeometryPixel(depth));
-    float radial = 1.0f - smoothstep(0.08f, 0.95f, distToLight);
-    float shaft = visibility * mistOnGeometry * atmosphereWeight * radial * lightVisibility;
-    float3 dayColor = float3(1.0f, 0.82f, 0.55f);
-    float3 nightColor = float3(0.22f, 0.32f, 0.62f);
-    float3 shaftColor = lerp(dayColor, nightColor, night);
-    return shaftColor * shaft * saturate(AC_VolumetricLightShaftStrength) * 0.22f;
+    float geom = IsGeometryPixel(depth);
+    float geometryMist = lerp(0.78f, 1.0f, 1.0f - geom);
+    float radial = 1.0f - smoothstep(0.05f, 1.10f, distToLight);
+    float onScreenLight = saturate(AC_LightScreenPos.z + 0.28f + weather * 0.22f);
+    float shaft = visibility * geometryMist * atmosphereWeight * radial * onScreenLight;
+
+    float3 dayColor = float3(1.0f, 0.80f, 0.48f);
+    float3 nightColor = float3(0.18f, 0.28f, 0.55f);
+    float3 rainColor = float3(0.36f, 0.46f, 0.58f);
+    float3 shaftColor = lerp(lerp(dayColor, nightColor, night), rainColor, weather * 0.55f);
+    return shaftColor * shaft * saturate(AC_VolumetricLightShaftStrength) * 0.46f;
 }
 #endif
 //--------------------------------------------------------------------------------------

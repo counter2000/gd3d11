@@ -208,11 +208,11 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 
 	float pxDistance = Input.vTexcoord2.y;
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
-	float cubeWeight = waterSSRActive ? lerp(0.45f, 0.95f, nightAmount) : 1.0f;
+	float cubeWeight = waterSSRActive ? 0.0f : 1.0f;
 	float ssrFresnel = lerp(0.55f, 0.80f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));
-	float3 reflectionBaseColor = reflectionSSRColor * rcp(1.0f + max(0.0f, reflectionLuma - 1.25f) * 0.65f);
+	float3 reflectionBaseColor = reflectionSSRColor * rcp(1.0f + max(0.0f, reflectionLuma - 0.5f) * 1.5f);
 	// Preserve HDR light-source reflections; only tame extreme outliers on the dynamic layer.
 	reflectionSSRColor *= rcp(1.0f + max(0.0f, reflectionLuma - 6.0f) * 0.12f);
 	// SkyCubemap2/ReflectionCube2 remains the old landscape/sky fallback when Water Effects are active.

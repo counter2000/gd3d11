@@ -1658,29 +1658,30 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             }
             ImGui::BeginDisabled( !settings.EnableSSR );
             {
-                ImGui::SliderFloat( "Dynamic Reflection Strength", &settings.SSRStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+                ImGui::SliderFloat( "Dynamic Reflection", &settings.SSRStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
 
                 ImGui::EndDisabled();
             }
             ImGui::PopID();
         }
 
-        ImGui::SeparatorText( "Screen-Space Lighting" );
+        ImGui::SeparatorText( "Screen-Space Light FX" );
         {
             ImGui::PushID( "ScreenSpaceLightingSettings" );
-            if ( ImGui::Checkbox( "Volumetric Light Shafts", &settings.EnableVolumetricLightShafts ) ) Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
-            ImGui::BeginDisabled( !settings.EnableVolumetricLightShafts );
-            ImGui::SliderFloat( "Light Shaft Strength", &settings.VolumetricLightShaftStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
-            ImGui::EndDisabled();
+            bool screenSpaceLightFX = settings.EnableVolumetricLightShafts || settings.EnableContactShadows || settings.EnableScreenSpaceGI;
+            if ( ImGui::Checkbox( "Enable", &screenSpaceLightFX ) ) {
+                settings.EnableVolumetricLightShafts = screenSpaceLightFX;
+                settings.EnableContactShadows = screenSpaceLightFX;
+                settings.EnableScreenSpaceGI = screenSpaceLightFX;
+                Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
+            }
 
-            if ( ImGui::Checkbox( "Contact Shadows", &settings.EnableContactShadows ) ) Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
-            ImGui::BeginDisabled( !settings.EnableContactShadows );
-            ImGui::SliderFloat( "Contact Shadow Strength", &settings.ContactShadowStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
-            ImGui::EndDisabled();
-
-            if ( ImGui::Checkbox( "Screen-Space GI Light", &settings.EnableScreenSpaceGI ) ) Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
-            ImGui::BeginDisabled( !settings.EnableScreenSpaceGI );
-            ImGui::SliderFloat( "GI Strength", &settings.ScreenSpaceGIStrength, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+            ImGui::BeginDisabled( !screenSpaceLightFX );
+            bool reloadScreenSpaceLightFX = false;
+            reloadScreenSpaceLightFX |= ImGui::SliderFloat( "Light Shafts", &settings.VolumetricLightShaftStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+            reloadScreenSpaceLightFX |= ImGui::SliderFloat( "Contact Shadows", &settings.ContactShadowStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+            reloadScreenSpaceLightFX |= ImGui::SliderFloat( "Indirect Light", &settings.ScreenSpaceGIStrength, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+            if ( reloadScreenSpaceLightFX ) Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
             ImGui::EndDisabled();
             ImGui::PopID();
         }

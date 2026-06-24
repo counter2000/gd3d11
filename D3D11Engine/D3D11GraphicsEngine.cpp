@@ -4011,9 +4011,9 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
     bool compositionSAO = (rendererState.RendererSettings.AoMode == AOMode::AO_SAO);
     bool compositionGodRays = (rendererState.RendererSettings.EnableGodRays && isOutdoor);
     bool compositionHeightFog = (rendererState.RendererSettings.DrawFog && isOutdoor);
-    bool compositionLightShafts = (rendererState.RendererSettings.EnableVolumetricLightShafts && isOutdoor);
-    bool compositionContactShadows = rendererState.RendererSettings.EnableContactShadows;
-    bool compositionSSGI = rendererState.RendererSettings.EnableScreenSpaceGI;
+    bool compositionLightShafts = (rendererState.RendererSettings.EnableVolumetricLightShafts && rendererState.RendererSettings.VolumetricLightShaftStrength > 0.0f && isOutdoor);
+    bool compositionContactShadows = rendererState.RendererSettings.EnableContactShadows && rendererState.RendererSettings.ContactShadowStrength > 0.0f;
+    bool compositionSSGI = rendererState.RendererSettings.EnableScreenSpaceGI && rendererState.RendererSettings.ScreenSpaceGIStrength > 0.0f;
     bool compositionNeedsDepth = compositionHeightFog || compositionLightShafts || compositionContactShadows || compositionSSGI;
     bool compositionActive = compositionSAO || compositionGodRays || compositionNeedsDepth;
 
@@ -8916,7 +8916,10 @@ void D3D11GraphicsEngine::DrawFrameParticleMeshes( std::unordered_map<zCVob*, Me
             continue;
         }
 
-        vsBufMPI.Update( it.first->GetWorldMatrixPtr() );
+        VS_ExConstantBuffer_PerInstance cbInstance = {};
+        cbInstance.World = *it.first->GetWorldMatrixPtr();
+        cbInstance.Color = float4( 1.0f, 1.0f, 1.0f, 1.0f );
+        vsBufMPI.Update( &cbInstance, sizeof( cbInstance ) );
 
         void* lastMeshBuffer = nullptr;
         void* lastIndexBuffer = nullptr;

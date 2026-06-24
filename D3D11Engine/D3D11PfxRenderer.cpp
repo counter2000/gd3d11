@@ -363,7 +363,7 @@ XRESULT D3D11PfxRenderer::RenderPostFXComposition(
     // Update constant buffers for inline heightfog and lightweight screen-space atmosphere effects.
     auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
     GSky* sky = Engine::GAPI->GetSky();
-    const bool needsAtmosphere = settings.DrawFog || settings.EnableVolumetricLightShafts || settings.EnableContactShadows || settings.EnableScreenSpaceGI;
+    const bool needsAtmosphere = settings.DrawFog || (settings.EnableVolumetricLightShafts && settings.VolumetricLightShaftStrength > 0.0f) || (settings.EnableContactShadows && settings.ContactShadowStrength > 0.0f) || (settings.EnableScreenSpaceGI && settings.ScreenSpaceGIStrength > 0.0f);
     if ( settings.DrawFog ) {
         HeightfogConstantBuffer cb;
         {
