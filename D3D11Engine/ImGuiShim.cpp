@@ -677,6 +677,14 @@ void ImGuiShim::RenderSettingsWindow()
                 ImGui::EndCombo();
             }
             ImGui::SetItemTooltip( "Screen-Space ambient occlusion mode.\nChanging this will reload shaders." );
+            bool screenSpaceLightFX = settings.EnableVolumetricLightShafts || settings.EnableContactShadows || settings.EnableScreenSpaceGI;
+            if ( ImGui::Checkbox( "Screen-Space Light FX", &screenSpaceLightFX ) ) {
+                settings.EnableVolumetricLightShafts = screenSpaceLightFX;
+                settings.EnableContactShadows = screenSpaceLightFX;
+                settings.EnableScreenSpaceGI = screenSpaceLightFX;
+                Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
+            }
+            ImGui::SetItemTooltip( "Enables light shafts, contact shadows, and indirect screen-space light.\nChanging this will reload shaders." );
 
             if ( ImGui::Checkbox( "Godrays", &settings.EnableGodRays ) ) {
                 Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
@@ -1047,7 +1055,7 @@ void RenderAdvancedColumn1( GothicRendererSettings& settings, GothicAPI* gapi ) 
         ImGui::SeparatorText( "GodRays" );
         {
             ImGui::PushID( "GodRaysSettings" );
-            if ( ImGui::Checkbox( "GodRays", &settings.EnableGodRays ) ) {
+            if ( ImGui::Checkbox( "Godrays", &settings.EnableGodRays ) ) {
                 Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
             }
             ImGui::SetItemTooltip( "Changing this will reload shaders." );

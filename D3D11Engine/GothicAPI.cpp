@@ -4294,6 +4294,11 @@ void GothicAPI::CollectVisibleVobs(
             vii.world = it->WorldMatrix;
             vii.prevWorld = it->HasValidPrevMatrix ? it->PrevWorldMatrix : it->WorldMatrix;
             vii.color = it->GroundColor;
+            if ( it->IsIndoorVob || (it->Vob && it->Vob->IsIndoorVob()) ) {
+                // INSTANCE_COLOR is R8G8B8A8_UNORM. Keep RGB lighting and mark alpha as indoor.
+                // This lets indoor point lights affect static indoor vobs/decorations like BSP polys.
+                vii.color = (vii.color & 0x00FFFFFFu) | 0x0D000000u;
+            }
             vii.windStrenth = 0.0f;
             vii.canBeAffectedByPlayer = 0;
 

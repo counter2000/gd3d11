@@ -5425,15 +5425,11 @@ void D3D11GraphicsEngine::DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRT
         UpdateRefractionViewProjection( ricb );
 
         ActivePS->GetBuffer( "RefractionInfo" ).Update( &ricb ).Bind();
-
-        // Bind reflection cube. With Water Effects/SSR active, use SkyCubemap2 as the
-        // old landscape/sky fallback; reflect_cube.dds remains the simple-water fallback.
+        // Bind the simple reflection cube only when Water Effects are disabled.
+        // With Water Effects active, the shader uses screen-space base/dynamic reflection only.
         const auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
-        if ( settings.EnableSSR ) {
-            GetContext()->PSSetShaderResources( 3, 1, ReflectionCube2.GetAddressOf() );
-        } else {
-            GetContext()->PSSetShaderResources( 3, 1, ReflectionCube.GetAddressOf() );
-        }
+        ID3D11ShaderResourceView* reflectionCubeSrv = settings.EnableSSR ? nullptr : ReflectionCube.Get();
+        GetContext()->PSSetShaderResources( 3, 1, &reflectionCubeSrv );
 
         if ( !FeatureLevel10Compatibility ) {
             // MDI path: one MDI call per texture batch
@@ -6579,6 +6575,9 @@ void XM_CALLCONV D3D11GraphicsEngine::DrawWorldAroundForWorldShadow( FXMVECTOR p
             vii.world = it->WorldMatrix;
             vii.prevWorld = it->HasValidPrevMatrix ? it->PrevWorldMatrix : it->WorldMatrix;
             vii.color = it->GroundColor;
+            if ( it->IsIndoorVob || (it->Vob && it->Vob->IsIndoorVob()) ) {
+                vii.color = (vii.color & 0x00FFFFFFu) | 0x0D000000u;
+            }
             vii.windStrenth = 0.0f;
             vii.canBeAffectedByPlayer = 0;
 

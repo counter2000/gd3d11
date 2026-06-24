@@ -215,7 +215,7 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	float3 reflectionBaseColor = reflectionSSRColor * rcp(1.0f + max(0.0f, reflectionLuma - 0.5f) * 1.5f);
 	// Preserve HDR light-source reflections; only tame extreme outliers on the dynamic layer.
 	reflectionSSRColor *= rcp(1.0f + max(0.0f, reflectionLuma - 6.0f) * 0.12f);
-	// SkyCubemap2/ReflectionCube2 remains the old landscape/sky fallback when Water Effects are active.
+	// With Water Effects active the cubemap is disabled; base SSR remains the fallback.
 	// Dynamic SSR is blended on top and may be masked near actors or on weak hits.
 	scene.rgb += reflection * cubeWeight * fresnel * lerp(1.0f, diffuse, 0.6f);
 	float baseSSRBlend = waterSSRActive ? saturate(ssrBaseWeight * ssrFresnel * 0.62f * lerp(0.85f, 1.05f, nightAmount)) : 0.0f;
