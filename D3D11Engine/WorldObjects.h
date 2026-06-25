@@ -361,7 +361,10 @@ struct VobLightInfo {
     std::atomic<size_t> VisibleInRenderPass{};
     bool IsPFXVobLight = false;
 
-    /** True for actor/PFX lights that should not be clipped at indoor/outdoor transitions. */
+    /** True if this light-vob was discovered at runtime instead of during static BSP cache build. */
+    bool IsDynamicVobLight = false;
+
+    /** True for dynamic/actor/PFX lights that should not be clipped at indoor/outdoor transitions. */
     bool IgnoreIndoorOutdoorLimit = false;
 
     /** True if this is an indoor-vob */
