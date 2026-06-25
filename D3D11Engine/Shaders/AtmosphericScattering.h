@@ -107,12 +107,17 @@ float GetNightWeight()
 	return saturate((-AC_LightPos.y) * 10.0f);
 }
 
-float GetNightDistanceFade(float3 worldPosition)
+float GetWorldBoundaryFade(float3 worldPosition)
 {
 	float cameraDistance = length(worldPosition - AC_WorldCameraPos);
-	float nightFadeStart = max(0.0f, AC_NightDarkeningStart);
-	float nightFadeEnd = nightFadeStart + max(1000.0f, AC_NightDarkeningRange);
-	return smoothstep(nightFadeStart, nightFadeEnd, cameraDistance)
+	float boundaryStart = max(0.0f, AC_NightDarkeningStart);
+	float boundaryEnd = boundaryStart + max(1000.0f, AC_NightDarkeningRange);
+	return smoothstep(boundaryStart, boundaryEnd, cameraDistance);
+}
+
+float GetNightDistanceFade(float3 worldPosition)
+{
+	return GetWorldBoundaryFade(worldPosition)
 		* GetNightWeight() * saturate(AC_EnableNightAtmosphere);
 }
 
@@ -181,13 +186,15 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 	
 	// Finally, scale the Mie and Rayleigh colors and set up the varying variables for the pixel shader.
 	float3 c0 = v3FrontColor * (vInvWavelength * AC_KrESun + AC_KmESun);
-	// Fade residual daytime scattering only at night and only toward the far-distance boundary.
+	float worldBoundaryFade = GetWorldBoundaryFade(worldPosition);
+	// Keep the stable renderer's sky-colored world boundary, but gate it to the far boundary
+	// so this does not become a general daytime fog or height-fog layer.
 	float nightDistanceFade = GetNightDistanceFade(worldPosition);
-	c0 *= 1.0f - nightDistanceFade;
+	float skyBoundaryTint = worldBoundaryFade * (1.0f - nightDistanceFade);
 	//c0 = lerp(dot(float3(0.333f,0.333f,0.333f), c0), c0, 0.5f);
 	float3 c1 = v3Attenuate;
 	
-	float3 dayColor = in_color * c1;
+	float3 dayColor = in_color * c1 + c0 * skyBoundaryTint;
 	float nearNightBrightness = lerp(1.0f, max(0.0f, AC_NearNightBrightness), saturate(AC_EnableNightAtmosphere));
 	float3 nightColor = float3(0.095f,0.115f,0.255f) * NIGHT_BRIGHTNESS * nearNightBrightness;
 	float moonWeight = saturate((-AC_LightPos.y - 0.08f) * 1.7f);
