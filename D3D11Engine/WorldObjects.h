@@ -312,12 +312,18 @@ struct VobInfo : public BaseVobInfo {
     /** Updates the vobs constantbuffer */
     void UpdateVobConstantBuffer(VS_ExConstantBuffer_PerInstance& cb);
     void UpdateState();
+    bool ComputeIndoorLightMask() const;
 
     /** Position the vob was at while being rendered last time */
     XMFLOAT3 LastRenderPosition;
 
-    /** True if this is an indoor-vob */
-    bool IsIndoorVob;
+    /** True if this is an indoor-vob for culling and draw-distance grouping. */
+    bool IsIndoorVob = false;
+
+    /** True when this vob should receive statically bounded indoor lights. */
+    bool IndoorLightMask = false;
+    bool HasIndoorLightMaskSample = false;
+    XMFLOAT3 LastIndoorLightMaskPosition = XMFLOAT3( FLT_MAX, FLT_MAX, FLT_MAX );
 
     /** Flag to see if this vob was drawn in the current render pass. Used to collect the same vob only once. */
     std::atomic<size_t> VisibleInRenderPass{};

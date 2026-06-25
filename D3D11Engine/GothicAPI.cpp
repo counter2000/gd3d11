@@ -3731,9 +3731,26 @@ float GothicAPI::TraceVisualInfo( const XMFLOAT3& origin, const XMFLOAT3& dir, B
 }
 
 /** Traces the worldmesh and returns the hit-location */
-bool GothicAPI::TraceWorldMesh( const XMFLOAT3& origin, const XMFLOAT3& dir, XMFLOAT3& hit, std::string* hitTextureName, XMFLOAT3* hitTriangle, MeshInfo** hitMesh, zCMaterial** hitMaterial ) {
+static bool IsTraceTriangleIndoor( const MeshInfo* mesh, unsigned int firstIndex ) {
+    if ( !mesh || firstIndex + 2 >= mesh->Indices.size() ) {
+        return false;
+    }
+
+    const DWORD c0 = mesh->Vertices[mesh->Indices[firstIndex]].Color;
+    const DWORD c1 = mesh->Vertices[mesh->Indices[firstIndex + 1]].Color;
+    const DWORD c2 = mesh->Vertices[mesh->Indices[firstIndex + 2]].Color;
+    const unsigned int a0 = (c0 >> 24) & 0xFFu;
+    const unsigned int a1 = (c1 >> 24) & 0xFFu;
+    const unsigned int a2 = (c2 >> 24) & 0xFFu;
+    return (a0 + a1 + a2) < (128u * 3u);
+}
+
+bool GothicAPI::TraceWorldMesh( const XMFLOAT3& origin, const XMFLOAT3& dir, XMFLOAT3& hit, std::string* hitTextureName, XMFLOAT3* hitTriangle, MeshInfo** hitMesh, zCMaterial** hitMaterial, bool* hitTriangleIndoor ) {
     const int maxSections = 2;
     float closest = FLT_MAX;
+    if ( hitTriangleIndoor ) {
+        *hitTriangleIndoor = false;
+    }
     std::list<std::pair<WorldMeshSectionInfo*, float>> hitSections;
 
     // Trace bounding-boxes first
@@ -3779,6 +3796,10 @@ bool GothicAPI::TraceWorldMesh( const XMFLOAT3& origin, const XMFLOAT3& dir, XMF
 
                         if ( hitMaterial ) {
                             *hitMaterial = it->first.Material;
+                        }
+
+                        if ( hitTriangleIndoor ) {
+                            *hitTriangleIndoor = IsTraceTriangleIndoor( it->second, i );
                         }
 
                         if ( hitTextureName && it->first.Material && it->first.Material->GetTexture() )
@@ -4301,11 +4322,13 @@ void GothicAPI::CollectVisibleVobs(
 
     if ( collectFlags & COLLECT_MUTATE ) {
         for ( auto it : renderQueue.vobs ) {
+            it->UpdateState();
+
             VobInstanceInfo vii = {};
             vii.world = it->WorldMatrix;
             vii.prevWorld = it->HasValidPrevMatrix ? it->PrevWorldMatrix : it->WorldMatrix;
             vii.color = it->GroundColor;
-            if ( it->IsIndoorVob || (it->Vob && it->Vob->IsIndoorVob()) ) {
+            if ( it->IndoorLightMask ) {
                 // INSTANCE_COLOR is R8G8B8A8_UNORM. Keep RGB lighting and mark alpha as indoor.
                 // This lets indoor point lights affect static indoor vobs/decorations like BSP polys.
                 vii.color = (vii.color & 0x00FFFFFFu) | 0x0D000000u;

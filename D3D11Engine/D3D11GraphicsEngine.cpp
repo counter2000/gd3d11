@@ -6600,11 +6600,13 @@ void XM_CALLCONV D3D11GraphicsEngine::DrawWorldAroundForWorldShadow( FXMVECTOR p
 
         for ( auto& it : vobs) {
             // process any vobs only visible in this cascade
+            it->UpdateState();
+
             VobInstanceInfo vii = {};
             vii.world = it->WorldMatrix;
             vii.prevWorld = it->HasValidPrevMatrix ? it->PrevWorldMatrix : it->WorldMatrix;
             vii.color = it->GroundColor;
-            if ( it->IsIndoorVob || (it->Vob && it->Vob->IsIndoorVob()) ) {
+            if ( it->IndoorLightMask ) {
                 vii.color = (vii.color & 0x00FFFFFFu) | 0x0D000000u;
             }
             vii.windStrenth = 0.0f;
