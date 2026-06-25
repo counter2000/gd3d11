@@ -126,14 +126,14 @@ StructuredBuffer<TiledPointLight> FP_Lights : register( t8 );
 StructuredBuffer<LightGrid> FP_LightGrid : register( t9 );
 StructuredBuffer<uint> FP_LightIndexList : register( t10 );
 TextureCubeArray FP_ShadowCubeArray : register( t11 );
-float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 lightPosWorld, float lightRange)
+float ComputeIndoorDoorFloorBleed(float indoorPixel, float doorwayBleedAllowed, float3 wsPosition, float3 wsNormal, float3 lightPosWorld, float lightRange)
 {
 	float outdoorPixel = 1.0f - indoorPixel;
 	float floorMask = smoothstep(0.40f, 0.70f, wsNormal.y);
 	float belowLight = smoothstep(-80.0f, 160.0f, lightPosWorld.y - wsPosition.y);
 	float horizontalDistance = length(lightPosWorld.xz - wsPosition.xz);
 	float doorwayRange = smoothstep(110.0f, 20.0f, horizontalDistance);
-	return outdoorPixel * floorMask * belowLight * doorwayRange;
+	return outdoorPixel * floorMask * belowLight * doorwayRange * saturate(doorwayBleedAllowed);
 }
 
 // ============================================
@@ -143,7 +143,7 @@ float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 w
 float3 FP_ComputePointLighting(
     float3 wsPosition, float3 vsPosition, float3 normal,
     float4 diffuseColor, float specIntensity, float specPower,
-    float2 screenPos )
+    float2 screenPos, float doorwayBleedAllowed )
 {
     uint tileX = (uint)screenPos.x / FP_TILE_SIZE;
     uint tileY = (uint)screenPos.y / FP_TILE_SIZE;
@@ -188,7 +188,7 @@ float3 FP_ComputePointLighting(
         }
 
         float indoorPixel = diffuseColor.a < 0.5f ? 1.0f : 0.0f;
-        float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, light.PositionWorld, light.Range);
+        float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, doorwayBleedAllowed, wsPosition, wsNormal, light.PositionWorld, light.Range);
         float indoorBoundary = saturate( (1.0f - light.IsIndoor) + light.IsIndoor * max(indoorPixel, doorFloorBleed) );
         lighting *= lerp(indoorBoundary, 1.0f, saturate(light.IgnoreIndoorOutdoorLimit));
 

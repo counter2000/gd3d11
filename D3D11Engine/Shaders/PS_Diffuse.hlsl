@@ -165,9 +165,14 @@ FORWARD_PLUS_PS_OUTPUT PSMain( PS_INPUT Input )
 	litPixel = ApplyAtmosphericScatteringGround(wsPosition, litPixel);
 
 	// Point lights, only when close enough
+#if ALPHATEST == 1
+	const float doorwayBleedAllowed = 0.0f;
+#else
+	const float doorwayBleedAllowed = 1.0f;
+#endif
 	if (pixelDistZ < 6000.0f) 
 	{
-		litPixel += FP_ComputePointLighting(wsPosition, vsPosition, nrm, float4(color.rgb, Input.vDiffuse.a), specIntensity, specPower, Input.vPosition.xy);
+		litPixel += FP_ComputePointLighting(wsPosition, vsPosition, nrm, float4(color.rgb, Input.vDiffuse.a), specIntensity, specPower, Input.vPosition.xy, doorwayBleedAllowed);
 	}
 
 	output.vColor = float4(litPixel, 1);

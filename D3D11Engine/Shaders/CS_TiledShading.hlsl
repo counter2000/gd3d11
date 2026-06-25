@@ -42,13 +42,14 @@ StructuredBuffer<LightGrid> SB_LightGrid : register( t9 );
 StructuredBuffer<uint> SB_LightIndexList : register( t10 );
 
 TextureCubeArray TX_ShadowCubeArray : register( t11 );
-float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 vsPosition, float3 lightPosView, float3 lightPosWorld, float lightRange, uint2 pixelCoord, float currentDepth)
+float ComputeIndoorDoorFloorBleed(float indoorPixel, float rawSpecPower, float3 wsPosition, float3 wsNormal, float3 vsPosition, float3 lightPosView, float3 lightPosWorld, float lightRange, uint2 pixelCoord, float currentDepth)
 {
 	float outdoorPixel = 1.0f - indoorPixel;
 	float floorMask = smoothstep(0.40f, 0.70f, wsNormal.y);
 	float belowLight = smoothstep(-80.0f, 160.0f, lightPosWorld.y - wsPosition.y);
+	float alphaTestedOrGrass = rawSpecPower < 0.0f ? 1.0f : 0.0f;
 	float surfaceMask = lerp(0.35f, 1.0f, floorMask);
-	float baseMask = outdoorPixel * surfaceMask * belowLight;
+	float baseMask = outdoorPixel * surfaceMask * belowLight * (1.0f - alphaTestedOrGrass);
 	if (baseMask <= 0.0f)
 		return 0.0f;
 
@@ -142,7 +143,7 @@ void CSMain( uint3 groupID : SV_GroupID, uint3 threadID : SV_GroupThreadID, uint
         }
 
         float indoorPixel = diffuse.a < 0.5f ? 1.0f : 0.0f;
-        float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, vsPosition, light.PositionView, light.PositionWorld, light.Range, pixelCoord, expDepth);
+        float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, gb3.y, wsPosition, wsNormal, vsPosition, light.PositionView, light.PositionWorld, light.Range, pixelCoord, expDepth);
         float indoorBoundary = saturate( (1.0f - light.IsIndoor) + light.IsIndoor * max(indoorPixel, doorFloorBleed) );
         lighting *= lerp(indoorBoundary, 1.0f, saturate(light.IgnoreIndoorOutdoorLimit));
 
