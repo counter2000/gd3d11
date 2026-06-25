@@ -48,12 +48,15 @@ float3 VSPositionFromDepth(float depth, float2 vTexCoord)
 {
 	return ReconstructVSPositionFromDepthReverseZInfinite( depth, vTexCoord, PL_ProjParams.xy ) * PL_ProjParams.z;
 }
-float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 lightPosWorld, float lightRange, float2 uv, float currentDepth)
+float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 vsPosition, float3 lightPosWorld, float lightRange, float2 uv, float currentDepth)
 {
 	float outdoorPixel = 1.0f - indoorPixel;
 	float floorMask = smoothstep(0.40f, 0.70f, wsNormal.y);
 	float belowLight = smoothstep(-80.0f, 160.0f, lightPosWorld.y - wsPosition.y);
-	float baseMask = outdoorPixel * floorMask * belowLight;
+	float surfaceMask = lerp(0.35f, 1.0f, floorMask);
+	float baseMask = outdoorPixel * surfaceMask * belowLight;
+	float worldPixel = max(max(length(ddx(wsPosition)), length(ddy(wsPosition))), 0.25f);
+	float baseRadius = clamp(30.0f / worldPixel, 3.0f, 56.0f);
 	if (baseMask <= 0.0f)
 		return 0.0f;
 
@@ -61,7 +64,7 @@ float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 w
 	float doorwayProbe = 0.0f;
 	[unroll] for (int r = 1; r <= 3; ++r)
 	{
-		float radius = (float)r * 8.0f;
+		float radius = baseRadius * (float)r;
 		float sampleFade = 1.0f - (float)(r - 1) * 0.25f;
 		[unroll] for (int d = 0; d < 4; ++d)
 		{
@@ -70,7 +73,8 @@ float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 w
 			float4 sampleDiffuse = TX_Diffuse.SampleLevel(SS_Linear, sampleUV, 0);
 			float sampleIndoor = sampleDiffuse.a < 0.5f ? 1.0f : 0.0f;
 			float sampleDepth = TX_Depth.SampleLevel(SS_Linear, sampleUV, 0).r;
-			float depthOk = 1.0f - smoothstep(0.010f, 0.045f, abs(sampleDepth - currentDepth));
+			float3 sampleVS = VSPositionFromDepth(sampleDepth, sampleUV);
+			float depthOk = 1.0f - smoothstep(25.0f, 120.0f, abs(sampleVS.z - vsPosition.z));
 			doorwayProbe = max(doorwayProbe, sampleIndoor * depthOk * sampleFade);
 		}
 	}
@@ -167,10 +171,10 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float3 lighting = PLS_ComputePointLightLighting(diffuse.rgb, PL_Color.rgb, ndl, falloff, spec, specIntensity, specPower, specMod);
 	
 	// Keep indoor point lights from leaking onto outdoor pixels, but allow a small
-	// floor-only doorway bleed so thresholds do not form a hard black line.
+	// distance-stable doorway bleed so thresholds do not form a hard camera-dependent line.
 	float indoor = 1.0f - PL_Outdoor;
 	float indoorPixel = diffuse.a < 0.5f ? 1.0f : 0.0f;
-	float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, Pl_PositionWorld, PL_Range, uv, expDepth);
+	float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, vsPosition, Pl_PositionWorld, PL_Range, uv, expDepth);
 	float indoorBoundary = saturate(PL_Outdoor + indoor * max(indoorPixel, doorFloorBleed));
 	lighting *= lerp(indoorBoundary, 1.0f, saturate(PL_IgnoreIndoorOutdoorLimit));
 	return float4(saturate(lighting),1);

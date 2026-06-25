@@ -101,7 +101,8 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float activeWeatherFog = saturate(AC_RainFXWeight);
 	float nightFogBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f));
 	float heightFogVisibility = max(activeWeatherFog, nightFogBlend);
-	fog = max(fog, stableWorldFade) * heightFogVisibility;
+	float weatherHeightFog = fog * activeWeatherFog;
+	fog = max(weatherHeightFog, stableWorldFade * heightFogVisibility);
 		
 	float3 color = ApplyAtmosphericScatteringGround(position, HF_FogColorMod, true, false);
 	float nightTimeBlend = nightFogBlend;
