@@ -28,6 +28,12 @@ cbuffer RefractionInfo : register( b2 )
 	float4x4 RI_ViewProj;
 };
 
+cbuffer WaterMaterialInfo : register( b3 )
+{
+	float WM_DisableSSR;
+	float3 WM_Pad;
+};
+
 //--------------------------------------------------------------------------------------
 // Textures and Samplers
 //--------------------------------------------------------------------------------------
@@ -80,7 +86,8 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 
 	// Camera direction
 	float3 viewDirection = normalize(Input.vWorldPosition - RI_CameraPosition);
-	float enhancedWater = step(0.5f, AC_EnableSSR);
+	float waterMaterialAllowsSSR = 1.0f - step(0.5f, WM_DisableSSR);
+	float enhancedWater = step(0.5f, AC_EnableSSR) * waterMaterialAllowsSSR;
 
 	// Calculate distortion vectors
 	float2 worldTexCoord = Input.vWorldPosition.xz / 1000.0f;
@@ -124,7 +131,7 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	float ssrRawWeight = 0.0f;
 	float ssrWeight = 0.0f;
 	float ssrHitQuality = 0.0f;
-	bool waterSSRActive = AC_EnableSSR > 0.5f;
+	bool waterSSRActive = AC_EnableSSR > 0.5f && WM_DisableSSR < 0.5f;
 
 	if (waterSSRActive) {
 		float3 rayPos = Input.vWorldPosition;
@@ -209,7 +216,7 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	float pxDistance = Input.vTexcoord2.y;
 	scene = lerp(scene, diffuse, 0.73f * max(pow(fresnel,8.0f), 0.5f));
 	float ssrFresnel = lerp(0.55f, 0.80f, saturate(pow(1.0f - saturate(dot(-viewDirection, wavesFres)), 2.0f)));
-	float reflectionStrength = max(0.0f, AC_SSRStrength);
+	float reflectionStrength = (WM_DisableSSR < 0.5f) ? max(0.0f, AC_SSRStrength) : 0.0f;
 	float cubeWeight = waterSSRActive ? saturate(1.0f - ssrWeight * saturate(reflectionStrength)) : 1.0f;
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));

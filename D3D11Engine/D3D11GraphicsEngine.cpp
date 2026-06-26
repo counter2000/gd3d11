@@ -145,6 +145,54 @@ namespace
 {
     static ID3D11ShaderResourceView* s_nullSRVs[16] = { nullptr };
 
+    struct WaterMaterialInfoConstantBuffer {
+        float WM_DisableSSR;
+        float WM_Pad[3];
+    };
+
+    bool TextureNameContainsMarker( const std::string& name, const char* marker ) {
+        if ( !marker || !*marker ) {
+            return false;
+        }
+
+        size_t markerLen = 0;
+        while ( marker[markerLen] ) {
+            ++markerLen;
+        }
+        if ( name.size() < markerLen ) {
+            return false;
+        }
+
+        for ( size_t i = 0; i + markerLen <= name.size(); ++i ) {
+            size_t j = 0;
+            for ( ; j < markerLen; ++j ) {
+                char c = name[i + j];
+                if ( c >= 'a' && c <= 'z' ) {
+                    c = static_cast<char>(c - 'a' + 'A');
+                }
+                if ( c != marker[j] ) {
+                    break;
+                }
+            }
+            if ( j == markerLen ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool IsWaterTextureExcludedFromSSR( zCTexture* texture ) {
+        if ( !texture ) {
+            return false;
+        }
+
+        const std::string name = texture->GetNameWithoutExt();
+        return TextureNameContainsMarker( name, "ICE" )
+            || TextureNameContainsMarker( name, "EIS" )
+            || TextureNameContainsMarker( name, "WATERFALL" )
+            || TextureNameContainsMarker( name, "WASSERFALL" );
+    }
+
     bool EnsureStructuredMatrixBuffer(
         std::unique_ptr<D3D11VertexBuffer>& buffer,
         UINT matrixCount,
@@ -3911,6 +3959,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
     FrameTransparencyMeshes.clear();
     FrameTransparencyMeshesPortal.clear();
     FrameTransparencyMeshesWaterfall.clear();
+    FrameTransparencyMeshesWetSSRBlockers.clear();
     m_FrameGeometryCache.Reset();
 
     // TODO: TODO: Hack for texture caching!
@@ -4117,24 +4166,13 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
                 waterMaskRTV = waterMask->GetRenderTargetView().Get();
             }
             DrawWaterSurfaces( waterMaskRTV );
+            if ( renderWetGroundSSR ) {
+                DrawWaterfallMask( waterMaskRTV );
+            }
         };
     });
 
     if ( renderWetGroundSSR ) {
-        graph.AddPass( RG_PASS_NAME("Mask Waterfalls For Wet Ground SSR"), [&]( RGBuilder& builder, RenderPass& pass ) {
-            builder.Write( waterMaskResource );
-
-            pass.m_executeCallback = [this, waterMaskResource](const RenderGraph& graph) {
-                TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Mask Waterfalls For Wet Ground SSR" );
-                auto* waterMask = graph.GetPhysicalTexture( waterMaskResource );
-                SetViewport( ViewportInfo( 0, 0, GetResolution() ) );
-                SetDefaultStates();
-                Engine::GAPI->GetRendererState().RasterizerState.CullMode = GothicRasterizerStateInfo::CM_CULL_BACK;
-                Engine::GAPI->GetRendererState().RasterizerState.SetDirty();
-                DrawWaterfallMask( waterMask->GetRenderTargetView().Get() );
-            };
-        });
-
         graph.AddPass( RG_PASS_NAME("Wet Ground SSR"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( normalsResource );
             builder.Read( reactiveMaskResource );
@@ -4965,7 +5003,7 @@ XRESULT D3D11GraphicsEngine::DrawMeshInfoListAlphablended(
 }
 
 XRESULT D3D11GraphicsEngine::DrawWaterfallMask( ID3D11RenderTargetView* waterMaskRTV ) {
-    if ( FrameTransparencyMeshesWaterfall.empty() || !waterMaskRTV ) {
+    if ( (FrameTransparencyMeshesWaterfall.empty() && FrameTransparencyMeshesWetSSRBlockers.empty()) || !waterMaskRTV ) {
         return XR_SUCCESS;
     }
 
@@ -4999,6 +5037,13 @@ XRESULT D3D11GraphicsEngine::DrawWaterfallMask( ID3D11RenderTargetView* waterMas
         Engine::GAPI->GetWrappedWorldMesh()->MeshIndexBuffer, 0, 0 );
 
     for ( auto const& [meshKey, meshInfo] : FrameTransparencyMeshesWaterfall ) {
+        if ( meshKey.Material && meshKey.Material->GetAniTexture() ) {
+            DrawVertexBufferIndexedUINT( nullptr, nullptr, meshInfo->Indices.size(),
+                meshInfo->BaseIndexLocation );
+        }
+    }
+
+    for ( auto const& [meshKey, meshInfo] : FrameTransparencyMeshesWetSSRBlockers ) {
         if ( meshKey.Material && meshKey.Material->GetAniTexture() ) {
             DrawVertexBufferIndexedUINT( nullptr, nullptr, meshInfo->Indices.size(),
                 meshInfo->BaseIndexLocation );
@@ -5100,6 +5145,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
     std::vector<TransparencyWorldMeshEntry> transparencyMeshes;
     std::vector<TransparencyWorldMeshEntry> portalTransparencyMeshes;
     std::vector<TransparencyWorldMeshEntry> waterfallTransparencyMeshes;
+    std::vector<TransparencyWorldMeshEntry> wetSSRBlockerTransparencyMeshes;
 
     GetContext()->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
     GetContext()->DSSetShader( nullptr, nullptr, 0 );
@@ -5154,6 +5200,9 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
                         ) {
                         if ( !isZPrepass ) {
                             transparencyMeshes.push_back( { transparencyMesh, distanceSq } );
+                            if ( IsWaterTextureExcludedFromSSR( aniTex ) ) {
+                                wetSSRBlockerTransparencyMeshes.push_back( { transparencyMesh, distanceSq } );
+                            }
                         }
                         continue;
                     } else {
@@ -5213,6 +5262,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
         sortAndAppendTransparencyMeshes( transparencyMeshes, FrameTransparencyMeshes );
         sortAndAppendTransparencyMeshes( portalTransparencyMeshes, FrameTransparencyMeshesPortal );
         sortAndAppendTransparencyMeshes( waterfallTransparencyMeshes, FrameTransparencyMeshesWaterfall );
+        sortAndAppendTransparencyMeshes( wetSSRBlockerTransparencyMeshes, FrameTransparencyMeshesWetSSRBlockers );
     }
     auto CompareMesh = []( std::pair<WorldMeshKey, MeshInfo*>& a, std::pair<WorldMeshKey, MeshInfo*>& b ) -> bool {
         if ( a.first.AlphaLevel != b.first.AlphaLevel )
@@ -5533,6 +5583,10 @@ void D3D11GraphicsEngine::DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRT
                 batch.texture->CacheIn( -1 );
                 batch.texture->Bind( 0 );
 
+                WaterMaterialInfoConstantBuffer wmcb = {};
+                wmcb.WM_DisableSSR = IsWaterTextureExcludedFromSSR( batch.texture ) ? 1.0f : 0.0f;
+                ActivePS->GetBuffer( "WaterMaterialInfo" ).Update( &wmcb ).Bind();
+
                 DrawMultiIndexedInstancedIndirect( Context.Get(),
                     batch.drawCount,
                     WaterIndirectBuffer->GetIndirectBuffer().Get(),
@@ -5543,6 +5597,10 @@ void D3D11GraphicsEngine::DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRT
             for ( const auto& batch : waterBatches ) {
                 batch.texture->CacheIn( -1 );
                 batch.texture->Bind( 0 );
+
+                WaterMaterialInfoConstantBuffer wmcb = {};
+                wmcb.WM_DisableSSR = IsWaterTextureExcludedFromSSR( batch.texture ) ? 1.0f : 0.0f;
+                ActivePS->GetBuffer( "WaterMaterialInfo" ).Update( &wmcb ).Bind();
 
                 for ( unsigned int i = 0; i < batch.drawCount; i++ ) {
                     const auto& args = waterDrawArgs[batch.argsOffset + i];

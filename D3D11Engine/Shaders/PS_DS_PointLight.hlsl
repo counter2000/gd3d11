@@ -48,7 +48,7 @@ float3 VSPositionFromDepth(float depth, float2 vTexCoord)
 {
 	return ReconstructVSPositionFromDepthReverseZInfinite( depth, vTexCoord, PL_ProjParams.xy ) * PL_ProjParams.z;
 }
-float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 vsPosition, float3 lightPosWorld, float lightRange, float2 uv, float currentDepth)
+float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 wsNormal, float3 vsPosition, float3 lightPosWorld, float lightRange, float2 pixelCoord, float currentDepth)
 {
 	float outdoorPixel = 1.0f - indoorPixel;
 	float floorMask = smoothstep(0.40f, 0.70f, wsNormal.y);
@@ -58,26 +58,26 @@ float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 w
 	if (baseMask <= 0.0f)
 		return 0.0f;
 
-	float worldPixel = max(max(length(ddx(wsPosition)), length(ddy(wsPosition))), 0.25f);
-	float maxRadius = clamp(30.0f / worldPixel, 1.0f, 12.0f);
-	float radiusA = max(1.0f, maxRadius * 0.5f);
-	float radiusB = max(1.0f, maxRadius);
-	float2 texel = 1.0f / PL_ViewportSize;
+	const float bleedWorldSize = 30.0f;
+	float worldPixel = max(2.0f * abs(vsPosition.z) * max(PL_ProjParams.x / PL_ViewportSize.x, PL_ProjParams.y / PL_ViewportSize.y), 0.02f);
+	int maxRadius = clamp((int)(bleedWorldSize / worldPixel + 0.5f), 1, 768);
+	int2 baseCoord = clamp(int2(pixelCoord), int2(0, 0), int2(PL_ViewportSize) - int2(1, 1));
 	float doorwayProbe = 0.0f;
 
-	[unroll] for (int r = 0; r < 2; ++r)
+	[unroll] for (int r = 0; r < 3; ++r)
 	{
-		float radius = (r == 0) ? radiusA : radiusB;
+		int radius = (r == 0) ? max(1, maxRadius / 3) : ((r == 1) ? max(1, (maxRadius * 2) / 3) : maxRadius);
 		[unroll] for (int d = 0; d < 8; ++d)
 		{
-			float sx = (d == 0 || d == 4 || d == 5) ? radius : ((d == 1 || d == 6 || d == 7) ? -radius : 0.0f);
-			float sy = (d == 2 || d == 4 || d == 6) ? radius : ((d == 3 || d == 5 || d == 7) ? -radius : 0.0f);
-			float2 sampleUV = saturate(uv + float2(sx, sy) * texel);
-			float4 sampleDiffuse = TX_Diffuse.SampleLevel(SS_Linear, sampleUV, 0);
+			int sx = (d == 0 || d == 4 || d == 5) ? radius : ((d == 1 || d == 6 || d == 7) ? -radius : 0);
+			int sy = (d == 2 || d == 4 || d == 6) ? radius : ((d == 3 || d == 5 || d == 7) ? -radius : 0);
+			int2 sampleCoord = clamp(baseCoord + int2(sx, sy), int2(0, 0), int2(PL_ViewportSize) - int2(1, 1));
+			float4 sampleDiffuse = TX_Diffuse.Load(int3(sampleCoord, 0));
 			float sampleIndoor = sampleDiffuse.a < 0.5f ? 1.0f : 0.0f;
-			float sampleDepth = TX_Depth.SampleLevel(SS_Linear, sampleUV, 0).r;
+			float sampleDepth = TX_Depth.Load(int3(sampleCoord, 0)).r;
+			float2 sampleUV = (float2(sampleCoord) + 0.5f) / PL_ViewportSize;
 			float3 sampleVS = VSPositionFromDepth(sampleDepth, sampleUV);
-			float worldFade = 1.0f - smoothstep(0.0f, 30.0f, length(sampleVS - vsPosition));
+			float worldFade = 1.0f - smoothstep(0.0f, bleedWorldSize, length(sampleVS - vsPosition));
 			doorwayProbe = max(doorwayProbe, sampleIndoor * worldFade);
 		}
 	}
@@ -176,7 +176,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	// distance-stable doorway bleed so thresholds do not form a hard camera-dependent line.
 	float indoor = 1.0f - PL_Outdoor;
 	float indoorPixel = diffuse.a < 0.5f ? 1.0f : 0.0f;
-	float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, vsPosition, Pl_PositionWorld, PL_Range, uv, expDepth);
+	float doorFloorBleed = 0.0f;
+	if (indoor > 0.5f && PL_IgnoreIndoorOutdoorLimit < 0.5f)
+	{
+		doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, vsPosition, Pl_PositionWorld, PL_Range, Input.vPosition.xy, expDepth);
+	}
 	float indoorBoundary = saturate(PL_Outdoor + indoor * max(indoorPixel, doorFloorBleed));
 	lighting *= lerp(indoorBoundary, 1.0f, saturate(PL_IgnoreIndoorOutdoorLimit));
 	return float4(saturate(lighting),1);

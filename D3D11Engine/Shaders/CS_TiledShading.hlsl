@@ -57,15 +57,14 @@ float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 w
 	if (baseMask <= 0.0f)
 		return 0.0f;
 
-	float worldPixel = max(2.0f * abs(vsPosition.z) * max(ProjParams.x / ViewportSize.x, ProjParams.y / ViewportSize.y), 0.25f);
-	int maxRadius = clamp((int)(30.0f / worldPixel + 0.5f), 1, 12);
-	int radiusA = max(1, maxRadius / 2);
-	int radiusB = max(1, maxRadius);
+	const float bleedWorldSize = 30.0f;
+	float worldPixel = max(2.0f * abs(vsPosition.z) * max(ProjParams.x / ViewportSize.x, ProjParams.y / ViewportSize.y), 0.02f);
+	int maxRadius = clamp((int)(bleedWorldSize / worldPixel + 0.5f), 1, 768);
 	float doorwayProbe = 0.0f;
 
-	[unroll] for (int r = 0; r < 2; ++r)
+	[unroll] for (int r = 0; r < 3; ++r)
 	{
-		int radius = (r == 0) ? radiusA : radiusB;
+		int radius = (r == 0) ? max(1, maxRadius / 3) : ((r == 1) ? max(1, (maxRadius * 2) / 3) : maxRadius);
 		[unroll] for (int d = 0; d < 8; ++d)
 		{
 			int sx = (d == 0 || d == 4 || d == 5) ? radius : ((d == 1 || d == 6 || d == 7) ? -radius : 0);
@@ -75,7 +74,7 @@ float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 w
 			float sampleIndoor = sampleDiffuse.a < 0.5f ? 1.0f : 0.0f;
 			float sampleDepth = TX_Depth.Load(int3(sampleCoord, 0)).r;
 			float3 sampleVS = VSPositionFromDepth(sampleDepth, sampleCoord);
-			float worldFade = 1.0f - smoothstep(0.0f, 30.0f, length(sampleVS - vsPosition));
+			float worldFade = 1.0f - smoothstep(0.0f, bleedWorldSize, length(sampleVS - vsPosition));
 			doorwayProbe = max(doorwayProbe, sampleIndoor * worldFade);
 		}
 	}
@@ -146,7 +145,10 @@ void CSMain( uint3 groupID : SV_GroupID, uint3 threadID : SV_GroupThreadID, uint
         }
 
         float indoorPixel = diffuse.a < 0.5f ? 1.0f : 0.0f;
-        float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, vsPosition, light.PositionView, light.PositionWorld, light.Range, pixelCoord, expDepth);
+        float doorFloorBleed = 0.0f;
+        if ( light.IsIndoor > 0.5f && light.IgnoreIndoorOutdoorLimit < 0.5f ) {
+            doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, vsPosition, light.PositionView, light.PositionWorld, light.Range, pixelCoord, expDepth);
+        }
         float indoorBoundary = saturate( (1.0f - light.IsIndoor) + light.IsIndoor * max(indoorPixel, doorFloorBleed) );
         lighting *= lerp(indoorBoundary, 1.0f, saturate(light.IgnoreIndoorOutdoorLimit));
 

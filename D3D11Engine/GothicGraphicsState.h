@@ -725,9 +725,9 @@ struct GothicRendererSettings {
         EnableSSS = true;
         SSSIntensity = 1.0f;
         EnableVolumetricLightShafts = true;
-        VolumetricLightShaftStrength = 1.0f;
+        VolumetricLightShaftStrength = 0.75f;
         EnableContactShadows = true;
-        ContactShadowStrength = 1.0f;
+        ContactShadowStrength = 0.35f;
         EnableScreenSpaceGI = false;
         ScreenSpaceGIStrength = 1.0f;
         EnableParticleLighting = true;
