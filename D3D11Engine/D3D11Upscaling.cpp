@@ -48,7 +48,7 @@ namespace {
     {
         graph.AddPass( RG_PASS_NAME("FSR 2"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( velocityBufferHandle );
-            builder.Read( reactiveMaskResource );
+            // builder.Read( reactiveMaskResource );
             builder.Read( backBufferHandle );
 
             builder.Write( backBufferHandle );
@@ -88,7 +88,7 @@ namespace {
                     backbufferTex->GetShaderResView().Get(),
                     depth,
                     velocityBufferTex->GetShaderResView().Get(),
-                    reactiveMask ? reactiveMask->GetShaderResView().Get() : nullptr,
+                    nullptr, // reactiveMask->GetShaderResView().Get(),
                     outputRTV,
                     inputSize,
                     engine.GetBackbufferResolution(),
@@ -115,7 +115,7 @@ namespace {
     {
         graph.AddPass( RG_PASS_NAME("FSR 3"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( velocityBufferHandle );
-            builder.Read( reactiveMaskResource );
+            // builder.Read( reactiveMaskResource );
             builder.Read( backBufferHandle );
 
             builder.Write( backBufferHandle );
@@ -155,7 +155,7 @@ namespace {
                     backbufferTex->GetShaderResView().Get(),
                     depth,
                     velocityBufferTex->GetShaderResView().Get(),
-                    reactiveMask ? reactiveMask->GetShaderResView().Get() : nullptr,
+                    nullptr, // reactiveMask->GetShaderResView().Get(),
                     outputRTV,
                     inputSize,
                     engine.GetBackbufferResolution(),
@@ -201,10 +201,6 @@ bool D3D11Upscaling::AddUpscalingPass( RenderGraph& graph,
 
     auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
 
-    if ( engine.GetDevice()->GetFeatureLevel() < D3D_FEATURE_LEVEL_11_0 ) {
-        return false;
-    }
-
     if ( settings.ResolutionScalePercent < 100
             && settings.Upscaler == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_1 ) {
 
@@ -212,6 +208,10 @@ bool D3D11Upscaling::AddUpscalingPass( RenderGraph& graph,
         return true;
     } 
     
+    if ( engine.GetDevice()->GetFeatureLevel() < D3D_FEATURE_LEVEL_11_0 ) {
+        return false;
+    }
+
     if ( settings.Upscaler == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_2
             && (settings.ResolutionScalePercent <= 100)
             && settings.AntiAliasingMode == GothicRendererSettings::AA_FSR ) {

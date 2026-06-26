@@ -132,7 +132,7 @@ float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 w
 	float floorMask = smoothstep(0.40f, 0.70f, wsNormal.y);
 	float belowLight = smoothstep(-80.0f, 160.0f, lightPosWorld.y - wsPosition.y);
 	float horizontalDistance = length(lightPosWorld.xz - wsPosition.xz);
-	float doorwayRange = smoothstep(110.0f, 20.0f, horizontalDistance);
+	float doorwayRange = 1.0f - smoothstep(0.0f, 30.0f, horizontalDistance);
 	return outdoorPixel * floorMask * belowLight * doorwayRange;
 }
 
@@ -188,7 +188,10 @@ float3 FP_ComputePointLighting(
         }
 
         float indoorPixel = diffuseColor.a < 0.5f ? 1.0f : 0.0f;
-        float doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, light.PositionWorld, light.Range);
+        float doorFloorBleed = 0.0f;
+        if ( light.IsIndoor > 0.5f && light.IgnoreIndoorOutdoorLimit < 0.5f ) {
+            doorFloorBleed = ComputeIndoorDoorFloorBleed(indoorPixel, wsPosition, wsNormal, light.PositionWorld, light.Range);
+        }
         float indoorBoundary = saturate( (1.0f - light.IsIndoor) + light.IsIndoor * max(indoorPixel, doorFloorBleed) );
         lighting *= lerp(indoorBoundary, 1.0f, saturate(light.IgnoreIndoorOutdoorLimit));
 

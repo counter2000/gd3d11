@@ -4237,44 +4237,20 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         if ( FeatureLevel10Compatibility || Engine::GAPI->GetRendererState().RendererSettings.DrawRainThroughTransformFeedback ) {
             graph.AddPass( RG_PASS_NAME("Draw Rain"), [&]( RGBuilder& builder, RenderPass& pass ) {
                 builder.Read( backBufferHandle );
-                builder.Read( reactiveMaskResource );
                 builder.Write( backBufferHandle );
-                builder.Write( reactiveMaskResource );
 
-                pass.m_executeCallback = [this, backBufferHandle, reactiveMaskResource](const RenderGraph& graph) {
+                pass.m_executeCallback = [this](const RenderGraph&) {
                     TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Draw Rain" );
-                    auto backBuffer = graph.GetPhysicalTexture( backBufferHandle );
-                    auto reactiveMask = graph.GetPhysicalTexture( reactiveMaskResource );
-                    ID3D11RenderTargetView* rtvs[5] = {
-                        backBuffer ? backBuffer->GetRenderTargetView().Get() : nullptr,
-                        nullptr,
-                        nullptr,
-                        nullptr,
-                        reactiveMask ? reactiveMask->GetRenderTargetView().Get() : nullptr,
-                    };
-                    GetContext()->OMSetRenderTargets( 5, rtvs, DepthStencilBuffer->GetDepthStencilView().Get() );
                     Effects->DrawRain();
                 };
             });
         } else {
             graph.AddPass( RG_PASS_NAME("Draw Rain CS"), [&]( RGBuilder& builder, RenderPass& pass ) {
                 builder.Read( backBufferHandle );
-                builder.Read( reactiveMaskResource );
                 builder.Write( backBufferHandle );
-                builder.Write( reactiveMaskResource );
 
-                pass.m_executeCallback = [this, backBufferHandle, reactiveMaskResource](const RenderGraph& graph) {
+                pass.m_executeCallback = [this](const RenderGraph&) {
                     TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Draw Rain (CS)" );
-                    auto backBuffer = graph.GetPhysicalTexture( backBufferHandle );
-                    auto reactiveMask = graph.GetPhysicalTexture( reactiveMaskResource );
-                    ID3D11RenderTargetView* rtvs[5] = {
-                        backBuffer ? backBuffer->GetRenderTargetView().Get() : nullptr,
-                        nullptr,
-                        nullptr,
-                        nullptr,
-                        reactiveMask ? reactiveMask->GetRenderTargetView().Get() : nullptr,
-                    };
-                    GetContext()->OMSetRenderTargets( 5, rtvs, DepthStencilBuffer->GetDepthStencilView().Get() );
                     Effects->DrawRain_CS();
                 };
             });
@@ -6600,11 +6576,13 @@ void XM_CALLCONV D3D11GraphicsEngine::DrawWorldAroundForWorldShadow( FXMVECTOR p
 
         for ( auto& it : vobs) {
             // process any vobs only visible in this cascade
+            it->UpdateState();
+
             VobInstanceInfo vii = {};
             vii.world = it->WorldMatrix;
             vii.prevWorld = it->HasValidPrevMatrix ? it->PrevWorldMatrix : it->WorldMatrix;
             vii.color = it->GroundColor;
-            if ( it->IsIndoorVob || (it->Vob && it->Vob->IsIndoorVob()) ) {
+            if ( it->IndoorLightMask ) {
                 vii.color = (vii.color & 0x00FFFFFFu) | 0x0D000000u;
             }
             vii.windStrenth = 0.0f;

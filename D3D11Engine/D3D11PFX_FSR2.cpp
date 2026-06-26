@@ -216,7 +216,7 @@ XRESULT D3D11PFX_FSR2::Apply(
     // Optional Resources (Passing nullptr handles them internally, e.g., Auto Exposure)
     // dispatchDesc.exposure = ffxGetResourceDX11_Fsr31_( nullptr, GetFfxResourceDescriptionDX11(nullptr), L"" );
     if (reactiveMask != nullptr) {
-        dispatchDesc.reactive = GetAsFfxResource( reactiveMask, L"FSR2_ReactiveMask" );
+        // dispatchDesc.reactive = GetAsFfxResource( reactiveMask, L"FSR2_ReactiveMask" );
         dispatchDesc.transparencyAndComposition = GetAsFfxResource( reactiveMask, L"FSR2_T_C" );
     }
 
