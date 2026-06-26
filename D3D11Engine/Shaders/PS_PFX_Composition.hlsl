@@ -93,6 +93,8 @@ float FogDither(float2 pixelPosition)
 float4 ComputeHeightFog( float2 texcoord )
 {
     float expDepth = TX_Depth.Sample( SS_Linear, texcoord ).r;
+    if ( expDepth <= 1e-7f )
+        return float4(0.0f, 0.0f, 0.0f, 0.0f);
     float3 position = VSPositionFromDepth( expDepth, texcoord );
     position = mul( float4( position, 1 ), HF_InvView ).xyz;
     float3 posOriginal = position;

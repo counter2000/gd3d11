@@ -62,9 +62,9 @@ float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 w
 	int maxRadius = clamp((int)(bleedWorldSize / worldPixel + 0.5f), 1, 768);
 	float doorwayProbe = 0.0f;
 
-	[unroll] for (int r = 0; r < 3; ++r)
+	[unroll] for (int r = 0; r < 7; ++r)
 	{
-		int radius = (r == 0) ? max(1, maxRadius / 3) : ((r == 1) ? max(1, (maxRadius * 2) / 3) : maxRadius);
+		int radius = max(1, (maxRadius * (r + 1)) / 7);
 		[unroll] for (int d = 0; d < 8; ++d)
 		{
 			int sx = (d == 0 || d == 4 || d == 5) ? radius : ((d == 1 || d == 6 || d == 7) ? -radius : 0);
@@ -74,7 +74,8 @@ float ComputeIndoorDoorFloorBleed(float indoorPixel, float3 wsPosition, float3 w
 			float sampleIndoor = sampleDiffuse.a < 0.5f ? 1.0f : 0.0f;
 			float sampleDepth = TX_Depth.Load(int3(sampleCoord, 0)).r;
 			float3 sampleVS = VSPositionFromDepth(sampleDepth, sampleCoord);
-			float worldFade = 1.0f - smoothstep(0.0f, bleedWorldSize, length(sampleVS - vsPosition));
+			float worldDistance = length(sampleVS - vsPosition);
+			float worldFade = saturate(1.0f - worldDistance / bleedWorldSize);
 			doorwayProbe = max(doorwayProbe, sampleIndoor * worldFade);
 		}
 	}

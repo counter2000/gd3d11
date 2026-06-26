@@ -82,6 +82,8 @@ struct PS_INPUT
 float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
 	float expDepth = TX_Depth.Sample(SS_Linear, Input.vTexcoord).r;
+	if (expDepth <= 1e-7f)
+		return float4(0.0f, 0.0f, 0.0f, 0.0f);
 	
 	float3 position = VSPositionFromDepth(expDepth, Input.vTexcoord);
 	

@@ -63,11 +63,20 @@ float3 SampleRoughReflection(float2 uv, float2 distortion)
     return color;
 }
 
+float SampleWetSSRBlockMask(float2 uv)
+{
+    float mask = TX_WaterMask.SampleLevel(SS_Linear, uv, 0).r;
+    mask = max(mask, TX_WaterMask.SampleLevel(SS_Linear, uv + float2(WG_InvResolution.x, 0.0f), 0).r);
+    mask = max(mask, TX_WaterMask.SampleLevel(SS_Linear, uv - float2(WG_InvResolution.x, 0.0f), 0).r);
+    mask = max(mask, TX_WaterMask.SampleLevel(SS_Linear, uv + float2(0.0f, WG_InvResolution.y), 0).r);
+    mask = max(mask, TX_WaterMask.SampleLevel(SS_Linear, uv - float2(0.0f, WG_InvResolution.y), 0).r);
+    return mask;
+}
 float4 PSMain(PS_INPUT input) : SV_TARGET
 {
     float2 uv = input.vTexcoord;
     float3 sceneColor = TX_Scene.SampleLevel(SS_Linear, uv, 0).rgb;
-    if (TX_WaterMask.SampleLevel(SS_Linear, uv, 0).r > 0.5f)
+    if (SampleWetSSRBlockMask(uv) > 0.05f)
         return float4(sceneColor, 1.0f);
 
     // Alpha-tested surfaces such as Minental ice write into the reactive mask.

@@ -181,14 +181,23 @@ namespace
         return false;
     }
 
-    bool IsWaterTextureExcludedFromSSR( zCTexture* texture ) {
+    bool IsIceTexture( zCTexture* texture ) {
         if ( !texture ) {
             return false;
         }
 
         const std::string name = texture->GetNameWithoutExt();
         return TextureNameContainsMarker( name, "ICE" )
-            || TextureNameContainsMarker( name, "EIS" )
+            || TextureNameContainsMarker( name, "EIS" );
+    }
+
+    bool IsWaterTextureExcludedFromSSR( zCTexture* texture ) {
+        if ( !texture ) {
+            return false;
+        }
+
+        const std::string name = texture->GetNameWithoutExt();
+        return IsIceTexture( texture )
             || TextureNameContainsMarker( name, "WATERFALL" )
             || TextureNameContainsMarker( name, "WASSERFALL" );
     }
@@ -5200,7 +5209,7 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
                         ) {
                         if ( !isZPrepass ) {
                             transparencyMeshes.push_back( { transparencyMesh, distanceSq } );
-                            if ( IsWaterTextureExcludedFromSSR( aniTex ) ) {
+                            if ( IsIceTexture( aniTex ) ) {
                                 wetSSRBlockerTransparencyMeshes.push_back( { transparencyMesh, distanceSq } );
                             }
                         }
