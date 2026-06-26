@@ -207,20 +207,13 @@ void rainResponse(PS_INPUT input, float3 lightVector, float lightIntensity, floa
         float3 tex3 = float3(textureCoordsH1, input.vTexcoord.y, texIndicesV2.x);        
         float3 tex4 = float3(textureCoordsH2, input.vTexcoord.y, texIndicesV2.y);
 
-		const float v2MaxFactor = 0.012f;
+		const float v2MaxFactor = 0.010f;
 		
         // Sample opacity from the textures
-        float rainBlurBias = 0.0f;
-#ifndef SNOW_FEATURE
-        rainBlurBias = (1.0f - smoothstep(150.0f, 1600.0f, length(eyeVector)))
-            * 3.0f * saturate(AR_Pad1.x);
-#endif
-
-        // Sample opacity from the textures
-        float col1 = TX_RainTextureArray.SampleBias(SS_Anisotropic, tex1, rainBlurBias).r * min(g_rainfactors[texIndicesV1.x], v2MaxFactor);
-        float col2 = TX_RainTextureArray.SampleBias(SS_Anisotropic, tex2, rainBlurBias).r * min(g_rainfactors[texIndicesV1.y], v2MaxFactor);
-        float col3 = TX_RainTextureArray.SampleBias(SS_Anisotropic, tex3, rainBlurBias).r * min(g_rainfactors[texIndicesV2.x], v2MaxFactor);
-        float col4 = TX_RainTextureArray.SampleBias(SS_Anisotropic, tex4, rainBlurBias).r * min(g_rainfactors[texIndicesV2.y], v2MaxFactor);
+        float col1 = TX_RainTextureArray.Sample(SS_Anisotropic, tex1).r * min(g_rainfactors[texIndicesV1.x], v2MaxFactor);
+        float col2 = TX_RainTextureArray.Sample(SS_Anisotropic, tex2).r * min(g_rainfactors[texIndicesV1.y], v2MaxFactor);
+        float col3 = TX_RainTextureArray.Sample(SS_Anisotropic, tex3).r * min(g_rainfactors[texIndicesV2.x], v2MaxFactor);
+        float col4 = TX_RainTextureArray.Sample(SS_Anisotropic, tex4).r * min(g_rainfactors[texIndicesV2.y], v2MaxFactor);
 
 		//s = saturate(s) * 0.6f;
 		
@@ -231,17 +224,7 @@ void rainResponse(PS_INPUT input, float3 lightVector, float lightIntensity, floa
 					
         opacity = lerp(hOpacity1,hOpacity2,t);
         opacity = pow(opacity,0.7); // inverse gamma correction (expand dynamic range)
-        float3 sunDir = normalize(AR_LightPosition - AR_CameraPosition);
-        float dayRainBoost = lerp(1.0f, 1.55f, smoothstep(0.02f, 0.35f, sunDir.y));
-        opacity = 4.35f * dayRainBoost * lightIntensity * opacity * fallOff;
-#ifndef SNOW_FEATURE
-        float eyeDistance = length(eyeVector);
-        float veryNearFade = lerp(1.0f, 0.20f,
-            (1.0f - smoothstep(80.0f, 520.0f, eyeDistance)) * saturate(AR_Pad1.x));
-        float focusRainBoost = lerp(1.0f, 1.08f,
-            smoothstep(520.0f, 1000.0f, eyeDistance) * (1.0f - smoothstep(2200.0f, 3600.0f, eyeDistance)) * saturate(AR_Pad1.x));
-        opacity *= veryNearFade * focusRainBoost;
-#endif
+        opacity = 4*lightIntensity * opacity * fallOff;
 		
 		opacity = opacity;
     }
@@ -250,16 +233,10 @@ void rainResponse(PS_INPUT input, float3 lightVector, float lightIntensity, floa
 }
 
 
-struct PS_OUTPUT
-{
-	float4 color : SV_TARGET0;
-	float reactiveMask : SV_TARGET4;
-};
-
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
-PS_OUTPUT PSMain( PS_INPUT Input )
+float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
 	//float4 color = pow(TX_Texture0.Sample(SS_Linear, Input.vTexcoord), 1.0f);
 	float4 color = float4(1,1,1, 0.2f);
@@ -282,18 +259,7 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 		1.0-(1.0/250.0),
 		directionalLight.w);
 #endif
-#ifndef SNOW_FEATURE
-	// Fade the billboard at both ends so shortened drops taper naturally
-	// instead of looking like clipped rectangular streaks.
-	float endFade = smoothstep(0.0f, 0.22f, Input.vTexcoord.y)
-		* smoothstep(0.0f, 0.22f, 1.0f - Input.vTexcoord.y);
-	directionalLight.w *= endFade * 0.82f;
-#endif
-	PS_OUTPUT output;
-	output.color = directionalLight;
-	float precipitationMask = smoothstep(0.0005f, 0.006f, directionalLight.w);
-	output.reactiveMask = max(precipitationMask, saturate(directionalLight.w * 24.0f));
-	return output;
+	return directionalLight;
 }
 
 

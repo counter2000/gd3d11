@@ -103,7 +103,6 @@ enum class PShaderID : size_t {
     PS_PFX_FSR1_RCAS,
     PS_PFX_Composition,
     PS_PFX_WetGroundSSR,
-    PS_PFX_ReactiveMaskDilate,
     PS_FP_Diffuse,
     PS_FP_DiffuseNormalmapped,
     PS_FP_DiffuseNormalmappedFxMap,

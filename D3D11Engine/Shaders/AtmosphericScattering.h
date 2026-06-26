@@ -104,7 +104,7 @@ float3 GetAtmosphericSunTerm(float3 normal)
 
 float GetNightWeight()
 {
-	return saturate((-AC_LightPos.y) * 10.0f);
+	return saturate(((-AC_LightPos.y) + 0.2f) * 10.0f);
 }
 
 float GetWorldBoundaryFade(float3 worldPosition)
@@ -189,25 +189,21 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 	float worldBoundaryFade = GetWorldBoundaryFade(worldPosition);
 	// Keep the stable renderer's sky-colored world boundary, but gate it to the far boundary
 	// so this does not become a general daytime fog or height-fog layer.
-	float nightDistanceFade = GetNightDistanceFade(worldPosition);
-	float skyBoundaryTint = worldBoundaryFade * (1.0f - nightDistanceFade);
+	float skyBoundaryTint = worldBoundaryFade;
 	//c0 = lerp(dot(float3(0.333f,0.333f,0.333f), c0), c0, 0.5f);
 	float3 c1 = v3Attenuate;
 	
 	float3 dayColor = in_color * c1 + c0 * skyBoundaryTint;
-	float nearNightBrightness = lerp(1.0f, max(0.0f, AC_NearNightBrightness), saturate(AC_EnableNightAtmosphere));
-	float3 nightColor = float3(0.095f,0.115f,0.255f) * NIGHT_BRIGHTNESS * nearNightBrightness;
-	float moonWeight = saturate((-AC_LightPos.y - 0.08f) * 1.7f);
-	float midtone = saturate(dot(in_color, float3(0.299f, 0.587f, 0.114f)) * 0.95f + 0.04f);
-	float3 moonColor = float3(0.018f, 0.026f, 0.052f) * moonWeight * midtone * nearNightBrightness;
+	float3 nightColor = float3(0.20,0.20,0.4) * NIGHT_BRIGHTNESS;
+	nightColor = lerp(nightColor, float3(0.24,0.24,0.24) * NIGHT_BRIGHTNESS * 0.6f, AC_SceneWettness);
 	float3 outColor;
 
 	if(applyNightshade)
-		outColor = dayColor + in_color * nightColor * nightWeight + moonColor;
+		outColor = dayColor + in_color * nightColor * nightWeight;
 	else
-		outColor = dayColor + nightColor * nightWeight + moonColor;
+		outColor = dayColor + nightColor * nightWeight;
 
-	return applyDistanceDarkening ? ApplyNightDistanceDarkening(worldPosition, outColor) : outColor;
+	return outColor;
 }
 
 float3 ApplyAtmosphericScatteringSky(float3 worldPosition)
