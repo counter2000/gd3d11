@@ -145,6 +145,63 @@ namespace
 {
     static ID3D11ShaderResourceView* s_nullSRVs[16] = { nullptr };
 
+    struct WaterMaterialInfoConstantBuffer {
+        float WM_DisableSSR;
+        float WM_Pad[3];
+    };
+
+    bool TextureNameContainsMarker( const std::string& name, const char* marker ) {
+        if ( !marker || !*marker ) {
+            return false;
+        }
+
+        size_t markerLen = 0;
+        while ( marker[markerLen] ) {
+            ++markerLen;
+        }
+        if ( name.size() < markerLen ) {
+            return false;
+        }
+
+        for ( size_t i = 0; i + markerLen <= name.size(); ++i ) {
+            size_t j = 0;
+            for ( ; j < markerLen; ++j ) {
+                char c = name[i + j];
+                if ( c >= 'a' && c <= 'z' ) {
+                    c = static_cast<char>(c - 'a' + 'A');
+                }
+                if ( c != marker[j] ) {
+                    break;
+                }
+            }
+            if ( j == markerLen ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool IsIceTexture( zCTexture* texture ) {
+        if ( !texture ) {
+            return false;
+        }
+
+        const std::string name = texture->GetNameWithoutExt();
+        return TextureNameContainsMarker( name, "ICE" )
+            || TextureNameContainsMarker( name, "EIS" );
+    }
+
+    bool IsWaterTextureExcludedFromSSR( zCTexture* texture ) {
+        if ( !texture ) {
+            return false;
+        }
+
+        const std::string name = texture->GetNameWithoutExt();
+        return IsIceTexture( texture )
+            || TextureNameContainsMarker( name, "WATERFALL" )
+            || TextureNameContainsMarker( name, "WASSERFALL" );
+    }
+
     bool EnsureStructuredMatrixBuffer(
         std::unique_ptr<D3D11VertexBuffer>& buffer,
         UINT matrixCount,
@@ -5442,6 +5499,10 @@ void D3D11GraphicsEngine::DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRT
                 batch.texture->CacheIn( -1 );
                 batch.texture->Bind( 0 );
 
+                WaterMaterialInfoConstantBuffer wmcb = {};
+                wmcb.WM_DisableSSR = IsWaterTextureExcludedFromSSR( batch.texture ) ? 1.0f : 0.0f;
+                ActivePS->GetBuffer( "WaterMaterialInfo" ).Update( &wmcb ).Bind();
+
                 DrawMultiIndexedInstancedIndirect( Context.Get(),
                     batch.drawCount,
                     WaterIndirectBuffer->GetIndirectBuffer().Get(),
@@ -5452,6 +5513,10 @@ void D3D11GraphicsEngine::DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRT
             for ( const auto& batch : waterBatches ) {
                 batch.texture->CacheIn( -1 );
                 batch.texture->Bind( 0 );
+
+                WaterMaterialInfoConstantBuffer wmcb = {};
+                wmcb.WM_DisableSSR = IsWaterTextureExcludedFromSSR( batch.texture ) ? 1.0f : 0.0f;
+                ActivePS->GetBuffer( "WaterMaterialInfo" ).Update( &wmcb ).Bind();
 
                 for ( unsigned int i = 0; i < batch.drawCount; i++ ) {
                     const auto& args = waterDrawArgs[batch.argsOffset + i];

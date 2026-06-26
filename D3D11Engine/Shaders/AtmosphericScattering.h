@@ -187,7 +187,7 @@ float3 ApplyAtmosphericScatteringGround(float3 worldPosition, float3 in_color, b
 	//c0 = lerp(dot(float3(0.333f,0.333f,0.333f), c0), c0, 0.5f);
 	float3 c1 = v3Attenuate;
 	
-	float3 dayColor = in_color * c1;
+	float3 dayColor = c0 + in_color * c1;
 	float nearNightBrightness = lerp(1.0f, max(0.0f, AC_NearNightBrightness), saturate(AC_EnableNightAtmosphere));
 	float3 nightColor = float3(0.095f,0.115f,0.255f) * NIGHT_BRIGHTNESS * nearNightBrightness;
 	float moonWeight = saturate((-AC_LightPos.y - 0.08f) * 1.7f);

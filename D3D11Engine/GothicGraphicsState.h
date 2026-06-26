@@ -720,14 +720,14 @@ struct GothicRendererSettings {
         SortRenderQueue = false;
         DrawThreaded = false;
         EnableSSR = true;
-        SSRStrength = 1.0f; // UI-normalized: 1.0 equals 0.6 effective shader strength.
+        SSRStrength = 1.0f; // UI-normalized: 1.0 equals the former 1.2 slider value.
         WaterCubemapStrength = 1.0f;
         EnableSSS = true;
         SSSIntensity = 1.0f;
         EnableVolumetricLightShafts = true;
-        VolumetricLightShaftStrength = 0.75f;
+        VolumetricLightShaftStrength = 1.0f; // UI-normalized: 1.0 keeps the former 0.75 effect strength.
         EnableContactShadows = true;
-        ContactShadowStrength = 0.35f;
+        ContactShadowStrength = 1.0f; // UI-normalized: 1.0 keeps the former 0.35 effect strength.
         EnableScreenSpaceGI = false;
         ScreenSpaceGIStrength = 1.0f;
         EnableParticleLighting = true;

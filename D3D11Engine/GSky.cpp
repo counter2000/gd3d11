@@ -318,7 +318,7 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_RainFXWeight = Engine::GAPI->GetRainFXWeight();
     AtmosphereCB.AC_EnableSSR = Engine::GAPI->GetRendererState().RendererSettings.EnableSSR ? 1.0f : 0.0f;
     AtmosphereCB.AC_EnableSSS = Engine::GAPI->GetRendererState().RendererSettings.EnableSSS ? 1.0f : 0.0f;
-    AtmosphereCB.AC_SSRStrength = Engine::GAPI->GetRendererState().RendererSettings.SSRStrength * 0.6f;
+    AtmosphereCB.AC_SSRStrength = Engine::GAPI->GetRendererState().RendererSettings.SSRStrength * 0.72f;
     AtmosphereCB.AC_SSSIntensity = Engine::GAPI->GetRendererState().RendererSettings.SSSIntensity;
     AtmosphereCB.AC_WaterCubemapStrength = Engine::GAPI->GetRendererState().RendererSettings.WaterCubemapStrength;
     AtmosphereCB.AC_EnableNightAtmosphere = 1.0f;
@@ -331,9 +331,10 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_WorldCameraPos = camPos;
     AtmosphereCB.AC_EnableContactShadows = (Engine::GAPI->GetRendererState().RendererSettings.EnableContactShadows && Engine::GAPI->GetRendererState().RendererSettings.ContactShadowStrength > 0.0f) ? 1.0f : 0.0f;
     AtmosphereCB.AC_EnableScreenSpaceGI = (Engine::GAPI->GetRendererState().RendererSettings.EnableScreenSpaceGI && Engine::GAPI->GetRendererState().RendererSettings.ScreenSpaceGIStrength > 0.0f) ? 1.0f : 0.0f;
-    AtmosphereCB.AC_VolumetricLightShaftStrength = Engine::GAPI->GetRendererState().RendererSettings.VolumetricLightShaftStrength;
-    AtmosphereCB.AC_ContactShadowStrength = Engine::GAPI->GetRendererState().RendererSettings.ContactShadowStrength;
-    AtmosphereCB.AC_ScreenSpaceGIStrength = Engine::GAPI->GetRendererState().RendererSettings.ScreenSpaceGIStrength * 0.25f;
+    const auto& rendererSettings = Engine::GAPI->GetRendererState().RendererSettings;
+    AtmosphereCB.AC_VolumetricLightShaftStrength = rendererSettings.VolumetricLightShaftStrength * 0.75f;
+    AtmosphereCB.AC_ContactShadowStrength = rendererSettings.ContactShadowStrength * 0.35f;
+    AtmosphereCB.AC_ScreenSpaceGIStrength = rendererSettings.ScreenSpaceGIStrength * 0.25f;
     AtmosphereCB.AC_EnableParticleLighting = Engine::GAPI->GetRendererState().RendererSettings.EnableParticleLighting ? 1.0f : 0.0f;
     AtmosphereCB.AC_ParticleLightingStrength = Engine::GAPI->GetRendererState().RendererSettings.ParticleLightingStrength * 0.75f;
 
