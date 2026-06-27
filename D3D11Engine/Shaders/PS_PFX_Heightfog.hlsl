@@ -105,7 +105,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float dryNightFog = fog * nightTimeBlend * (1.0f - activeWeatherFog);
 	fog = max(weatherFog, dryNightFog);
 	float fogGradientWeight = saturate(fog * (1.0f - fog) * 4.0f);
-	float fogGradientDither = FogDither(Input.vPosition.xy) * nightTimeBlend * (1.5f / 255.0f);
+	float fogGradientDither = FogDither(Input.vPosition.xy) * nightTimeBlend * (4.0f / 255.0f);
 	float ditheredFog = saturate(fog + fogGradientDither * fogGradientWeight);
 		
 	float3 color = ApplyAtmosphericScatteringGround(position, HF_FogColorMod, true, false);
@@ -117,7 +117,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float darknessFactor = lerp(dayDarknessFactor, 2.0f, nightTimeBlend);
 	float maxFogOpacity = lerp(1.0f, 0.85f, nightTimeBlend);
 
-	float ditherStrength = lerp(1.5f, 3.0f, nightTimeBlend) / 255.0f;
+	float ditherStrength = lerp(2.0f, 5.0f, nightTimeBlend) / 255.0f;
 	float3 ditheredFogColor = color / darknessFactor + FogDither(Input.vPosition.xy) * ditherStrength;
 	return float4(saturate(ditheredFogColor), ditheredFog * maxFogOpacity);
 }

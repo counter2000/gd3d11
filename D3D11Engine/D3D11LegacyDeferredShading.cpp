@@ -89,7 +89,7 @@ XRESULT D3D11LegacyDeferredShading::DrawPointlightLights(
         plcb.Pl_PositionWorld = vob->GetPositionWorld();
         plcb.PL_Outdoor = light->IsIndoorVob ? 0.0f : 1.0f;
         plcb.PL_IgnoreIndoorOutdoorLimit = light->IgnoreIndoorOutdoorLimit ? 1.0f : 0.0f;
-        plcb.PL_ShadowSoftness = settings.ShadowSoftness;
+        plcb.PL_ShadowSoftness = settings.ShadowSoftness * 2.0f;
         plcb.PL_ShadowStrength = 1.0f;
 
         float dist;

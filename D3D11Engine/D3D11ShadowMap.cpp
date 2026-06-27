@@ -977,7 +977,7 @@ XRESULT D3D11ShadowMap::DrawPointlightShadows( std::vector<VobLightInfo*>& light
 
             // pick shadow resolution based on distance.
             int desiredResolution = SHADOW_CUBE_SIZE; // Fallback / far distance
-            if ( d < distVeryCloseSq && !staticOnlyMode && !light->Vob->IsStatic() ) {
+            if ( d < distVeryCloseSq && !staticOnlyMode ) {
                 light->UpdateShadows = true;
                 // for now, keep all lights/shadows the same size, otherwise they change their "volume"
                 // desiredResolution = 256; // High res for close lights
@@ -1391,7 +1391,7 @@ DS_ScreenQuadConstantBuffer D3D11ShadowMap::FillSunCSMConstantBuffer() const {
     scb.SQ_ShadowStrength = settings.ShadowStrength;
     scb.SQ_ShadowAOStrength = settings.ShadowAOStrength;
     scb.SQ_WorldAOStrength = settings.WorldAOStrength;
-    scb.SQ_ShadowSoftness = settings.ShadowSoftness;
+    scb.SQ_ShadowSoftness = settings.ShadowSoftness * 2.0f;
     scb.SQ_LightSize = std::clamp( settings.PCSSLightSize, 0.005f, 0.5f );
 
     if ( auto bspTree = Engine::GAPI->GetLoadedWorldInfo()->BspTree )
@@ -1511,7 +1511,7 @@ XRESULT D3D11ShadowMap::DrawWorldLights()
     scb.SQ_ShadowStrength = settings.ShadowStrength;
     scb.SQ_ShadowAOStrength = settings.ShadowAOStrength;
     scb.SQ_WorldAOStrength = settings.WorldAOStrength;
-    scb.SQ_ShadowSoftness = settings.ShadowSoftness;
+    scb.SQ_ShadowSoftness = settings.ShadowSoftness * 2.0f;
     scb.SQ_LightSize = std::clamp( settings.PCSSLightSize, 0.005f, 0.5f );
 
     // Modify lightsettings when indoor

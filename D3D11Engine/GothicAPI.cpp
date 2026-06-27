@@ -4362,8 +4362,7 @@ void GothicAPI::CollectVisibleVobs(
 
                 // Update the lights shadows if: Light is dynamic or full shadow-updates are set
                 if ( !vi->IsPFXVobLight && vi->HasRenderableParentVob ) {
-                    if ( RendererState.RendererSettings.EnablePointlightShadows >= GothicRendererSettings::PLS_FULL
-                        || (RendererState.RendererSettings.EnablePointlightShadows >= GothicRendererSettings::PLS_UPDATE_DYNAMIC && !vi->Vob->IsStatic()) ) {
+                    if ( RendererState.RendererSettings.EnablePointlightShadows >= GothicRendererSettings::PLS_UPDATE_DYNAMIC ) {
                         // Now check for distances, etc
                         float lightPlayerDist;
                         XMStoreFloat( &lightPlayerDist, XMVector3Length( playerPosition - vi->Vob->GetPositionWorldXM() ) );

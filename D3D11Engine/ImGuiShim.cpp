@@ -955,8 +955,8 @@ void ImGuiShim::RenderSettingsWindow()
             }
 
             ImText( "Shadow Softness", buttonWidth ); ImGui::SameLine();
-            ImGui::SliderFloat( "##ShadowSoftness", &settings.ShadowSoftness, 0.5f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
-            ImGui::SetItemTooltip( "Controls world and point-light shadow softness. 1.0 is the default." );
+            ImGui::SliderFloat( "##ShadowSoftness", &settings.ShadowSoftness, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+            ImGui::SetItemTooltip( "Controls world and point-light shadow softness. 1.0 uses the softer default." );
 
             ImText( "Pointlight Shadows", buttonWidth ); ImGui::SameLine();
             
@@ -1334,8 +1334,6 @@ void ImGuiShim::RenderAdvancedColumn2( GothicRendererSettings& settings, GothicA
             ImGui::SetItemTooltip( "Which shadow cascades should be filtered using '16xPCF'.\nChanging this will reload shaders." );
             
             ImGui::DragFloat( "ShadowStrength", &settings.ShadowStrength, 0.01f, 0.01f, 5.0f, "%.2f" );
-            ImGui::DragFloat( "ShadowSoftness", &settings.ShadowSoftness, 0.05f, 0.2f, 8.0f, "%.2f" );
-            ImGui::SetItemTooltip( "PCF kernel scale (1.0=sharp default, <1.0=sharper, >1.0=softer)" );
             ImGui::DragFloat( "PCSSLightSize", &settings.PCSSLightSize, 0.002f, 0.005f, 0.5f, "%.3f" );
             ImGui::SetItemTooltip( "PCSS light radius in shadow UV space. Higher values increase contact hardening and penumbra growth." );
             ImGui::DragFloat( "ShadowAOStrength", &settings.ShadowAOStrength, 0.01f, -5.0f, 2.0f, "%.2f" );

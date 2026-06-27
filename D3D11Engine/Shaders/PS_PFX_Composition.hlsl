@@ -111,7 +111,7 @@ float4 ComputeHeightFog( float2 texcoord, float2 pixelPosition )
     float dryNightFog = fog * nightTimeBlend * (1.0f - activeWeatherFog);
     fog = max(weatherFog, dryNightFog);
     float fogGradientWeight = saturate(fog * (1.0f - fog) * 4.0f);
-    float fogGradientDither = FogDither(pixelPosition) * nightTimeBlend * (1.5f / 255.0f);
+    float fogGradientDither = FogDither(pixelPosition) * nightTimeBlend * (4.0f / 255.0f);
     float ditheredFog = saturate(fog + fogGradientDither * fogGradientWeight);
     float3 color = ApplyAtmosphericScatteringGround( position, HF_FogColorMod, true, false );
 	float nightFogBrightness = lerp(1.0f, max(0.0f, AC_NightFogBrightness), saturate(AC_EnableNightAtmosphere));
@@ -317,7 +317,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
     float4 fog = ComputeHeightFog( Input.vTexcoord, Input.vPosition.xy );
     color.rgb = lerp( color.rgb, fog.rgb, fog.a );
     float nightTimeBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f));
-    float ditherStrength = lerp(1.5f, 3.0f, nightTimeBlend) / 255.0f;
+    float ditherStrength = lerp(2.0f, 5.0f, nightTimeBlend) / 255.0f;
     color.rgb = saturate(color.rgb + FogDither(Input.vPosition.xy) * fog.a * ditherStrength);
 #endif
 

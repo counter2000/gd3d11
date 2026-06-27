@@ -5035,6 +5035,9 @@ XRESULT D3D11GraphicsEngine::DrawWaterfallMask( ID3D11RenderTargetView* waterMas
     Engine::GAPI->GetRendererState().DepthState.SetDirty();
     UpdateRenderStates();
 
+    GetContext()->OMSetRenderTargets( 1, HDRBackBuffer->GetRenderTargetView().GetAddressOf(),
+        DepthStencilBuffer->GetDepthStencilView().Get() );
+
     return XR_SUCCESS;
 }
 

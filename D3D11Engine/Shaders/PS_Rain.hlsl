@@ -252,8 +252,8 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 #ifndef SNOW_FEATURE
 	float sunHeight = normalize(AR_LightPosition - AR_CameraPosition).y;
 	float nightRainBlend = smoothstep(0.0f, 1.0f, saturate(-sunHeight * 4.0f));
-	float verticalFade = smoothstep(0.0f, 0.07f, Input.vTexcoord.y)
-		* (1.0f - smoothstep(0.93f, 1.0f, Input.vTexcoord.y));
+	float verticalFade = smoothstep(0.0f, 0.18f, Input.vTexcoord.y)
+		* (1.0f - smoothstep(0.82f, 1.0f, Input.vTexcoord.y));
 	directionalLight.w *= lerp(1.0f, 0.78f, nightRainBlend) * verticalFade;
 #endif
 	

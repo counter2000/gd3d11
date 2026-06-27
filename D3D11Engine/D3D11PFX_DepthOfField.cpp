@@ -19,21 +19,11 @@ extern bool FeatureLevel10Compatibility;
 static DepthOfFieldConstantBuffer BuildDepthOfFieldConstants() {
     auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
 
-    static float dialogBlend = 0.0f;
-    const bool inDialog = Engine::GAPI->DialogFinished() == 0;
-    const float deltaTime = std::clamp( Engine::GAPI->GetFrameTimeSec(), 0.0f, 0.1f );
-    const float response = inDialog ? 6.0f : 2.5f;
-    dialogBlend += ((inDialog ? 1.0f : 0.0f) - dialogBlend)
-        * (1.0f - std::exp(-response * deltaTime));
-
     DepthOfFieldConstantBuffer cb = {};
     cb.DoF_FocusDistance = settings.DoFFocusDistance;
     cb.DoF_FocusRange = settings.DoFFocusRange;
-    const float strengthScale = std::clamp( settings.DoFBokehRadius / 8.0f, 0.125f, 4.0f );
-    const float baseBokehRadius = 8.0f * strengthScale;
-    const float baseMaxBlur = 12.0f * strengthScale;
-    cb.DoF_BokehRadius = baseBokehRadius + (32.0f - baseBokehRadius) * dialogBlend;
-    cb.DoF_MaxBlur = baseMaxBlur + (48.0f - baseMaxBlur) * dialogBlend;
+    cb.DoF_BokehRadius = settings.DoFBokehRadius;
+    cb.DoF_MaxBlur = settings.DoFMaxBlur;
 
     auto& proj = Engine::GAPI->GetProjectionMatrix();
     cb.DoF_ProjParams = float4( 1.0f / proj._11, 1.0f / proj._22, proj._34, proj._33 );
