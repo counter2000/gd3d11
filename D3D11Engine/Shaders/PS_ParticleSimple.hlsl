@@ -24,10 +24,11 @@ struct PS_INPUT
     float3 vViewPosition    : TEXCOORD5;
     float4 vCurrClipPos     : TEXCOORD6;
     float4 vPrevClipPos     : TEXCOORD7;
+    float vParticleLightingScale : TEXCOORD8;
     float4 vPosition        : SV_POSITION;
 };
 
-float3 AdaptParticleLighting(float3 rgb)
+float3 AdaptParticleLighting(float3 rgb, float particleLightingScale)
 {
     float luma = dot(rgb, float3(0.2126f, 0.7152f, 0.0722f));
     float warmEmission = saturate((rgb.r - max(rgb.g, rgb.b)) * 3.0f);
@@ -37,7 +38,7 @@ float3 AdaptParticleLighting(float3 rgb)
     float nonEmissiveDim = lerp(1.0f, 0.24f, night) * lerp(1.0f, 0.78f, rain);
     float emissiveDim = lerp(1.0f, 0.70f, night * rain);
     float factor = lerp(nonEmissiveDim, emissiveDim, emissiveGuess);
-    return rgb * lerp(1.0f, factor, saturate(AC_EnableParticleLighting * AC_ParticleLightingStrength));
+    return rgb * lerp(1.0f, factor, saturate(AC_EnableParticleLighting * AC_ParticleLightingStrength * particleLightingScale));
 }
 
 float4 PSMain( PS_INPUT Input ) : SV_TARGET
@@ -47,6 +48,6 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 #ifdef USE_FFDATA
     color *= cbFFData.textureFactor;
 #endif
-    color.rgb = AdaptParticleLighting(color.rgb);
+    color.rgb = AdaptParticleLighting(color.rgb, Input.vParticleLightingScale);
     return color;
 }

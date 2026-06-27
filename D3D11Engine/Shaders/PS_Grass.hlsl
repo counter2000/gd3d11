@@ -67,7 +67,7 @@ DEFERRED_PS_OUTPUT PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	output.vNrm = EncodeNormalGBuffer(normalize(Input.vNormalVS));
 	
-	output.vSI_SP = float2(0.0f, -1.0f); // Mark grass for deferred backlighting.
+	output.vSI_SP = float2(0.0f, -0.5f); // Unique grass marker; regular alpha-tested materials encode values <= -1.
 	
 	// Calculate velocity from clip positions
 	output.vVelocity = CalculateVelocity(Input.vCurrClipPos, Input.vPrevClipPos);

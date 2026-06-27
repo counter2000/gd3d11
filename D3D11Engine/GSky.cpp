@@ -276,10 +276,11 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_LightPos = LightDir;
 
     XMVECTOR lightDirVec = XMVector3Normalize( XMLoadFloat3( &LightDir ) );
-    XMVECTOR lightWorld = Engine::GAPI->GetCameraPositionXM() + lightDirVec * std::max( 10000.0f, Engine::GAPI->GetFarPlane() );
-    XMMATRIX lightViewProj = Engine::GAPI->GetViewMatrixXM() * XMLoadFloat4x4( &Engine::GAPI->GetProjectionMatrix() );
+    const float lightDistance = std::max( 10000.0f, Engine::GAPI->GetFarPlane() );
+    XMVECTOR lightViewDir = XMVector3Normalize( XMVector3TransformNormal( lightDirVec, Engine::GAPI->GetViewMatrixXM() ) );
+    XMVECTOR lightViewPosition = XMVectorSet( XMVectorGetX( lightViewDir ) * lightDistance, XMVectorGetY( lightViewDir ) * lightDistance, XMVectorGetZ( lightViewDir ) * lightDistance, 1.0f );
     XMFLOAT4 lightClip;
-    XMStoreFloat4( &lightClip, XMVector4Transform( XMVectorSet( XMVectorGetX( lightWorld ), XMVectorGetY( lightWorld ), XMVectorGetZ( lightWorld ), 1.0f ), lightViewProj ) );
+    XMStoreFloat4( &lightClip, XMVector4Transform( lightViewPosition, XMLoadFloat4x4( &Engine::GAPI->GetProjectionMatrix() ) ) );
     float lightVisible = 0.0f;
     float lightScreenX = 0.5f;
     float lightScreenY = 0.5f;
@@ -290,7 +291,12 @@ XRESULT GSky::RenderSky() {
         float ndcZ = lightClip.z * invW;
         lightScreenX = ndcX * 0.5f + 0.5f;
         lightScreenY = -ndcY * 0.5f + 0.5f;
-        lightVisible = (lightClip.w > 0.0f && ndcZ >= 0.0f && ndcZ <= 1.0f && lightScreenX >= -0.25f && lightScreenX <= 1.25f && lightScreenY >= -0.25f && lightScreenY <= 1.25f) ? 1.0f : 0.0f;
+        if ( lightClip.w > 0.0f && ndcZ >= 0.0f && ndcZ <= 1.0f ) {
+            const float edgeDistance = std::min( std::min( lightScreenX + 0.25f, 1.25f - lightScreenX ), std::min( lightScreenY + 0.25f, 1.25f - lightScreenY ) );
+            const float fadeWidth = 0.35f;
+            const float fade = std::max( 0.0f, std::min( 1.0f, (edgeDistance + fadeWidth) / fadeWidth ) );
+            lightVisible = fade * fade * (3.0f - 2.0f * fade);
+        }
     }
     AtmosphereCB.AC_LightScreenPos = XMFLOAT4( lightScreenX, lightScreenY, lightVisible, 0.0f );
     AtmosphereCB.AC_CameraHeight = -Atmosphere.SphereOffsetY;
@@ -336,7 +342,7 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_ContactShadowStrength = rendererSettings.ContactShadowStrength * 0.35f;
     AtmosphereCB.AC_ScreenSpaceGIStrength = rendererSettings.ScreenSpaceGIStrength * 0.25f;
     AtmosphereCB.AC_EnableParticleLighting = Engine::GAPI->GetRendererState().RendererSettings.EnableParticleLighting ? 1.0f : 0.0f;
-    AtmosphereCB.AC_ParticleLightingStrength = Engine::GAPI->GetRendererState().RendererSettings.ParticleLightingStrength * 0.75f;
+    AtmosphereCB.AC_ParticleLightingStrength = Engine::GAPI->GetRendererState().RendererSettings.ParticleLightingStrength * 1.5f;
 
     //Engine::GraphicsEngine->DrawSky();
 

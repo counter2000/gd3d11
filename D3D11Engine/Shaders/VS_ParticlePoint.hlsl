@@ -28,6 +28,7 @@ struct VS_INPUT
     float3 vSize : SIZE;
     unsigned int type : TYPE;
     float3 vVelocity : VELOCITY;
+    float vParticleLightingScale : LIGHTINGSCALE;
 };
 
 struct VS_OUTPUT
@@ -39,6 +40,7 @@ struct VS_OUTPUT
     float3 vViewPosition : TEXCOORD5;
 	float4 vCurrClipPos     : TEXCOORD6;
 	float4 vPrevClipPos     : TEXCOORD7;
+    float vParticleLightingScale : TEXCOORD8;
     float4 vPosition : SV_POSITION;
 };
 
@@ -105,5 +107,6 @@ VS_OUTPUT VSMain( VS_INPUT Input )
     Output.vPosition = mul(float4(position, 1.0f), frame.M_ViewProj);
     Output.vDiffuse = float4(Input.vDiffuse.rgb, pow(Input.vDiffuse.a, 2.2f));
     Output.vTexcoord = float2(tu[Input.vertexID], tv[Input.vertexID]);
+    Output.vParticleLightingScale = Input.vParticleLightingScale;
 	return Output;
 }

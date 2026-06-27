@@ -25,7 +25,8 @@ struct MaterialInfo;
 
 struct ParticleRenderInfo {
     GothicBlendStateInfo BlendState;
-    int BlendMode;
+    int BlendMode = zRND_ALPHA_FUNC_BLEND;
+    bool SortBackToFront = false;
 };
 
 struct ParticleInstanceInfo {
@@ -34,6 +35,7 @@ struct ParticleInstanceInfo {
     float3 scale;
     int drawMode; // 0 = billboard, 1 = y-locked billboard, 2 = y-plane, 3 = velo aligned
     float3 velocity;
+    float particleLightingScale = 1.0f;
 };
 
 /** Mutable per-particle data, updated every frame by the advance CS/VS. */

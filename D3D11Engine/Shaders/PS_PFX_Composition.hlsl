@@ -111,7 +111,7 @@ float4 ComputeHeightFog( float2 texcoord, float2 pixelPosition )
     float dryNightFog = fog * nightTimeBlend * (1.0f - activeWeatherFog);
     fog = max(weatherFog, dryNightFog);
     float fogGradientWeight = saturate(fog * (1.0f - fog) * 4.0f);
-    float fogGradientDither = FogDither(pixelPosition) * nightTimeBlend * (6.0f / 255.0f);
+    float fogGradientDither = FogDither(pixelPosition) * nightTimeBlend * (8.0f / 255.0f);
     float ditheredFog = saturate(fog + fogGradientDither * fogGradientWeight);
     float3 color = ApplyAtmosphericScatteringGround( position, HF_FogColorMod, true, false );
 	float nightFogBrightness = lerp(1.0f, max(0.0f, AC_NightFogBrightness), saturate(AC_EnableNightAtmosphere));
@@ -256,7 +256,7 @@ float3 ComputeVolumetricLightShafts(float2 uv, float depth)
     float weather = max(saturate(AC_RainFXWeight), saturate(AC_SceneWettness));
     float atmosphereWeight = saturate(day + night * 0.28f) * lerp(1.0f, 0.28f, weather);
 
-    float2 lightCenter = saturate(AC_LightScreenPos.xy);
+    float2 lightCenter = AC_LightScreenPos.xy;
     float2 toLight = lightCenter - uv;
     float distToLight = length(toLight);
     float2 dir = toLight / max(distToLight, 0.0001f);
@@ -317,7 +317,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
     float4 fog = ComputeHeightFog( Input.vTexcoord, Input.vPosition.xy );
     color.rgb = lerp( color.rgb, fog.rgb, fog.a );
     float nightTimeBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f));
-    float ditherStrength = lerp(2.0f, 7.0f, nightTimeBlend) / 255.0f;
+    float ditherStrength = lerp(2.0f, 9.0f, nightTimeBlend) / 255.0f;
     color.rgb = saturate(color.rgb + FogDither(Input.vPosition.xy) * fog.a * ditherStrength);
 #endif
 

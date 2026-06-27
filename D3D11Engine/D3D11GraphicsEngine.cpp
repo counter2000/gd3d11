@@ -9219,6 +9219,19 @@ void D3D11GraphicsEngine::DrawFrameParticles(
                 continue;
         }
 
+        if ( partInfo.SortBackToFront && instances.size() > 1 ) {
+            const float3 cameraPosition = Engine::GAPI->GetCameraPosition();
+            std::sort( instances.begin(), instances.end(), [cameraPosition]( const ParticleInstanceInfo& a, const ParticleInstanceInfo& b ) {
+                const float adx = a.position.x - cameraPosition.x;
+                const float ady = a.position.y - cameraPosition.y;
+                const float adz = a.position.z - cameraPosition.z;
+                const float bdx = b.position.x - cameraPosition.x;
+                const float bdy = b.position.y - cameraPosition.y;
+                const float bdz = b.position.z - cameraPosition.z;
+                return adx * adx + ady * ady + adz * adz > bdx * bdx + bdy * bdy + bdz * bdz;
+            } );
+        }
+
         GothicBlendStateInfo& blendState = partInfo.BlendState;
 
         // This only happens once or twice, since the input list is sorted

@@ -86,6 +86,34 @@ namespace {
         return name;
     }
 
+    bool NameStartsWithMarker( const char* name, const char* marker ) {
+        if ( !name || !marker )
+            return false;
+
+        while ( *marker ) {
+            if ( !*name )
+                return false;
+            const unsigned char nameChar = static_cast<unsigned char>(*name++);
+            const unsigned char markerChar = static_cast<unsigned char>(*marker++);
+            if ( ::tolower( nameChar ) != ::tolower( markerChar ) )
+                return false;
+        }
+        return true;
+    }
+
+    bool IsWaterfallParticleTexture( zCTexture* texture ) {
+        if ( !texture )
+            return false;
+
+        const std::string name = ToLowerMaterialName( texture->GetNameWithoutExt() );
+        return name.find( "waterwall" ) != std::string::npos
+            || name.find( "waterfist_expl" ) != std::string::npos
+            || name.find( "waterfall_a0" ) != std::string::npos
+            || name.find( "watersplash2" ) != std::string::npos
+            || name.find( "watersplash3" ) != std::string::npos
+            || name.find( "waveeffect_top" ) != std::string::npos;
+    }
+
     void ApplyMaterialCompatibility( MaterialInfo::Buffer& buffer, int version ) {
         if ( version < 2 && buffer.DisplacementFactor == 0.0f ) {
             buffer.DisplacementFactor = 0.7f;
@@ -3398,8 +3426,13 @@ void GothicAPI::DrawParticleFX( zCVob* source, zCParticleFX* fx, ParticleFrameDa
             }
         }
 
+        const char* pfxName = source && source->GetVisual() ? source->GetVisual()->GetObjectName() : reinterpret_cast<zCVisual*>(fx)->GetObjectName();
+        const bool lavaFogParticle = NameStartsWithMarker( pfxName, "LAVAFOG" );
+        const bool waterfallParticle = IsWaterfallParticleTexture( texture );
+
         // Set render states for this type
         ParticleRenderInfo& inf = FrameParticleInfo[texture];
+        inf.SortBackToFront = inf.SortBackToFront || lavaFogParticle;
 
         switch ( fx->GetEmitter()->GetVisAlphaFunc() ) {
         case zRND_ALPHA_FUNC_ADD:
@@ -3486,6 +3519,7 @@ void GothicAPI::DrawParticleFX( zCVob* source, zCParticleFX* fx, ParticleFrameDa
             ii.position = p->PositionWS;
             ii.color = color;
             ii.velocity = p->Vel;
+            ii.particleLightingScale = waterfallParticle ? 0.5f : 1.0f;
 
             if ( fx->GetEmitter()->GetVisAlignment() == 2 ) {
                 if ( zCVob* connectedVob = fx->GetConnectedVob() ) {
