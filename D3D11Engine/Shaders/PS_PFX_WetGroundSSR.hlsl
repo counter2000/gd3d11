@@ -165,7 +165,8 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
     if (hitWeight <= 0.0f)
         return float4(sceneColor, 1.0f);
 
-    float3 reflectedColor = SampleRoughReflection(hitUV, reflectionDistortion);
+    float2 reflectedUV = saturate(hitUV + rippleDistortion * 0.0025f);
+    float3 reflectedColor = SampleRoughReflection(reflectedUV, reflectionDistortion);
     float reflectionLuma = dot(reflectedColor, float3(0.2126f, 0.7152f, 0.0722f));
     reflectedColor *= rcp(1.0f + max(0.0f, reflectionLuma - 1.0f) * 0.7f);
 

@@ -54,7 +54,7 @@ float3 AdaptParticleLighting(float3 rgb, float particleLightingScale)
     return rgb * lerp(1.0f, factor, saturate(AC_EnableParticleLighting * AC_ParticleLightingStrength) * saturate(particleLightingScale));
 }
 
-float SoftParticleFade( PS_INPUT Input )
+float SoftParticleFade( PS_INPUT Input, float3 rgb )
 {
 #ifndef USE_FFDATA
     float2 screenUV = Input.vPosition.xy / RI_ViewportSize;
@@ -64,7 +64,17 @@ float SoftParticleFade( PS_INPUT Input )
 
     float sceneViewDepth = RI_Projection._43 / (sceneDepth - RI_Projection._33);
     float depthDifference = sceneViewDepth - Input.vViewPosition.z;
-    return saturate(depthDifference / 45.0f);
+    if ( depthDifference <= 0.0f )
+        return 0.0f;
+
+    float luma = dot(rgb, float3(0.2126f, 0.7152f, 0.0722f));
+    float warmEmission = saturate((rgb.r - max(rgb.g, rgb.b)) * 3.0f);
+    float emissiveGuess = saturate((luma - 0.45f) * 2.4f + warmEmission * 0.85f);
+
+    float smokeFade = smoothstep(0.0f, 1.0f, saturate(depthDifference / 45.0f));
+    float fireEdgeFade = smoothstep(0.0f, 1.0f, saturate(depthDifference / 10.0f));
+    float fireFade = max(fireEdgeFade, 0.78f);
+    return lerp(smokeFade, fireFade, emissiveGuess);
 #else
     return 1.0f;
 #endif
@@ -77,7 +87,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 #ifdef USE_FFDATA
     color *= cbFFData.textureFactor;
 #endif
-    color.a *= SoftParticleFade(Input);
+    color.a *= SoftParticleFade(Input, color.rgb);
     color.rgb = AdaptParticleLighting(color.rgb, Input.vParticleLightingScale);
     return color;
 }

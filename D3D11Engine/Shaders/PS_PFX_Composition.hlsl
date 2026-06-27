@@ -262,23 +262,30 @@ float3 ComputeVolumetricLightShafts(float2 uv, float depth)
     float2 dir = toLight / max(distToLight, 0.0001f);
 
     float visibility = 0.0f;
+    float visibilityWeight = 0.0f;
     [unroll]
-    for (int i = 1; i <= 10; ++i)
+    for (int i = 0; i < 16; ++i)
     {
-        float t = (float)i / 10.0f;
-        float2 suv = saturate(uv + dir * t * 0.22f);
-        float sd = GetDepthRaw(suv);
-        float sky = 1.0f - IsGeometryPixel(sd);
-        // Do not fully kill shafts on landscape; foggy air should still show a weak beam over geometry.
-        visibility += lerp(0.38f, 1.0f, sky) * (1.0f - t * 0.045f);
+        float t = ((float)i + 0.5f) / 16.0f;
+        float2 suv = uv + dir * t * 0.24f;
+        float inBounds = step(0.0f, suv.x) * step(suv.x, 1.0f) * step(0.0f, suv.y) * step(suv.y, 1.0f);
+        if (inBounds > 0.0f)
+        {
+            float sd = GetDepthRaw(suv);
+            float sky = 1.0f - IsGeometryPixel(sd);
+            float sampleWeight = (1.0f - t * 0.10f);
+            visibility += lerp(0.38f, 1.0f, sky) * sampleWeight;
+            visibilityWeight += sampleWeight;
+        }
     }
-    visibility /= 10.0f;
+    visibility /= max(visibilityWeight, 0.001f);
 
     float geom = IsGeometryPixel(depth);
-    float geometryMist = lerp(0.78f, 1.0f, 1.0f - geom);
-    float radial = 1.0f - smoothstep(0.02f, 1.24f, distToLight);
+    float geometryMist = lerp(0.82f, 1.0f, geom);
+    float radial = pow(1.0f - smoothstep(0.00f, 1.34f, distToLight), 1.12f);
+    float skyShaftLimit = lerp(0.42f, 1.0f, geom);
     float onScreenLight = saturate(AC_LightScreenPos.z + 0.18f);
-    float shaft = visibility * geometryMist * atmosphereWeight * radial * onScreenLight;
+    float shaft = visibility * geometryMist * atmosphereWeight * radial * skyShaftLimit * onScreenLight;
 
     float3 dayColor = float3(1.0f, 0.80f, 0.48f);
     float3 nightColor = float3(0.18f, 0.28f, 0.55f);
