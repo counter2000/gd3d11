@@ -99,6 +99,15 @@ namespace {
             || name.find( "waveeffect_top" ) != std::string::npos;
     }
 
+    bool IsEmissiveParticleTexture( zCTexture* texture, int blendMode ) {
+        if ( !texture || blendMode != zRND_ALPHA_FUNC_ADD )
+            return false;
+
+        const std::string name = ToLowerMaterialName( texture->GetNameWithoutExt() );
+        // FIRESMOKE+ADD is Gothic's LAVAFOG, not an emissive flame.
+        return name.find( "firesmoke" ) == std::string::npos;
+    }
+
     void ApplyMaterialCompatibility( MaterialInfo::Buffer& buffer, int version ) {
         if ( version < 2 && buffer.DisplacementFactor == 0.0f ) {
             buffer.DisplacementFactor = 0.7f;
@@ -3415,6 +3424,7 @@ void GothicAPI::DrawParticleFX( zCVob* source, zCParticleFX* fx, ParticleFrameDa
 
         const bool waterfallParticle = IsWaterfallParticleTexture( texture );
         const int blendMode = static_cast<int>(fx->GetEmitter()->GetVisAlphaFunc());
+        const bool emissiveParticle = !waterfallParticle && IsEmissiveParticleTexture( texture, blendMode );
         const ParticleBatchKey batchKey = { texture, blendMode };
 
         // Blend mode is part of the batch key because Gothic reuses particle textures
@@ -3506,7 +3516,7 @@ void GothicAPI::DrawParticleFX( zCVob* source, zCParticleFX* fx, ParticleFrameDa
             ii.position = p->PositionWS;
             ii.color = color;
             ii.velocity = p->Vel;
-            ii.particleLightingScale = waterfallParticle ? 0.25f : 1.0f;
+            ii.particleLightingScale = emissiveParticle ? -1.0f : (waterfallParticle ? 0.25f : 1.0f);
 
             if ( fx->GetEmitter()->GetVisAlignment() == 2 ) {
                 if ( zCVob* connectedVob = fx->GetConnectedVob() ) {
@@ -5547,8 +5557,8 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "Display", "ForceFOV", std::to_string( s.ForceFOV ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "FOVHoriz", std::to_string( static_cast<int>(s.FOVHoriz) ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "FOVVert", std::to_string( static_cast<int>(s.FOVVert) ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "Display", "Gamma", std::to_string( s.GammaValue ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "Display", "Brightness", std::to_string( s.BrightnessValue ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "Display", "DisplayContrast", std::to_string( s.GammaValue ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "Display", "DisplayBrightness", std::to_string( s.BrightnessValue ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "DisplayFlip", std::to_string( s.DisplayFlip ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "LowLatency", std::to_string( s.LowLatency ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Display", "HDR_Monitor", std::to_string( s.HDR_Monitor ? TRUE : FALSE ).c_str(), ini.c_str() );
@@ -5713,8 +5723,8 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.ForceFOV = GetPrivateProfileBoolA( "Display", "ForceFOV", ds.ForceFOV, ini );
         s.FOVHoriz = GetPrivateProfileIntA( "Display", "FOVHoriz", 90, ini.c_str() );
         s.FOVVert = GetPrivateProfileIntA( "Display", "FOVVert", 90, ini.c_str() );
-        s.GammaValue = GetPrivateProfileFloatA( "Display", "Gamma", 1.0f, ini );
-        s.BrightnessValue = GetPrivateProfileFloatA( "Display", "Brightness", 1.0f, ini );
+        s.GammaValue = GetPrivateProfileFloatA( "Display", "DisplayContrast", 1.0f, ini );
+        s.BrightnessValue = GetPrivateProfileFloatA( "Display", "DisplayBrightness", 1.0f, ini );
         s.DisplayFlip = GetPrivateProfileBoolA( "Display", "DisplayFlip", ds.DisplayFlip, ini );
         s.LowLatency = GetPrivateProfileBoolA( "Display", "LowLatency", ds.LowLatency, ini );
         s.HDR_Monitor = GetPrivateProfileBoolA( "Display", "HDR_Monitor", false, ini );

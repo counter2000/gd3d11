@@ -249,6 +249,12 @@ float3 ComputeScreenSpaceGILight(float2 uv, float centerDepth, float3 baseColor)
 #endif
 
 #if COMPOSE_LIGHTSHAFTS
+float LightShaftGeometryCoverage(float depth)
+{
+    // Keep the sky/geometry transition continuous so temporal projection jitter cannot flip the mask.
+    return smoothstep(0.0000001f, 0.0000060f, max(depth, 0.0f));
+}
+
 float3 ComputeVolumetricLightShafts(float2 uv, float depth)
 {
     float day = saturate(AC_LightPos.y * 2.0f + 0.15f);
@@ -264,23 +270,19 @@ float3 ComputeVolumetricLightShafts(float2 uv, float depth)
     float visibility = 0.0f;
     float visibilityWeight = 0.0f;
     [unroll]
-    for (int i = 0; i < 16; ++i)
+    for (int i = 0; i < 24; ++i)
     {
-        float t = ((float)i + 0.5f) / 16.0f;
-        float2 suv = uv + dir * t * 0.24f;
-        float inBounds = step(0.0f, suv.x) * step(suv.x, 1.0f) * step(0.0f, suv.y) * step(suv.y, 1.0f);
-        if (inBounds > 0.0f)
-        {
-            float sd = GetDepthRaw(suv);
-            float sky = 1.0f - IsGeometryPixel(sd);
-            float sampleWeight = (1.0f - t * 0.10f);
-            visibility += lerp(0.38f, 1.0f, sky) * sampleWeight;
-            visibilityWeight += sampleWeight;
-        }
+        float t = ((float)i + 0.5f) / 24.0f;
+        float2 suv = saturate(uv + dir * t * 0.24f);
+        float sd = GetDepthRaw(suv);
+        float sky = 1.0f - LightShaftGeometryCoverage(sd);
+        float sampleWeight = 1.0f - t * 0.10f;
+        visibility += lerp(0.38f, 1.0f, sky) * sampleWeight;
+        visibilityWeight += sampleWeight;
     }
     visibility /= max(visibilityWeight, 0.001f);
 
-    float geom = IsGeometryPixel(depth);
+    float geom = LightShaftGeometryCoverage(depth);
     float geometryMist = lerp(0.82f, 1.0f, geom);
     float radial = pow(1.0f - smoothstep(0.00f, 1.34f, distToLight), 1.12f);
     float skyShaftLimit = lerp(0.42f, 1.0f, geom);

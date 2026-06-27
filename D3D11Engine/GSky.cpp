@@ -279,8 +279,12 @@ XRESULT GSky::RenderSky() {
     const float lightDistance = std::max( 10000.0f, Engine::GAPI->GetFarPlane() );
     XMVECTOR lightViewDir = XMVector3Normalize( XMVector3TransformNormal( lightDirVec, Engine::GAPI->GetViewMatrixXM() ) );
     XMVECTOR lightViewPosition = XMVectorSet( XMVectorGetX( lightViewDir ) * lightDistance, XMVectorGetY( lightViewDir ) * lightDistance, XMVectorGetZ( lightViewDir ) * lightDistance, 1.0f );
+    XMFLOAT4X4 lightProjection = Engine::GAPI->GetProjectionMatrix();
+    // Screen-space atmosphere effects must not follow the temporal sub-pixel jitter.
+    lightProjection._13 = 0.0f;
+    lightProjection._23 = 0.0f;
     XMFLOAT4 lightClip;
-    XMStoreFloat4( &lightClip, XMVector4Transform( lightViewPosition, XMLoadFloat4x4( &Engine::GAPI->GetProjectionMatrix() ) ) );
+    XMStoreFloat4( &lightClip, XMVector4Transform( lightViewPosition, XMLoadFloat4x4( &lightProjection ) ) );
     float lightVisible = 0.0f;
     float lightScreenX = 0.5f;
     float lightScreenY = 0.5f;

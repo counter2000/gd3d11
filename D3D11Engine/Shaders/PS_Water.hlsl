@@ -131,6 +131,8 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	float ssrRawWeight = 0.0f;
 	float ssrWeight = 0.0f;
 	float ssrHitQuality = 0.0f;
+	float3 ssrHitWorldPosition = Input.vWorldPosition;
+	float ssrHitValid = 0.0f;
 	bool waterSSRActive = AC_EnableSSR > 0.5f && WM_DisableSSR < 0.5f;
 
 	if (waterSSRActive) {
@@ -191,6 +193,8 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 				float nearHitQuality = smoothstep(700.0f, 2200.0f, abs(sampleZ));
 
 				reflectionSSR = TX_Scene.SampleLevel(SS_Linear, uv, 0).xyz;
+				ssrHitWorldPosition = midPos;
+				ssrHitValid = 1.0f;
 				float2 edgeFade = saturate(abs(uv - 0.5f) * 2.0f);
 				float edgeDistance = max(edgeFade.x, edgeFade.y);
 				ssrRawWeight = 1.0f - smoothstep(0.78f, 1.0f, edgeDistance);
@@ -219,13 +223,28 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	float reflectionStrength = (WM_DisableSSR < 0.5f) ? max(0.0f, AC_SSRStrength) : 0.0f;
 	float cubeWeight = waterSSRActive ? saturate(1.0f - ssrWeight * saturate(reflectionStrength)) : 1.0f;
 	float3 reflectionSSRColor = max(reflectionSSR, float3(0.0f, 0.0f, 0.0f));
+	if (ssrHitValid > 0.5f)
+	{
+		float3 rainAtmosphereColor = ApplyAtmosphericScatteringGround(ssrHitWorldPosition, reflectionSSRColor);
+		reflectionSSRColor = lerp(reflectionSSRColor, rainAtmosphereColor, saturate(AC_RainFXWeight));
+	}
 	float reflectionLuma = dot(reflectionSSRColor, float3(0.2126f, 0.7152f, 0.0722f));
 	// Preserve HDR light-source reflections; only tame extreme outliers on the dynamic layer.
 	reflectionSSRColor *= rcp(1.0f + max(0.0f, reflectionLuma - 6.0f) * 0.12f);
 	// Dynamic SSR is the only screen-space reflection layer now. The cubemap is the fallback
 	// whenever the strength is zero or the near/contact SSR masks suppress actor artifacts.
-	scene.rgb += reflection * cubeWeight * fresnel * lerp(1.0f, diffuse, 0.6f);
+	float waterViewDistance = length(Input.vWorldPosition - AC_WorldCameraPos);
+	float rainCubemapVisibility = 1.0f - saturate(AC_RainFXWeight) * smoothstep(12000.0f, 50000.0f, waterViewDistance);
+	scene.rgb += reflection * cubeWeight * rainCubemapVisibility * fresnel * lerp(1.0f, diffuse, 0.6f);
 	float ssrBlend = saturate(ssrWeight * ssrFresnel * reflectionStrength * 0.78f * lerp(0.85f, 1.10f, nightAmount));
+	float rainFogVisibility = 1.0f;
+	if (ssrHitValid > 0.5f)
+	{
+		float hitDistance = length(ssrHitWorldPosition - AC_WorldCameraPos);
+		float rainFogOcclusion = saturate(AC_RainFXWeight) * smoothstep(12000.0f, 50000.0f, hitDistance);
+		rainFogVisibility = 1.0f - rainFogOcclusion;
+	}
+	ssrBlend *= rainFogVisibility;
 	float3 color = lerp(scene, sceneClean, pow(saturate(pxDistance / 35000.0f), 4.0f));
 	color = lerp(color, sceneWet, (1-shallowDepth));
 

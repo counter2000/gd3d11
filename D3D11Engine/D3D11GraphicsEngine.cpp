@@ -8697,9 +8697,21 @@ void D3D11GraphicsEngine::DrawDecalList( const std::vector<zCVob*>& decals,
             gacb.GA_LightingScale = ( 1.0f + ( 0.34f - 1.0f ) * night ) * ( 1.0f + ( 0.78f - 1.0f ) * rain );
         }
     }
+    const float ambientDecalLightingScale = gacb.GA_LightingScale;
+    if ( !lighting ) {
+        struct DecalSoftParticleConstants {
+            float4 DepthParams;
+        } dspcb = {};
+        const auto& projection = Engine::GAPI->GetProjectionMatrix();
+        dspcb.DepthParams = float4( projection._33, projection._43, 10.0f, 0.0f );
+        GetActivePS()->GetBuffer( "DecalSoftParticleInfo" ).Update( &dspcb ).Bind();
+        DepthStencilBufferCopy->BindToPixelShader( GetContext().Get(), 3 );
+    }
+
     int lastAlphaFunc = -1;
     zCTexture* lastTex = nullptr;
     float lastGhostAlpha = gacb.GA_Alpha;
+    float lastLightingScale = gacb.GA_LightingScale;
     auto psBufGAI = GetActivePS()->GetBuffer( "GhostAlphaInfo" )
         .Update( &gacb )
         .Bind();
@@ -8745,6 +8757,13 @@ void D3D11GraphicsEngine::DrawDecalList( const std::vector<zCVob*>& decals,
         }
 
         if ( !lighting ) {
+            const float lightingScale = alphaFunc == zMAT_ALPHA_FUNC_ADD ? -1.0f : ambientDecalLightingScale;
+            if ( lastLightingScale != lightingScale ) {
+                gacb.GA_LightingScale = lightingScale;
+                psBufGAI.Update( &gacb );
+                lastLightingScale = lightingScale;
+            }
+
             switch ( alphaFunc ) {
             case zMAT_ALPHA_FUNC_BLEND:
             case zMAT_ALPHA_FUNC_BLEND_TEST:
@@ -8801,6 +8820,9 @@ void D3D11GraphicsEngine::DrawDecalList( const std::vector<zCVob*>& decals,
     UINT nullStride = 0;
     UINT nullOffset = 0;
     Context->IASetVertexBuffers( 1, 1, &nullBuf, &nullStride, &nullOffset );
+    if ( !lighting ) {
+        Context->PSSetShaderResources( 3, 1, s_nullSRVs );
+    }
 }
 
 /** Draws quadmarks in a simple way */
@@ -9136,6 +9158,7 @@ void D3D11GraphicsEngine::DrawFrameParticles(
     SetActivePixelShader( PShaderID::PS_ParticleDistortion );
     ActivePS->Apply();
     ActivePS->GetBuffer("RefractionInfo").Update(&ricb).Bind();
+    DepthStencilBufferCopy->BindToPixelShader( GetContext().Get(), 3 );
     if ( auto sky = Engine::GAPI->GetSky() ) {
         ActivePS->GetBuffer( "Atmosphere" ).Update( &sky->GetAtmosphereCB() ).Bind();
     }
@@ -9274,6 +9297,7 @@ void D3D11GraphicsEngine::DrawFrameParticles(
         GetResolution(), true );
 
     GetContext()->PSSetShaderResources( 1, 2, s_nullSRVs );
+    GetContext()->PSSetShaderResources( 3, 1, s_nullSRVs );
 }
 
 /** Called when a vob was removed from the world */

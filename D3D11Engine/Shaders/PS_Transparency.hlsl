@@ -8,11 +8,17 @@ cbuffer GhostAlphaInfo : register( b0 )
     float GA_LightingScale;
 };
 
+cbuffer DecalSoftParticleInfo : register( b1 )
+{
+    float4 DSP_DepthParams; // x=projection._33, y=projection._43, z=fade distance
+};
+
 //--------------------------------------------------------------------------------------
 // Textures and Samplers
 //--------------------------------------------------------------------------------------
 SamplerState SS_Linear : register( s0 );
 Texture2D	TX_Texture0 : register( t0 );
+Texture2D	TX_Depth : register( t3 );
 Texture2D	TX_Scene : register( t5 );
 
 //--------------------------------------------------------------------------------------
@@ -38,6 +44,21 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	//float screenLuma = 0.2126 * screenColor.r + 0.7125 * screenColor.g + 0.0722 * screenColor.b;
 
 	float4 color = TX_Texture0.Sample(SS_Linear, Input.vTexcoord);
-    //color *= float4(screenLuma, screenLuma, screenLuma, GA_Alpha);
-    return float4(color.rgb * GA_LightingScale, color.a * GA_Alpha);
+    float lightingScale = abs(GA_LightingScale);
+    float softFade = 1.0f;
+    if (GA_LightingScale < 0.0f && Input.vViewPosition.z > 0.0f)
+    {
+        float2 screenUV = Input.vPosition.xy / GA_ViewportSize;
+        float sceneDepth = TX_Depth.Sample(SS_Linear, saturate(screenUV)).r;
+        if (sceneDepth > 1e-7f)
+        {
+            float sceneViewDepth = DSP_DepthParams.y / (sceneDepth - DSP_DepthParams.x);
+            float depthDifference = sceneViewDepth - Input.vViewPosition.z;
+            softFade = depthDifference <= 0.0f
+                ? 0.0f
+                : smoothstep(0.0f, 1.0f, saturate(depthDifference / DSP_DepthParams.z));
+        }
+    }
+    // Negative lighting scale marks emissive additive decals; magnitude remains the color scale.
+    return float4(color.rgb * lightingScale * softFade, color.a * GA_Alpha * softFade);
 }

@@ -38,12 +38,21 @@ bool IsSkyDepth( float d )
     return d <= 1e-7f;
 }
 
+float GeometryCoverage( float d )
+{
+    if ( DoF_Pad < 0.5f )
+        return IsSkyDepth( d ) ? 0.0f : 1.0f;
+
+    return smoothstep( 1e-7f, 6e-6f, max( d, 0.0f ) );
+}
+
 float ComputeCoCFromDepth( float d, float focusDepth )
 {
-    if ( IsSkyDepth( d ) )
+    if ( GeometryCoverage( d ) <= 0.001f )
         return 0.0f;
 
-    return saturate( ( LinearizeDepth( d ) - focusDepth ) / DoF_FocusRange );
+    float stableDepth = DoF_Pad >= 0.5f ? max( d, 6e-6f ) : d;
+    return saturate( ( LinearizeDepth( stableDepth ) - focusDepth ) / DoF_FocusRange );
 }
 
 static const int SKY_EDGE_SAMPLE_COUNT = 24;
@@ -71,7 +80,7 @@ float4 GetSkyEdgeBlurSample(float2 texcoord, float2 dtexel, float focusDepth)
         float coc = ComputeCoCFromDepth(depth, focusDepth);
         float4 blur = TX_Blur.SampleLevel(SS_Linear, sampleUV, 0);
         float radialWeight = exp(-dot(offset, offset) * 2.4f);
-        float geometryWeight = IsSkyDepth(depth) ? 0.0f : smoothstep(0.12f, 0.65f, coc);
+        float geometryWeight = GeometryCoverage(depth) * smoothstep(0.12f, 0.65f, coc);
         float sampleWeight = radialWeight * geometryWeight;
 
         colorAccum += blur.rgb * sampleWeight;
@@ -105,8 +114,9 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
     TX_Depth.GetDimensions( depthSize.x, depthSize.y );
     float2 dtexel = 1.0 / depthSize;
     float depthC = TX_Depth.SampleLevel( SS_Linear, texcoord, 0 ).r;
+    float geometryC = GeometryCoverage( depthC );
     float4 blurSample = TX_Blur.SampleLevel( SS_Linear, texcoord, 0 );
-    if ( IsSkyDepth( depthC ) )
+    if ( DoF_Pad < 0.5f && IsSkyDepth( depthC ) )
     {
         float4 skyEdgeBlur = GetSkyEdgeBlurSample( texcoord, dtexel, focusDepth );
         OutputComposite[DTid.xy] = float4( lerp( sharpColor, skyEdgeBlur.rgb, skyEdgeBlur.a ), 1.0 );
@@ -118,16 +128,37 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
     float depthR = TX_Depth.SampleLevel( SS_Linear, texcoord + float2(  dtexel.x, 0 ), 0 ).r;
     float depthU = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( 0, -dtexel.y ), 0 ).r;
     float depthD = TX_Depth.SampleLevel( SS_Linear, texcoord + float2( 0,  dtexel.y ), 0 ).r;
-    float cocL = IsSkyDepth( depthL ) ? cocC : ComputeCoCFromDepth( depthL, focusDepth );
-    float cocR = IsSkyDepth( depthR ) ? cocC : ComputeCoCFromDepth( depthR, focusDepth );
-    float cocU = IsSkyDepth( depthU ) ? cocC : ComputeCoCFromDepth( depthU, focusDepth );
-    float cocD = IsSkyDepth( depthD ) ? cocC : ComputeCoCFromDepth( depthD, focusDepth );
+    float geometryL = GeometryCoverage( depthL );
+    float geometryR = GeometryCoverage( depthR );
+    float geometryU = GeometryCoverage( depthU );
+    float geometryD = GeometryCoverage( depthD );
 
-    float2 inwardShift = float2(
-        (IsSkyDepth(depthL) ? 1.0f : 0.0f) - (IsSkyDepth(depthR) ? 1.0f : 0.0f),
-        (IsSkyDepth(depthU) ? 1.0f : 0.0f) - (IsSkyDepth(depthD) ? 1.0f : 0.0f));
+    float cocL;
+    float cocR;
+    float cocU;
+    float cocD;
+    float2 inwardShift;
+    if ( DoF_Pad >= 0.5f )
+    {
+        cocL = lerp( cocC, ComputeCoCFromDepth( depthL, focusDepth ), geometryL );
+        cocR = lerp( cocC, ComputeCoCFromDepth( depthR, focusDepth ), geometryR );
+        cocU = lerp( cocC, ComputeCoCFromDepth( depthU, focusDepth ), geometryU );
+        cocD = lerp( cocC, ComputeCoCFromDepth( depthD, focusDepth ), geometryD );
+        inwardShift = float2( geometryR - geometryL, geometryD - geometryU );
+    }
+    else
+    {
+        cocL = IsSkyDepth( depthL ) ? cocC : ComputeCoCFromDepth( depthL, focusDepth );
+        cocR = IsSkyDepth( depthR ) ? cocC : ComputeCoCFromDepth( depthR, focusDepth );
+        cocU = IsSkyDepth( depthU ) ? cocC : ComputeCoCFromDepth( depthU, focusDepth );
+        cocD = IsSkyDepth( depthD ) ? cocC : ComputeCoCFromDepth( depthD, focusDepth );
+        inwardShift = float2(
+            (IsSkyDepth(depthL) ? 1.0f : 0.0f) - (IsSkyDepth(depthR) ? 1.0f : 0.0f),
+            (IsSkyDepth(depthU) ? 1.0f : 0.0f) - (IsSkyDepth(depthD) ? 1.0f : 0.0f));
+    }
+
     float inwardLength = length(inwardShift);
-    if ( inwardLength > 0.0f )
+    if ( inwardLength > 0.0001f )
     {
         float shiftStrength = saturate((DoF_BokehRadius - 5.0f) / 27.0f);
         float2 inwardDirection = inwardShift / inwardLength;
@@ -138,11 +169,15 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
     }
 
     float minCoC = min( min( cocC, cocL ), min( cocR, min( cocU, cocD ) ) );
-
-    // Bilinear-upsampled half-res bokeh blur
-
     float blendFactor = smoothstep( 0.0, 1.0, minCoC );
     float3 finalColor = lerp( sharpColor, blurSample.rgb, blendFactor );
+
+    if ( DoF_Pad >= 0.5f && geometryC < 0.999f )
+    {
+        float4 skyEdgeBlur = GetSkyEdgeBlurSample( texcoord, dtexel, focusDepth );
+        float3 skyEdgeColor = lerp( sharpColor, skyEdgeBlur.rgb, skyEdgeBlur.a );
+        finalColor = lerp( skyEdgeColor, finalColor, geometryC );
+    }
 
     OutputComposite[DTid.xy] = float4( finalColor, 1.0 );
 }
