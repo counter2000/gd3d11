@@ -5738,7 +5738,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         }
 
         s.SharpenFactor = std::clamp( GetPrivateProfileFloatA( "SMAA", "SharpenFactor", 0.30f, ini ), 0.0f, 1.0f );
-        const int sharpeningMode = std::clamp(
+        const int sharpeningMode = std::clamp<int>(
             GetPrivateProfileIntA( "General", "SharpeningMode", static_cast<int>(ds.SharpeningMode), ini.c_str() ),
             static_cast<int>(GothicRendererSettings::SHARPEN_NONE),
             static_cast<int>(GothicRendererSettings::SHARPEN_CAS) );
