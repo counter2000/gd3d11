@@ -46,7 +46,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float4 color = TX_Texture0.Sample(SS_Linear, Input.vTexcoord);
     float lightingScale = abs(GA_LightingScale);
     float softFade = 1.0f;
-    if (GA_LightingScale < 0.0f && Input.vViewPosition.z > 0.0f)
+    if (GA_LightingScale < 0.0f && DSP_DepthParams.w > 0.5f && DSP_DepthParams.z > 0.001f && Input.vViewPosition.z > 0.0f)
     {
         float2 screenUV = Input.vPosition.xy / GA_ViewportSize;
         float sceneDepth = TX_Depth.Sample(SS_Linear, saturate(screenUV)).r;

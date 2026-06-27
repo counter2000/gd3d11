@@ -732,6 +732,8 @@ struct GothicRendererSettings {
         ScreenSpaceGIStrength = 1.0f;
         EnableParticleLighting = true;
         ParticleLightingStrength = 1.0f;
+        EnableSoftParticles = true;
+        SoftParticleStrength = 1.0f;
         EnableDoF = true;
         DoFGaussBlur = false;
         DoFFocusDistance = 12000.0f;
@@ -945,6 +947,8 @@ struct GothicRendererSettings {
     float ScreenSpaceGIStrength;
     bool EnableParticleLighting;
     float ParticleLightingStrength;
+    bool EnableSoftParticles;
+    float SoftParticleStrength;
     bool EnableDoF;
     bool DoFGaussBlur;
     float DoFFocusDistance;

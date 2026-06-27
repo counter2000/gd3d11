@@ -8703,7 +8703,9 @@ void D3D11GraphicsEngine::DrawDecalList( const std::vector<zCVob*>& decals,
             float4 DepthParams;
         } dspcb = {};
         const auto& projection = Engine::GAPI->GetProjectionMatrix();
-        dspcb.DepthParams = float4( projection._33, projection._43, 10.0f, 0.0f );
+        const auto& rendererSettings = Engine::GAPI->GetRendererState().RendererSettings;
+        dspcb.DepthParams = float4( projection._33, projection._43, 10.0f * rendererSettings.SoftParticleStrength,
+            rendererSettings.EnableSoftParticles ? 1.0f : 0.0f );
         GetActivePS()->GetBuffer( "DecalSoftParticleInfo" ).Update( &dspcb ).Bind();
         DepthStencilBufferCopy->BindToPixelShader( GetContext().Get(), 3 );
     }

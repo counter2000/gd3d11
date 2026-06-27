@@ -417,7 +417,8 @@ struct AtmosphereConstantBuffer {
 
     float AC_EnableParticleLighting;
     float AC_ParticleLightingStrength;
-    float2 AC_AtmospherePad3;
+    float AC_EnableSoftParticles;
+    float AC_SoftParticleStrength;
 
     float4 AC_LightScreenPos;
 };

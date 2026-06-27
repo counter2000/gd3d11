@@ -1006,7 +1006,7 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::SliderFloat( "##Contrast", &settings.GammaValue, 0.20f, 2.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_ClampOnInput );
 
             ImText( "Brightness", buttonWidth ); ImGui::SameLine();
-            ImGui::SliderFloat( "##Brightness", &settings.BrightnessValue, 0.10f, 3.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_ClampOnInput );
+            ImGui::SliderFloat( "##Brightness", &settings.BrightnessValue, 0.20f, 2.0f, "%.2f", ImGuiSliderFlags_::ImGuiSliderFlags_ClampOnInput );
             ImGui::PopItemWidth();
 
 
@@ -1654,12 +1654,7 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
         ImGui::SeparatorText( "Water Effects" );
         {
             ImGui::PushID( "EnhancedWaterEffectsSettings" );
-            bool enhancedWater = settings.EnableSSR;
-            if ( ImGui::Checkbox( "Enable", &enhancedWater ) ) {
-                settings.EnableSSR = enhancedWater;
-                settings.EnableWaterAnimation = enhancedWater;
-                Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Water );
-            }
+
             ImGui::BeginDisabled( !settings.EnableSSR );
             {
                 ImGui::SliderFloat( "Dynamic Reflection", &settings.SSRStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
@@ -1672,13 +1667,7 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
         ImGui::SeparatorText( "Screen-Space Light FX" );
         {
             ImGui::PushID( "ScreenSpaceLightingSettings" );
-            bool screenSpaceLightFX = settings.EnableVolumetricLightShafts || settings.EnableContactShadows || settings.EnableScreenSpaceGI;
-            if ( ImGui::Checkbox( "Enable", &screenSpaceLightFX ) ) {
-                settings.EnableVolumetricLightShafts = screenSpaceLightFX;
-                settings.EnableContactShadows = screenSpaceLightFX;
-                settings.EnableScreenSpaceGI = screenSpaceLightFX;
-                Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
-            }
+            const bool screenSpaceLightFX = settings.EnableVolumetricLightShafts || settings.EnableContactShadows || settings.EnableScreenSpaceGI;
 
             ImGui::BeginDisabled( !screenSpaceLightFX );
             bool reloadScreenSpaceLightFX = false;
@@ -1697,12 +1686,16 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             ImGui::BeginDisabled( !settings.EnableParticleLighting );
             ImGui::SliderFloat( "Lighting Adaptation", &settings.ParticleLightingStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
             ImGui::EndDisabled();
+            ImGui::Checkbox( "Soft Particles", &settings.EnableSoftParticles );
+            ImGui::BeginDisabled( !settings.EnableSoftParticles );
+            ImGui::SliderFloat( "Soft Particle Strength", &settings.SoftParticleStrength, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
+            ImGui::EndDisabled();
             ImGui::PopID();
         }
         ImGui::SeparatorText( "Backlit Vegetation" );
         {
             ImGui::PushID( "BacklitVegetationSettings" );
-            ImGui::Checkbox( "Enable", &settings.EnableSSS );
+
             ImGui::BeginDisabled( !settings.EnableSSS );
             {
                 ImGui::SliderFloat( "Intensity", &settings.SSSIntensity, 0.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
@@ -1714,7 +1707,7 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
         ImGui::SeparatorText( "Depth of Field" );
         {
             ImGui::PushID( "DepthOfFieldSettings" );
-            ImGui::Checkbox( "Enable", &settings.EnableDoF );
+
             ImGui::BeginDisabled( !settings.EnableDoF );
             {
                 ImGui::SliderFloat( "Blur Distance", &settings.DoFFocusDistance, 0.0f, 30000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );

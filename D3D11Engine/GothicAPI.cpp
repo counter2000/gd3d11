@@ -5539,6 +5539,8 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "General", "ScreenSpaceGIStrength", float_to_string( s.ScreenSpaceGIStrength, 2 ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableParticleLighting", std::to_string( s.EnableParticleLighting ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "ParticleLightingStrength", float_to_string( s.ParticleLightingStrength, 2 ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "EnableSoftParticles", std::to_string( s.EnableSoftParticles ? TRUE : FALSE ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "SoftParticleStrength", float_to_string( s.SoftParticleStrength, 2 ).c_str(), ini.c_str() );
 
     /*
     * Draw-distance is saved on a per World basis using SaveRendererWorldSettings
@@ -5676,6 +5678,8 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.ScreenSpaceGIStrength = std::clamp( GetPrivateProfileFloatA( "General", "ScreenSpaceGIStrength", ds.ScreenSpaceGIStrength, ini ), 0.0f, 2.0f );
         s.EnableParticleLighting = GetPrivateProfileBoolA( "General", "EnableParticleLighting", ds.EnableParticleLighting, ini );
         s.ParticleLightingStrength = std::clamp( GetPrivateProfileFloatA( "General", "ParticleLightingStrength", ds.ParticleLightingStrength, ini ), 0.0f, 2.0f );
+        s.EnableSoftParticles = GetPrivateProfileBoolA( "General", "EnableSoftParticles", ds.EnableSoftParticles, ini );
+        s.SoftParticleStrength = std::clamp( GetPrivateProfileFloatA( "General", "SoftParticleStrength", ds.SoftParticleStrength, ini ), 0.0f, 2.0f );
 
         /*
         * Draw-distance is Loaded on a per World basis using LoadRendererWorldSettings
