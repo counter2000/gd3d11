@@ -26,6 +26,9 @@
 #include "zCView.h"
 #include "zCVobLight.h"
 #include "oCNPC.h"
+#include "oCGame.h"
+#include "zCBspTree.h"
+#include "zCMesh.h"
 #include <DDSTextureLoader.h>
 #include <ScreenGrab.h>
 #include <wincodec.h>

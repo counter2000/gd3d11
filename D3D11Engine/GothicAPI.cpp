@@ -4096,10 +4096,6 @@ LRESULT GothicAPI::OnWindowMessage( HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
             Engine::GraphicsEngine->OnUIEvent( BaseGraphicsEngine::EUIEvent::UI_ClosedSettings );
             break;
 
-        case VK_NUMPAD1:
-            if ( !Engine::ImGuiHandle->GetIsActive() && !GMPModeActive && Engine::GAPI->GetRendererState().RendererSettings.AllowNumpadKeys )
-                SpawnVegetationBoxAt( GetCameraPosition() );
-            break;
         }
         default:
             if ( Engine::ImGuiHandle->GetIsActive() ) {
@@ -6363,7 +6359,7 @@ static void CollectVisibleVobsHelper( BspInfo* base,
  *  Uses the p-vertex (positive-vertex) method: for each plane, the corner of the AABB most
  *  aligned with the plane normal is tested. If that corner is outside the plane, the whole
  *  AABB is outside. All 8 leaves are tested in parallel; surviving leaves are processed
- *  with CollectLeafVobs.  Requires a perspective (plane-cached) Frustum Ã¢â‚¬â€ checked by the caller.
+ *  with CollectLeafVobs.  Requires a perspective (plane-cached) Frustum - checked by the caller.
  */
 static void CollectVisibleVobsWithLeafCache(
     const RndCullContext& ctx,
@@ -6446,7 +6442,7 @@ static void CollectVisibleVobsWithLeafCache(
         vOutside = _mm256_or_ps( vOutside, _mm256_cmp_ps( vDistSq, vDistSqThresh, _CMP_GE_OQ ) );
 
         const int cullMask = _mm256_movemask_ps( vOutside );
-        if ( cullMask == 0xFF ) continue; // All 8 culled Ã¢â‚¬â€ skip scalar work
+        if ( cullMask == 0xFF ) continue; // All 8 culled - skip scalar work
 
         if ( cullMask == 0 ) {
             for ( uint32_t lane = 0; lane < 8; ++lane ) {
