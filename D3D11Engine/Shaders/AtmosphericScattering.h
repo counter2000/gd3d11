@@ -103,6 +103,12 @@ float3 GetAtmosphericSunTerm(float3 normal)
 	return saturate(dot(normal, AC_LightPos));
 }
 
+float SmootherStep01(float x)
+{
+	x = saturate(x);
+	return x * x * x * (x * (x * 6.0f - 15.0f) + 10.0f);
+}
+
 float GetNightWeight()
 {
 	return saturate((-AC_LightPos.y) * 10.0f);
@@ -113,8 +119,8 @@ float GetNightDistanceFade(float3 worldPosition)
 	float cameraDistance = length(worldPosition - AC_WorldCameraPos);
 	float nightFadeStart = max(0.0f, AC_NightDarkeningStart);
 	float nightFadeEnd = nightFadeStart + max(1000.0f, AC_NightDarkeningRange);
-	return smoothstep(nightFadeStart, nightFadeEnd, cameraDistance)
-		* GetNightWeight() * saturate(AC_EnableNightAtmosphere);
+	float nightDistanceBlend = SmootherStep01((cameraDistance - nightFadeStart) / max(1.0f, nightFadeEnd - nightFadeStart));
+	return nightDistanceBlend * GetNightWeight() * saturate(AC_EnableNightAtmosphere);
 }
 
 float3 ApplyNightDistanceDarkening(float3 worldPosition, float3 color)

@@ -82,14 +82,7 @@ float ComputeVolumetricFog( float3 cameraToWorldPos, float3 posOriginal )
 
     return exp( -HF_GlobalDensity * w * fogInt );
 }
-
-float FogDither(float2 pixelPosition)
-{
-    float n1 = frac(52.9829189f * frac(dot(pixelPosition, float2(0.06711056f, 0.00583715f))));
-    float n2 = frac(52.9829189f * frac(dot(pixelPosition + 37.17f, float2(0.00583715f, 0.06711056f))));
-    return n1 + n2 - 1.0f;
-}
-
+`r`n
 float4 ComputeHeightFog( float2 texcoord, float2 pixelPosition )
 {
     float expDepth = TX_Depth.Sample( SS_Linear, texcoord ).r;
@@ -110,9 +103,11 @@ float4 ComputeHeightFog( float2 texcoord, float2 pixelPosition )
     float weatherFog = max(fog, stableWorldFade) * activeWeatherFog;
     float dryNightFog = fog * nightTimeBlend * (1.0f - activeWeatherFog);
     fog = max(weatherFog, dryNightFog);
-    float fogGradientWeight = saturate(fog * (1.0f - fog) * 4.0f);
-    float fogGradientDither = FogDither(pixelPosition) * nightTimeBlend * (4.0f / 255.0f);
-    float ditheredFog = saturate(fog + fogGradientDither * fogGradientWeight);
+	float dryNightCurve = nightTimeBlend * (1.0f - activeWeatherFog);
+	float fogSmoother = SmootherStep01(fog);
+	float fogLifted = 1.0f - SmootherStep01(1.0f - fog);
+	float fogBlendCurve = lerp(fogSmoother, fogLifted, saturate(fog));
+	fog = lerp(fog, fogBlendCurve, dryNightCurve);
     float3 color = ApplyAtmosphericScatteringGround( position, HF_FogColorMod, true, false );
 	float nightFogBrightness = lerp(1.0f, max(0.0f, AC_NightFogBrightness), saturate(AC_EnableNightAtmosphere));
 	float3 nightFogColor = float3(0.12f, 0.18f, 0.27f) * nightFogBrightness;
@@ -122,7 +117,7 @@ float4 ComputeHeightFog( float2 texcoord, float2 pixelPosition )
 	float darknessFactor = lerp(dayDarknessFactor, 2.5f, nightTimeBlend);
 	float maxFogOpacity = lerp(1.0f, 0.85f, nightTimeBlend);
 
-	return float4(saturate(color / darknessFactor), ditheredFog * maxFogOpacity);
+	return float4(saturate(color / darknessFactor), fog * maxFogOpacity);
 }
 #endif
 
@@ -278,8 +273,6 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
     float4 fog = ComputeHeightFog( Input.vTexcoord, Input.vPosition.xy );
     color.rgb = lerp( color.rgb, fog.rgb, fog.a );
     float nightTimeBlend = smoothstep(0.0f, 1.0f, saturate(-AC_LightPos.y * 4.0f));
-    float ditherStrength = lerp(2.0f, 5.0f, nightTimeBlend) / 255.0f;
-    color.rgb = saturate(color.rgb + FogDither(Input.vPosition.xy) * fog.a * ditherStrength);
 #endif
 
 #if COMPOSE_GODRAYS

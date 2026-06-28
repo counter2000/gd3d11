@@ -58,14 +58,7 @@ float ComputeVolumetricFog(float3 cameraToWorldPos, float3 posOriginal)
 	
 	return exp( -HF_GlobalDensity * w * fogInt );
 }
-
-float FogDither(float2 pixelPosition)
-{
-	float n1 = frac(52.9829189f * frac(dot(pixelPosition, float2(0.06711056f, 0.00583715f))));
-	float n2 = frac(52.9829189f * frac(dot(pixelPosition + 37.17f, float2(0.00583715f, 0.06711056f))));
-	return n1 + n2 - 1.0f;
-}
-
+`r`n
 //--------------------------------------------------------------------------------------
 // Input / Output structures
 //--------------------------------------------------------------------------------------
@@ -104,9 +97,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float weatherFog = max(fog, stableWorldFade) * activeWeatherFog;
 	float dryNightFog = fog * nightTimeBlend * (1.0f - activeWeatherFog);
 	fog = max(weatherFog, dryNightFog);
-	float fogGradientWeight = saturate(fog * (1.0f - fog) * 4.0f);
-	float fogGradientDither = FogDither(Input.vPosition.xy) * nightTimeBlend * (4.0f / 255.0f);
-	float ditheredFog = saturate(fog + fogGradientDither * fogGradientWeight);
+	float dryNightCurve = nightTimeBlend * (1.0f - activeWeatherFog);
+	float fogSmoother = SmootherStep01(fog);
+	float fogLifted = 1.0f - SmootherStep01(1.0f - fog);
+	float fogBlendCurve = lerp(fogSmoother, fogLifted, saturate(fog));
+	fog = lerp(fog, fogBlendCurve, dryNightCurve);
 		
 	float3 color = ApplyAtmosphericScatteringGround(position, HF_FogColorMod, true, false);
 	float nightFogBrightness = lerp(1.0f, max(0.0f, AC_NightFogBrightness), saturate(AC_EnableNightAtmosphere));
@@ -116,8 +111,5 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	float dayDarknessFactor = max(1.0f, 2.0f - max(0.0f, AC_LightPos.y));
 	float darknessFactor = lerp(dayDarknessFactor, 2.0f, nightTimeBlend);
 	float maxFogOpacity = lerp(1.0f, 0.85f, nightTimeBlend);
-
-	float ditherStrength = lerp(2.0f, 5.0f, nightTimeBlend) / 255.0f;
-	float3 ditheredFogColor = color / darknessFactor + FogDither(Input.vPosition.xy) * ditherStrength;
-	return float4(saturate(ditheredFogColor), ditheredFog * maxFogOpacity);
+	return float4(saturate(color / darknessFactor), fog * maxFogOpacity);
 }

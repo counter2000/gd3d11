@@ -127,8 +127,6 @@ XRESULT D3D11PfxRenderer::RenderWetGroundSSR(
     const INT2 resolution = engine->GetResolution();
     cb.WG_InvResolution = float2( 1.0f / std::max( resolution.x, 1 ), 1.0f / std::max( resolution.y, 1 ) );
     cb.WG_Strength = Engine::GAPI->GetRendererState().RendererSettings.SSRStrength * 0.72f;
-    cb.WG_Time = Engine::GAPI->GetTimeSeconds();
-    cb.WG_RainFXWeight = Engine::GAPI->GetRainFXWeight();
     ps->GetBuffer( "WetGroundSSRConstantBuffer" ).Update( &cb ).Bind();
 
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> previousRTV;
