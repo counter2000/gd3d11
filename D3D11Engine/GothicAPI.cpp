@@ -5550,7 +5550,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.GlobalWindStrength = std::clamp( GetPrivateProfileFloatA( "Display", "WindStrength", ds.GlobalWindStrength, ini ), 0.01f, 2.0f );
         s.EnableWaterAnimation = GetPrivateProfileBoolA( "Display", "WaterWaveAnimation", ds.EnableWaterAnimation, ini );
         s.HeroAffectsObjects = GetPrivateProfileBoolA( "Display", "HeroAffectsObjects", ds.HeroAffectsObjects, ini );
-        s.HeroAffectsObjectsStrength = std::clamp( GetPrivateProfileFloatA( "Display", "HeroAffectsObjectsStrength", ds.HeroAffectsObjectsStrength, ini ), 0.01f, 2.0f );
+        s.HeroAffectsObjectsStrength = 1.0f; // Fixed effect strength; F11 exposes this feature as a simple toggle.
 
         if ( GetPrivateProfileBoolA( "SMAA", "Enabled", false, ini ) ) {
             s.AntiAliasingMode = GothicRendererSettings::E_AntiAliasingMode::AA_SMAA;

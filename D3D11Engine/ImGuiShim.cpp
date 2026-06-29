@@ -162,43 +162,18 @@ namespace {
 
     int SnapRenderScalePercentNonFSR( int value )
     {
-        static constexpr std::array<int, 21> levels = {
-            25, 33, 40, 48, 55, 63, 70, 78, 85, 93, 100,
-            110, 120, 130, 140, 150, 160, 170, 180, 190, 200
-        };
-
-        int best = levels.front();
-        int bestDistance = value > best ? value - best : best - value;
-        for ( int level : levels ) {
-            const int distance = value > level ? value - level : level - value;
-            if ( distance < bestDistance ) {
-                best = level;
-                bestDistance = distance;
-            }
-        }
-        return best;
+        const int clamped = std::clamp( value, 25, 200 );
+        return 25 + ((clamped - 25 + 2) / 5) * 5;
     }
 
     bool SliderRenderScalePercentNonFSR( const char* label, int* value )
     {
-        static constexpr std::array<int, 21> levels = {
-            25, 33, 40, 48, 55, 63, 70, 78, 85, 93, 100,
-            110, 120, 130, 140, 150, 160, 170, 180, 190, 200
-        };
-        int index = 0;
-        int bestDistance = abs( *value - levels[0] );
-        for ( int i = 1; i < static_cast<int>(levels.size()); ++i ) {
-            const int distance = abs( *value - levels[i] );
-            if ( distance < bestDistance ) {
-                index = i;
-                bestDistance = distance;
-            }
-        }
-        *value = levels[index];
+        *value = SnapRenderScalePercentNonFSR( *value );
+        int index = (*value - 25) / 5;
         char display[16];
         std::snprintf( display, sizeof(display), "%d%%", *value );
-        if ( SliderSteppedIndex( label, &index, 20, false, 10, display ) ) {
-            *value = levels[index];
+        if ( SliderSteppedIndex( label, &index, 35, false, 15, display ) ) {
+            *value = 25 + index * 5;
             return true;
         }
         return false;
@@ -673,9 +648,11 @@ void ImGuiShim::RenderSettingsWindow()
         ImGui::Separator();
 
         const float standardComboWidth = 250.0f;
-        const float inlineToggleWidth = 122.0f;
-        const float inlineToggleLabelWidth = inlineToggleWidth - ImGui::GetFrameHeight() - style.ItemSpacing.x;
         const float compactComboWidth = 150.0f;
+        // All right-column value controls start at the same x position.
+        const float inlineToggleWidth = (buttonWidth.x - style.ItemSpacing.x) * 0.5f;
+        const float inlineToggleLabelWidth = inlineToggleWidth - ImGui::GetFrameHeight() - style.ItemSpacing.x;
+        const float aoModeLabelWidth = buttonWidth.x - compactComboWidth - style.ItemSpacing.x;
         
         {
             ImGui::BeginGroup();
@@ -991,7 +968,7 @@ void ImGuiShim::RenderSettingsWindow()
                     {"SAO", AOMode::AO_SAO, nullptr},
                     {"ASSAO", AOMode::AO_ASSAO, "Intel ASSAO (Adaptive Screen Space Ambient Occlusion)"},
             };
-            ImText( "AO Mode", { inlineToggleWidth, buttonWidth.y } ); ImGui::SameLine();
+            ImText( "AO Mode", { aoModeLabelWidth, buttonWidth.y } ); ImGui::SameLine();
             ImGui::SetNextItemWidth( compactComboWidth );
             if ( ImComboBoxCT( "##AOMode", aoModes, &settings.AoMode, [] {
                 Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
@@ -1096,21 +1073,18 @@ void ImGuiShim::RenderSettingsWindow()
             if ( ImGui::Checkbox( "##Enable Characters affect objects", &settings.HeroAffectsObjects ) ) {
                 shadersToReload |= ShaderCategory::Other;
             }
-            ImGui::SameLine();
-            ImGui::BeginDisabled( !settings.HeroAffectsObjects );
-            ImGui::SetNextItemWidth( standardComboWidth );
-            SliderNormalizedUiStrength( "##CharactersAffectObjectsStrength", &settings.HeroAffectsObjectsStrength );
-            ImGui::EndDisabled();
-            ImGui::SetItemTooltip( "Controls how strongly nearby grass and wheat react to the hero and up to five nearby NPCs." );
+            ImGui::SetItemTooltip( "Allows nearby grass and wheat to react to the hero and up to five nearby NPCs." );
 #endif //BUILD_GOTHIC_2_6_fix
 
-            ImGui::Spacing();
-            ImGui::Checkbox( "HDR", &settings.EnableHDR );
-            ImGui::SetItemTooltip( "Enables high dynamic range rendering." );
-            ImGui::Checkbox( "Enable Rain", &settings.EnableRain );
+            ImText( "Enable Rain", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
+            ImGui::Checkbox( "##Enable Rain", &settings.EnableRain );
             ImGui::SetItemTooltip( "Turns weather particles and wet-ground rain effects on or off." );
-            ImGui::Checkbox( "Limit Light Intensity", &settings.LimitLightIntesity );
+            ImText( "Limit Light Intensity", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
+            ImGui::Checkbox( "##Limit Light Intensity", &settings.LimitLightIntesity );
             ImGui::SetItemTooltip( "Limits overly bright point lights to reduce blown-out interiors." );
+            ImText( "HDR", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
+            ImGui::Checkbox( "##Enable HDR", &settings.EnableHDR );
+            ImGui::SetItemTooltip( "Enables high dynamic range rendering." );
             ImGui::EndGroup();
         }
 
