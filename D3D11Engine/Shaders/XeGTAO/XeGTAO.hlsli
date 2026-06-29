@@ -638,7 +638,7 @@ void XeGTAO_PrefilterDepths16x16( uint2 dispatchThreadID /*: SV_DispatchThreadID
 
     // MIP 2
     [branch]
-    if( all( ( groupThreadID.xy % 2.xx ) == 0 ) )
+    if( all( ( groupThreadID.xy % uint2( 2, 2 ) ) == 0 ) )
     {
         lpfloat inTL = g_scratchDepths[groupThreadID.x+0][groupThreadID.y+0];
         lpfloat inTR = g_scratchDepths[groupThreadID.x+1][groupThreadID.y+0];
@@ -654,7 +654,7 @@ void XeGTAO_PrefilterDepths16x16( uint2 dispatchThreadID /*: SV_DispatchThreadID
 
     // MIP 3
     [branch]
-    if( all( ( groupThreadID.xy % 4.xx ) == 0 ) )
+    if( all( ( groupThreadID.xy % uint2( 4, 4 ) ) == 0 ) )
     {
         lpfloat inTL = g_scratchDepths[groupThreadID.x+0][groupThreadID.y+0];
         lpfloat inTR = g_scratchDepths[groupThreadID.x+2][groupThreadID.y+0];
@@ -670,7 +670,7 @@ void XeGTAO_PrefilterDepths16x16( uint2 dispatchThreadID /*: SV_DispatchThreadID
 
     // MIP 4
     [branch]
-    if( all( ( groupThreadID.xy % 8.xx ) == 0 ) )
+    if( all( ( groupThreadID.xy % uint2( 8, 8 ) ) == 0 ) )
     {
         lpfloat inTL = g_scratchDepths[groupThreadID.x+0][groupThreadID.y+0];
         lpfloat inTR = g_scratchDepths[groupThreadID.x+4][groupThreadID.y+0];
@@ -771,7 +771,7 @@ void XeGTAO_Denoise( const uint2 pixCoordBase, const GTAOConstants consts, Textu
 
 #if 1   // this allows some small amount of AO leaking from neighbours if there are 3 or 4 edges; this reduces both spatial and temporal aliasing
         const lpfloat leak_threshold = 2.5; const lpfloat leak_strength = 0.5;
-        lpfloat edginess = (saturate(4.0 - leak_threshold - dot( edgesC_LRTB[side], 1.xxxx )) / (4-leak_threshold)) * leak_strength;
+        lpfloat edginess = (saturate(4.0 - leak_threshold - dot( edgesC_LRTB[side], lpfloat4( 1, 1, 1, 1 ) )) / (4-leak_threshold)) * leak_strength;
         edgesC_LRTB[side] = saturate( edgesC_LRTB[side] + edginess );
 #endif
 
