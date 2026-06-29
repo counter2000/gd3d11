@@ -726,7 +726,6 @@
       <Filter>Engine</Filter>
     </ClInclude>
     <ClInclude Include="GothicExternals.h" />
-    <ClInclude Include="TAAConstantBuffer.h" />
     <ClInclude Include="D3D11PFX_TAA.h">
       <Filter>Engine\D3D11\PFX\Effects</Filter>
     </ClInclude>
@@ -737,9 +736,6 @@
       <Filter>Engine\D3D11\PFX\Effects</Filter>
     </ClInclude>
     <ClInclude Include="Frustum.h" />
-    <ClInclude Include="D3D11PFX_FSR1.h">
-      <Filter>Engine\D3D11\PFX\Effects</Filter>
-    </ClInclude>
     <ClInclude Include="TexturePool.h" />
     <ClInclude Include="RenderQueue.h" />
     <ClInclude Include="RGTextureDesc.h">
@@ -753,9 +749,6 @@
     </ClInclude>
     <ClInclude Include="D3D11RenderQueue.h" />
     <ClInclude Include="D3D11PFX_FSR3.h">
-      <Filter>Engine\D3D11\PFX\Effects</Filter>
-    </ClInclude>
-    <ClInclude Include="D3D11PFX_FSR2.h">
       <Filter>Engine\D3D11\PFX\Effects</Filter>
     </ClInclude>
     <ClInclude Include="D3D11ShadowMap.h">
@@ -1043,9 +1036,6 @@
     <ClCompile Include="D3D11PFX_SimpleSharpen.cpp">
       <Filter>Engine\D3D11\PFX\Effects</Filter>
     </ClCompile>
-    <ClCompile Include="D3D11PFX_FSR1.cpp">
-      <Filter>Engine\D3D11\PFX\Effects</Filter>
-    </ClCompile>
     <ClCompile Include="RenderPass.cpp">
       <Filter>Engine\Graph</Filter>
     </ClCompile>
@@ -1053,9 +1043,6 @@
       <Filter>Engine\Graph</Filter>
     </ClCompile>
     <ClCompile Include="D3D11PFX_FSR3.cpp">
-      <Filter>Engine\D3D11\PFX\Effects</Filter>
-    </ClCompile>
-    <ClCompile Include="D3D11PFX_FSR2.cpp">
       <Filter>Engine\D3D11\PFX\Effects</Filter>
     </ClCompile>
     <ClCompile Include="D3D11ShadowMap.cpp">
@@ -1139,12 +1126,6 @@
       <Filter>Librarys\Assimp</Filter>
     </None>
     <None Include="Shaders\PS_PFX_TAA.hlsl">
-      <Filter>Engine\Shaders</Filter>
-    </None>
-    <None Include="Shaders\PS_PFX_FSR1_EASU.hlsl">
-      <Filter>Engine\Shaders</Filter>
-    </None>
-    <None Include="Shaders\PS_PFX_FSR1_RCAS.hlsl">
       <Filter>Engine\Shaders</Filter>
     </None>
     <None Include="Shaders\PS_PFX_Velocity.hlsl">

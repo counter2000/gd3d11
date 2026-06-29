@@ -72,6 +72,14 @@ public:
 #endif
     }
 
+    void SetSingleStep( bool paused ) {
+#ifdef BUILD_SPACER
+        (void)paused;
+#else
+        *reinterpret_cast<int*>(THISPTR_OFFSET( GothicMemoryLocations::oCGame::Offset_SingleStep )) = paused ? 1 : 0;
+#endif
+    }
+
     typedef enum oEGameDialogView {
         GAME_VIEW_SCREEN,
         GAME_VIEW_CONVERSATION,

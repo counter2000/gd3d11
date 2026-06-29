@@ -458,11 +458,6 @@ XRESULT D3D11ShaderManager::Init() {
 
 
     if ( !FeatureLevel10Compatibility ) {
-        // FSR1 EASU (Edge Adaptive Spatial Upsampling) Shader
-        Shaders.push_back( ShaderInfo::make<PShaderID::PS_PFX_FSR1_EASU>( "PS_PFX_FSR1_EASU.hlsl" ));
-
-        // FSR1 RCAS (Robust Contrast Adaptive Sharpening) Shader
-        Shaders.push_back( ShaderInfo::make<PShaderID::PS_PFX_FSR1_RCAS>( "PS_PFX_FSR1_RCAS.hlsl" ));
 
         Shaders.push_back( ShaderInfo::make<CShaderID::CS_AdvanceRain>( "CS_AdvanceRain.hlsl" ));
 

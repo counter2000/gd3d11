@@ -34,6 +34,9 @@ public:
     bool GetIsActive();
 
     bool GetBlockGameInput();
+    void BeginSettingsEdit();
+    void CommitSettingsEdit();
+    void CancelSettingsEdit();
     // helper function to prevent calling this too often if other places already called it.
     void UpdateBlockGameInput() {
         m_lastFrameBlockGameInput = GetBlockGameInput();
@@ -60,4 +63,7 @@ private:
     void RenderAdvancedSettingsWindow();
     void RenderAdvancedColumn2(GothicRendererSettings& settings, GothicAPI* gapi);
     bool m_lastFrameBlockGameInput = false;
+    bool m_settingsEditActive = false;
+    GothicRendererSettings m_settingsSnapshot;
+    INT2 m_settingsResolutionSnapshot = INT2( 0, 0 );
 };

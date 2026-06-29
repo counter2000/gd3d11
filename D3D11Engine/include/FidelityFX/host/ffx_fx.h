@@ -30,8 +30,6 @@
 #include <FidelityFX/host/ffx_fsr3upscaler.h>
 #include <FidelityFX/host/ffx_frameinterpolation.h>
 #include <FidelityFX/host/ffx_opticalflow.h>
-#include <FidelityFX/host/ffx_fsr2.h>
-#include <FidelityFX/host/ffx_fsr1.h>
 #include <FidelityFX/host/ffx_spd.h>
 #include <FidelityFX/host/ffx_lpm.h>
 #include <FidelityFX/host/ffx_vrs.h>

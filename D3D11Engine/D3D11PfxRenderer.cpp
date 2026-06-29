@@ -17,8 +17,6 @@
 #include "D3D11PFX_TAA.h"
 #include "D3D11PFX_SimpleSharpen.h"
 #include "D3D11PFX_CAS.h"
-#include "D3D11PFX_FSR1.h"
-#include "D3D11PFX_FSR2.h"
 #include "D3D11PFX_FSR3.h"
 #include "D3D11PFX_SAO.h"
 #include "D3D11PFX_ASSAO.h"
@@ -47,8 +45,6 @@ D3D11PfxRenderer::D3D11PfxRenderer() {
         FX_TAA = std::make_unique<D3D11PFX_TAA>( this );
         NvHBAO = std::make_unique<D3D11NVHBAO>();
         FX_SAO = std::make_unique<D3D11PFX_SAO>( this );
-        PFX_FSR1 = std::make_unique<D3D11PFX_FSR1>( this );
-        PFX_FSR2 = std::make_unique<D3D11PFX_FSR2>( this );
         PFX_FSR3 = std::make_unique<D3D11PFX_FSR3>( this );
         PFX_ASSAO = std::make_unique<D3D11PFX_ASSAO>(
             engine->GetDevice().Get(),
@@ -308,7 +304,6 @@ XRESULT D3D11PfxRenderer::CopyTextureToRTV( const Microsoft::WRL::ComPtr<ID3D11S
 XRESULT D3D11PfxRenderer::OnResize( const INT2& newResolution ) {
 
 
-    if ( PFX_FSR2 ) PFX_FSR2->ReleaseResources();
     if ( PFX_FSR3 ) PFX_FSR3->Destroy();
     m_texturePool->Clear(); // textures will be created on demand
     if ( !FeatureLevel10Compatibility ) {
@@ -528,16 +523,6 @@ void D3D11PfxRenderer::FreeResources()
         this->FX_TAA->ReleaseResources();
     }
 
-    if ( this->PFX_FSR2
-        && settings.AntiAliasingMode != GothicRendererSettings::AA_FSR
-        && !(settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_2) && settings.ResolutionScalePercent < 100) {
-        this->PFX_FSR2->ReleaseResources();
-    }
-
-    if ( this->PFX_FSR1
-        && !(settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_1) && settings.ResolutionScalePercent < 100 ) {
-        this->PFX_FSR1->ReleaseResources();
-    }
 
     if ( this->NvHBAO 
         && settings.AoMode != AOMode::AO_HBAO ) {

@@ -78,8 +78,8 @@ struct DepthOfFieldConstantBuffer {
     float4 DoF_ProjParams;
     float DoF_NearPlane;
     float DoF_FarPlane;
-    float DoF_Pad;
-    float DoF_Pad2;
+    float DoF_NearBlurDistance;
+    float DoF_NearBlurStrength;
 };
 
 struct PerObjectState {
@@ -436,16 +436,6 @@ struct CASConstantBuffer {
     FfxUInt32x4 const1;  // CasSetup output
 };
 
-struct FSR1EASUConstantBuffer {
-    uint32_t Const0[4];  // FsrEasuCon output
-    uint32_t Const1[4];  // FsrEasuCon output
-    uint32_t Const2[4];  // FsrEasuCon output
-    uint32_t Const3[4];  // FsrEasuCon output
-};
-
-struct FSR1RCASConstantBuffer {
-    uint32_t RCASConst[4];  // FsrRcasCon output (only first element used)
-};
 
 struct VelocityDebugConstantBuffer {
     float Amplification;    // Multiplier for velocity values (e.g., 10-100)

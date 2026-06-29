@@ -4240,12 +4240,6 @@ void GothicAPI::CollectVisibleVobs(
     }
 
     XMVECTOR cameraPosition = GetCameraPositionXM();
-    XMVECTOR playerPosition = Engine::GAPI->GetPlayerVob() != nullptr ? Engine::GAPI->GetPlayerVob()->GetPositionWorldXM() : XMVectorSet( FLT_MAX, FLT_MAX, FLT_MAX, 0 );
-    // Take cameraposition if we are freelooking
-    if ( zCCamera::IsFreeLookActive() ) {
-        playerPosition = cameraPosition;
-    }
-
     // LegacyRenderQueueProxy marks every found item and only pushes unique ones.
     LegacyRenderQueueProxy renderQueue(vobs, lights, mobs );
 
@@ -4356,9 +4350,9 @@ void GothicAPI::CollectVisibleVobs(
                 if ( !vi->IsPFXVobLight && vi->HasRenderableParentVob ) {
                     if ( RendererState.RendererSettings.EnablePointlightShadows >= GothicRendererSettings::PLS_UPDATE_DYNAMIC ) {
                         // Now check for distances, etc
-                        float lightPlayerDist;
-                        XMStoreFloat( &lightPlayerDist, XMVector3Length( playerPosition - vi->Vob->GetPositionWorldXM() ) );
-                        if ( vi->Vob->GetLightRange() > minDynamicUpdateLightRange && lightPlayerDist < vi->Vob->GetLightRange() * 1.5f )
+                        float lightCameraDist;
+                        XMStoreFloat( &lightCameraDist, XMVector3Length( cameraPosition - vi->Vob->GetPositionWorldXM() ) );
+                        if ( vi->Vob->GetLightRange() > minDynamicUpdateLightRange && lightCameraDist < vi->Vob->GetLightRange() * 1.5f )
                             vi->UpdateShadows = true;
                     }
                 }
@@ -5321,6 +5315,8 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "General", "DoFFocusRange", float_to_string( s.DoFFocusRange, 1 ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DoFBokehRadius", float_to_string( s.DoFBokehRadius, 2 ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "DoFMaxBlur", float_to_string( s.DoFMaxBlur, 1 ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "DoFNearBlurDistance", float_to_string( s.DoFNearBlurDistance, 1 ).c_str(), ini.c_str() );
+    WritePrivateProfileStringA( "General", "DoFNearBlurStrength", float_to_string( s.DoFNearBlurStrength, 2 ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "AllowNormalmaps", std::to_string( s.AllowNormalmaps ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "EnableParallaxOcclusionMapping", std::to_string( s.EnableParallaxOcclusionMapping ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "ParallaxOcclusionStrength", float_to_string( s.ParallaxOcclusionStrength, 2 ).c_str(), ini.c_str() );
@@ -5460,6 +5456,8 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.DoFFocusRange = GetPrivateProfileFloatA( "General", "DoFFocusRange", ds.DoFFocusRange, ini );
         s.DoFBokehRadius = std::clamp( GetPrivateProfileFloatA( "General", "DoFBokehRadius", ds.DoFBokehRadius, ini ), 0.035f, 7.0f );
         s.DoFMaxBlur = GetPrivateProfileFloatA( "General", "DoFMaxBlur", ds.DoFMaxBlur, ini );
+        s.DoFNearBlurDistance = std::clamp( GetPrivateProfileFloatA( "General", "DoFNearBlurDistance", ds.DoFNearBlurDistance, ini ), 0.0f, 1000.0f );
+        s.DoFNearBlurStrength = std::clamp( GetPrivateProfileFloatA( "General", "DoFNearBlurStrength", ds.DoFNearBlurStrength, ini ), 0.0f, 2.0f );
         s.AllowNormalmaps = GetPrivateProfileBoolA( "General", "AllowNormalmaps", ds.AllowNormalmaps, ini );
         s.EnableParallaxOcclusionMapping = GetPrivateProfileBoolA( "General", "EnableParallaxOcclusionMapping", ds.EnableParallaxOcclusionMapping, ini );
         s.ParallaxOcclusionStrength = std::clamp( GetPrivateProfileFloatA( "General", "ParallaxOcclusionStrength", ds.ParallaxOcclusionStrength, ini ), 0.0f, 4.0f );
@@ -5523,7 +5521,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.textureMaxSize = std::max<int>( 32, GetPrivateProfileIntA( "Display", "TextureQuality", 16384, ini.c_str() ) );
         res.x = GetPrivateProfileIntA( "Display", "Width", desktopRect.right, ini.c_str() );
         res.y = GetPrivateProfileIntA( "Display", "Height", desktopRect.bottom, ini.c_str() );
-        s.ResolutionScalePercent = std::clamp<int>( GetPrivateProfileIntA( "Display", "ResolutionScale", ds.ResolutionScalePercent, ini.c_str() ), 25, 200 );
+        s.ResolutionScalePercent = std::clamp<int>( GetPrivateProfileIntA( "Display", "ResolutionScale", ds.ResolutionScalePercent, ini.c_str() ), 33, 200 );
         s.Upscaler = (GothicRendererSettings::E_Upscaler)std::clamp<int>( GetPrivateProfileIntA( "Display", "Upscaler", ds.Upscaler, ini.c_str() ), 0, GothicRendererSettings::E_Upscaler::_UPSCALER_NUM_MODES - 1 );
         s.EnableVSync = GetPrivateProfileBoolA( "Display", "VSync", ds.EnableVSync, ini );
         s.ForceFOV = GetPrivateProfileBoolA( "Display", "ForceFOV", ds.ForceFOV, ini );

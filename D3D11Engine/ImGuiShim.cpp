@@ -41,6 +41,64 @@ enum class TX_QUALITY : uint16_t {
 };
 
 namespace {
+    void ApplyGD3D11DarkStyle()
+    {
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.WindowRounding = 3.0f;
+        style.ChildRounding = 2.0f;
+        style.FrameRounding = 2.0f;
+        style.PopupRounding = 3.0f;
+        style.ScrollbarRounding = 3.0f;
+        style.GrabRounding = 2.0f;
+        style.FrameBorderSize = 0.0f;
+        style.WindowBorderSize = 1.0f;
+        style.PopupBorderSize = 1.0f;
+
+        ImVec4* colors = style.Colors;
+        colors[ImGuiCol_Text] = ImVec4( 0.92f, 0.93f, 0.94f, 1.00f );
+        colors[ImGuiCol_TextDisabled] = ImVec4( 0.48f, 0.50f, 0.53f, 1.00f );
+        colors[ImGuiCol_WindowBg] = ImVec4( 0.045f, 0.048f, 0.052f, 0.94f );
+        colors[ImGuiCol_ChildBg] = ImVec4( 0.055f, 0.058f, 0.064f, 0.92f );
+        colors[ImGuiCol_PopupBg] = ImVec4( 0.070f, 0.074f, 0.082f, 0.98f );
+        colors[ImGuiCol_Border] = ImVec4( 0.25f, 0.26f, 0.28f, 0.70f );
+        colors[ImGuiCol_BorderShadow] = ImVec4( 0.00f, 0.00f, 0.00f, 0.00f );
+        colors[ImGuiCol_FrameBg] = ImVec4( 0.115f, 0.122f, 0.135f, 0.94f );
+        colors[ImGuiCol_FrameBgHovered] = ImVec4( 0.165f, 0.174f, 0.192f, 1.00f );
+        colors[ImGuiCol_FrameBgActive] = ImVec4( 0.205f, 0.216f, 0.238f, 1.00f );
+        colors[ImGuiCol_TitleBg] = ImVec4( 0.080f, 0.086f, 0.096f, 1.00f );
+        colors[ImGuiCol_TitleBgActive] = ImVec4( 0.115f, 0.124f, 0.138f, 1.00f );
+        colors[ImGuiCol_TitleBgCollapsed] = ImVec4( 0.045f, 0.048f, 0.052f, 0.90f );
+        colors[ImGuiCol_MenuBarBg] = ImVec4( 0.095f, 0.102f, 0.113f, 1.00f );
+        colors[ImGuiCol_ScrollbarBg] = ImVec4( 0.045f, 0.048f, 0.052f, 0.80f );
+        colors[ImGuiCol_ScrollbarGrab] = ImVec4( 0.28f, 0.30f, 0.33f, 1.00f );
+        colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4( 0.36f, 0.38f, 0.42f, 1.00f );
+        colors[ImGuiCol_ScrollbarGrabActive] = ImVec4( 0.48f, 0.50f, 0.55f, 1.00f );
+        colors[ImGuiCol_CheckMark] = ImVec4( 0.62f, 0.72f, 0.84f, 1.00f );
+        colors[ImGuiCol_SliderGrab] = ImVec4( 0.42f, 0.52f, 0.65f, 1.00f );
+        colors[ImGuiCol_SliderGrabActive] = ImVec4( 0.62f, 0.72f, 0.84f, 1.00f );
+        colors[ImGuiCol_Button] = ImVec4( 0.145f, 0.154f, 0.170f, 0.94f );
+        colors[ImGuiCol_ButtonHovered] = ImVec4( 0.205f, 0.218f, 0.240f, 1.00f );
+        colors[ImGuiCol_ButtonActive] = ImVec4( 0.245f, 0.260f, 0.286f, 1.00f );
+        colors[ImGuiCol_Header] = ImVec4( 0.150f, 0.160f, 0.178f, 0.94f );
+        colors[ImGuiCol_HeaderHovered] = ImVec4( 0.205f, 0.218f, 0.240f, 1.00f );
+        colors[ImGuiCol_HeaderActive] = ImVec4( 0.245f, 0.260f, 0.286f, 1.00f );
+        colors[ImGuiCol_Separator] = ImVec4( 0.25f, 0.26f, 0.28f, 0.75f );
+        colors[ImGuiCol_SeparatorHovered] = ImVec4( 0.42f, 0.52f, 0.65f, 1.00f );
+        colors[ImGuiCol_SeparatorActive] = ImVec4( 0.62f, 0.72f, 0.84f, 1.00f );
+        colors[ImGuiCol_ResizeGrip] = ImVec4( 0.42f, 0.52f, 0.65f, 0.45f );
+        colors[ImGuiCol_ResizeGripHovered] = ImVec4( 0.62f, 0.72f, 0.84f, 0.75f );
+        colors[ImGuiCol_ResizeGripActive] = ImVec4( 0.62f, 0.72f, 0.84f, 1.00f );
+        colors[ImGuiCol_Tab] = ImVec4( 0.115f, 0.124f, 0.138f, 1.00f );
+        colors[ImGuiCol_TabHovered] = ImVec4( 0.205f, 0.218f, 0.240f, 1.00f );
+        colors[ImGuiCol_TabActive] = ImVec4( 0.165f, 0.176f, 0.195f, 1.00f );
+        colors[ImGuiCol_TabUnfocused] = ImVec4( 0.080f, 0.086f, 0.096f, 1.00f );
+        colors[ImGuiCol_TabUnfocusedActive] = ImVec4( 0.125f, 0.134f, 0.150f, 1.00f );
+        colors[ImGuiCol_TextSelectedBg] = ImVec4( 0.42f, 0.52f, 0.65f, 0.35f );
+        colors[ImGuiCol_NavHighlight] = ImVec4( 0.62f, 0.72f, 0.84f, 0.70f );
+        colors[ImGuiCol_NavWindowingHighlight] = ImVec4( 0.92f, 0.93f, 0.94f, 0.70f );
+        colors[ImGuiCol_NavWindowingDimBg] = ImVec4( 0.00f, 0.00f, 0.00f, 0.45f );
+        colors[ImGuiCol_ModalWindowDimBg] = ImVec4( 0.00f, 0.00f, 0.00f, 0.55f );
+    }
     int FindNearestStepIndex( float value, const float* levels, int levelCount )
     {
         int bestIndex = 0;
@@ -162,18 +220,18 @@ namespace {
 
     int SnapRenderScalePercentNonFSR( int value )
     {
-        const int clamped = std::clamp( value, 25, 200 );
-        return 25 + ((clamped - 25 + 2) / 5) * 5;
+        const int clamped = std::clamp( value, 100, 200 );
+        return 100 + ((clamped - 100 + 2) / 5) * 5;
     }
 
     bool SliderRenderScalePercentNonFSR( const char* label, int* value )
     {
         *value = SnapRenderScalePercentNonFSR( *value );
-        int index = (*value - 25) / 5;
+        int index = (*value - 100) / 5;
         char display[16];
         std::snprintf( display, sizeof(display), "%d%%", *value );
-        if ( SliderSteppedIndex( label, &index, 35, false, 15, display ) ) {
-            *value = 25 + index * 5;
+        if ( SliderSteppedIndex( label, &index, 20, false, 0, display ) ) {
+            *value = 100 + index * 5;
             return true;
         }
         return false;
@@ -244,6 +302,7 @@ void ImGuiShim::Init(
 { 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ApplyGD3D11DarkStyle();
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = NULL;
     io.LogFilename = NULL;
@@ -589,8 +648,7 @@ void ApplyGraphicsPresets( GothicRendererSettings& s ) {
 namespace
 {
     bool IsFSRUpscaler( GothicRendererSettings::E_Upscaler v ) {
-        return v == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3
-            || v == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_2;
+        return v == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3;
     }
     bool UsesTemporalSharpeningBoost( const GothicRendererSettings& s ) {
         return s.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_TAA
@@ -600,6 +658,38 @@ namespace
     void FixupSettings( GothicRendererSettings& s ) {
         s.FixupUpscalingSettings();
     }
+}
+
+void ImGuiShim::BeginSettingsEdit() {
+    if ( m_settingsEditActive ) {
+        return;
+    }
+
+    m_settingsSnapshot = Engine::GAPI->GetRendererState().RendererSettings;
+    m_settingsResolutionSnapshot = CurrentResolution;
+    m_settingsEditActive = true;
+}
+
+void ImGuiShim::CommitSettingsEdit() {
+    m_settingsEditActive = false;
+}
+
+void ImGuiShim::CancelSettingsEdit() {
+    if ( !m_settingsEditActive ) {
+        return;
+    }
+
+    auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
+    const bool textureQualityChanged = settings.textureMaxSize != m_settingsSnapshot.textureMaxSize;
+    settings = m_settingsSnapshot;
+    FixupSettings( settings );
+    m_settingsEditActive = false;
+
+    if ( textureQualityChanged ) {
+        Engine::GAPI->UpdateTextureMaxSize();
+    }
+    Engine::GraphicsEngine->TriggerResize( m_settingsResolutionSnapshot );
+    Engine::GraphicsEngine->ReloadShaders( ShaderCategory::All );
 }
 
 void ImGuiShim::RenderSettingsWindow()
@@ -644,15 +734,16 @@ void ImGuiShim::RenderSettingsWindow()
             } ) ) {
             ImGui::EndCombo();
         }
+        ImGui::SetItemTooltip( "Applies a balanced group of visible F11 settings. Custom means one or more values were adjusted manually." );
         ImGui::PopItemWidth();
         ImGui::Separator();
 
         const float standardComboWidth = 250.0f;
-        const float compactComboWidth = 150.0f;
         // All right-column value controls start at the same x position.
         const float inlineToggleWidth = (buttonWidth.x - style.ItemSpacing.x) * 0.5f;
         const float inlineToggleLabelWidth = inlineToggleWidth - ImGui::GetFrameHeight() - style.ItemSpacing.x;
-        const float aoModeLabelWidth = buttonWidth.x - compactComboWidth - style.ItemSpacing.x;
+        const float compactComboWidth = inlineToggleWidth;
+        const float aoModeLabelWidth = inlineToggleWidth;
         
         {
             ImGui::BeginGroup();
@@ -691,26 +782,24 @@ void ImGuiShim::RenderSettingsWindow()
                 }
                 ImGui::EndCombo();
             }
+            ImGui::SetItemTooltip( "Selects the output resolution. Render Scale controls the internal render resolution separately." );
 
             static std::vector<std::tuple<const char*, GothicRendererSettings::E_AntiAliasingMode, const char*>> antiAliasing = {
                 {"Disabled", GothicRendererSettings::E_AntiAliasingMode::AA_NONE, nullptr },
                 {"SMAA", GothicRendererSettings::E_AntiAliasingMode::AA_SMAA, nullptr },
                 {"TAA", GothicRendererSettings::E_AntiAliasingMode::AA_TAA, "Temporal Anti-Aliasing" },
-                {"FSR 2", GothicRendererSettings::E_AntiAliasingMode::AA_FSR, "FidelityFX Super Resolution 2" },
                 {"FSR 3", GothicRendererSettings::E_AntiAliasingMode::AA_FSR3, "FidelityFX Super Resolution 3"},
             };
             {
                 ImGui::PushID( "AntiAliasingSettings" );
                 auto selectedMode = settings.AntiAliasingMode;
-                if ( selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR && settings.Upscaler == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3 ) {
+                if ( selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR ) {
                     selectedMode = GothicRendererSettings::E_AntiAliasingMode::AA_FSR3;
                 }
-                const bool wasFSRAntiAliasing = settings.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR
-                    && IsFSRUpscaler( settings.Upscaler );
+                const bool wasFSRAntiAliasing = settings.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR;
                 ImText( "Anti Aliasing", buttonWidth ); ImGui::SameLine();
                 if ( ImComboBoxCT( "##AntiAliasing", antiAliasing, &selectedMode, [&selectedMode, &settings, wasFSRAntiAliasing] {
-                    const bool selectsFSRAntiAliasing = selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR
-                        || selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR3;
+                    const bool selectsFSRAntiAliasing = selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR3;
                     if ( wasFSRAntiAliasing && !selectsFSRAntiAliasing ) {
                         settings.ResolutionScalePercent = 100;
                     }
@@ -718,8 +807,6 @@ void ImGuiShim::RenderSettingsWindow()
                     if ( selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR3 ) {
                         selectedMode = GothicRendererSettings::E_AntiAliasingMode::AA_FSR;
                         settings.Upscaler = GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3;
-                    } else if ( selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR ) {
-                        settings.Upscaler = GothicRendererSettings::E_Upscaler::UPSCALER_FSR_2;
                     }
                     settings.AntiAliasingMode = selectedMode;
                     FixupSettings( settings );
@@ -727,11 +814,12 @@ void ImGuiShim::RenderSettingsWindow()
                     } ) ) {
                     ImGui::EndCombo();
                 }
+                ImGui::SetItemTooltip( "Selects edge smoothing. FSR 3 also uses Render Scale for its quality presets." );
                 ImGui::PopID();
             }
 
             ImText( "Render Scale", buttonWidth ); ImGui::SameLine();
-            if ( settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_2 || settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3 ) {
+            if ( settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3 ) {
                 settings.ResolutionScalePercent = std::clamp( settings.ResolutionScalePercent, 33, 100 );
                 // Display "levels" as typical for FSR
                 static std::vector<std::pair<const char*, int>> fsrLevels = {
@@ -745,7 +833,7 @@ void ImGuiShim::RenderSettingsWindow()
                 if (ImComboBox( "##ResolutionScalePercent", fsrLevels, &settings.ResolutionScalePercent ) ) {
                     ImGui::EndCombo();
                 }
-                ImGui::SetItemTooltip("Effective resolution: %d x %d",
+                ImGui::SetItemTooltip("FSR 3 quality preset. Effective resolution: %d x %d",
                     CurrentResolution.x * settings.ResolutionScalePercent / 100,
                     CurrentResolution.y * settings.ResolutionScalePercent / 100
                 );
@@ -759,7 +847,7 @@ void ImGuiShim::RenderSettingsWindow()
                     settings.ResolutionScalePercent = resolutionScale;
                     FixupSettings( settings );
                 }
-                ImGui::SetItemTooltip("Effective resolution: %d x %d",
+                ImGui::SetItemTooltip("Internal render resolution. Effective resolution: %d x %d",
                     CurrentResolution.x * settings.ResolutionScalePercent / 100,
                     CurrentResolution.y * settings.ResolutionScalePercent / 100
                 );
@@ -790,16 +878,17 @@ void ImGuiShim::RenderSettingsWindow()
             {
                 ImGui::EndCombo();
             }
+            ImGui::SetItemTooltip( "Limits maximum texture resolution. Lower values reduce VRAM use but make textures blurrier." );
 
             ImText( "Display Mode [*]", buttonWidth );
-            ImGui::SetItemTooltip("some changes may require a restart");
+            ImGui::SetItemTooltip( "Selects fullscreen or window mode. Entries marked with [*] take effect after restarting the game." );
             ImGui::SameLine();
 
             static auto displayModeState = InterpretWindowMode( settings );
             static std::vector<std::tuple<const char*, WindowModes, const char*>> DisplayEnums = {
                 { "Fullscreen Borderless", WindowModes::WINDOW_MODE_FULLSCREEN_BORDERLESS, nullptr },
-                { "Fullscreen Lowlatency [*]", WindowModes::WINDOW_MODE_FULLSCREEN_LOWLATENCY, "switching requires restarting the game"},
-                { "Fullscreen Exclusive [*]", WindowModes::WINDOW_MODE_FULLSCREEN_EXCLUSIVE, "switching requires restarting the game"},
+                { "Fullscreen Lowlatency [*]", WindowModes::WINDOW_MODE_FULLSCREEN_LOWLATENCY, "This mode takes effect after restarting the game."},
+                { "Fullscreen Exclusive [*]", WindowModes::WINDOW_MODE_FULLSCREEN_EXCLUSIVE, "This mode takes effect after restarting the game."},
                 { "Windowed", WindowModes::WINDOW_MODE_WINDOWED, nullptr},
             };
             
@@ -905,12 +994,15 @@ void ImGuiShim::RenderSettingsWindow()
 
             ImText( "World Draw Distance", buttonWidth ); ImGui::SameLine();
             ImGui::SliderInt( "##SectionDrawRadius", &settings.SectionDrawRadius, 1, 20, "%d", ImGuiSliderFlags_::ImGuiSliderFlags_ClampOnInput );
+            ImGui::SetItemTooltip( "Controls how far world sections are drawn. Higher values show more distant terrain and buildings." );
 
             ImText( "Contrast", buttonWidth ); ImGui::SameLine();
             SliderDisplayTuningStrength( "##Contrast", &settings.GammaValue );
+            ImGui::SetItemTooltip( "Adjusts display contrast after rendering." );
 
             ImText( "Brightness", buttonWidth ); ImGui::SameLine();
             SliderDisplayTuningStrength( "##Brightness", &settings.BrightnessValue );
+            ImGui::SetItemTooltip( "Adjusts display brightness after rendering." );
             ImGui::PopItemWidth();
 
             ImGui::EndGroup();
@@ -942,8 +1034,8 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::EndDisabled();
             ImGui::EndDisabled();
             ImGui::SetItemTooltip( settings.EnableVSync
-                ? "The FPS limiter is inactive while VSync controls frame presentation. Its saved value becomes active again when VSync is disabled."
-                : "Limits rendering independently of the display refresh rate. This does not prevent screen tearing." );
+                ? "VSync is active, so frame pacing follows the monitor and the separate FPS limiter is inactive."
+                : "Limits rendering independently of VSync. Useful for lower heat, noise, and power draw." );
             ImText( "Surface Detail", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
             if ( ImGui::Checkbox( "##Enable Surface Detail", &settings.AllowNormalmaps ) ) {
                 Engine::GAPI->UpdateTextureMaxSize();
@@ -960,7 +1052,7 @@ void ImGuiShim::RenderSettingsWindow()
                 ImGui::EndCombo();
             }
             ImGui::EndDisabled();
-            ImGui::SetItemTooltip( "Normal Maps adds surface lighting detail. Parallax additionally uses available *_disp.dds height maps; textures without displacement maps continue to use normal mapping." );
+            ImGui::SetItemTooltip( "Adds normal-map surface detail. Parallax also uses available *_disp.dds height maps; textures without height maps still use normal mapping." );
 
             static std::vector<std::tuple<const char*, AOMode, const char*>> aoModes = {
                     {"Disabled", AOMode::AO_NONE, nullptr},
@@ -998,7 +1090,7 @@ void ImGuiShim::RenderSettingsWindow()
                 shadersToReload |= ShaderCategory::Other;
             }
             ImGui::EndDisabled();
-            ImGui::SetItemTooltip( "Controls contact shadows and indirect screen-space light together. Separate fine tuning remains available in Advanced Settings." );
+            ImGui::SetItemTooltip( "Adds small contact shadows and subtle screen-space indirect light. Separate fine tuning remains available in Advanced Settings." );
 
             ImText( "Godrays", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
             if ( ImGui::Checkbox( "##Enable Godrays", &settings.EnableGodRays ) ) {
@@ -1009,7 +1101,7 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::SetNextItemWidth( standardComboWidth );
             SliderNormalizedUiStrength( "##GodrayStrength", &settings.GodRayStrength );
             ImGui::EndDisabled();
-            ImGui::SetItemTooltip( "Controls the intensity of sun shafts/godrays." );
+            ImGui::SetItemTooltip( "Adds sunlight beams when the sun is partially blocked by trees, buildings, or terrain." );
             bool enhancedWater = settings.EnableSSR;
             ImText( "Water Effects", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
             if ( ImGui::Checkbox( "##Enable Water Effects", &enhancedWater ) ) {
@@ -1022,7 +1114,7 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::SetNextItemWidth( standardComboWidth );
             SliderNormalizedUiStrength( "##WaterEffectsStrength", &settings.SSRStrength );
             ImGui::EndDisabled();
-            ImGui::SetItemTooltip( "Controls the strength of water and wet-ground reflections." );
+            ImGui::SetItemTooltip( "Enables water reflections, animated water movement, and wet-ground reflection strength." );
 
             ImText( "Backlit Vegetation", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
             ImGui::Checkbox( "##Enable Backlit Vegetation", &settings.EnableSSS );
@@ -1034,7 +1126,7 @@ void ImGuiShim::RenderSettingsWindow()
                 settings.SSSIntensity = backlitVegetationStrength * 0.75f;
             }
             ImGui::EndDisabled();
-            ImGui::SetItemTooltip( "Controls soft light transmission through grass, leaves, and alpha-tested vegetation." );
+            ImGui::SetItemTooltip( "Adds soft backlighting through leaves, grass, and alpha-tested vegetation." );
 
             ImText( "Depth of Field", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
             ImGui::Checkbox( "##Enable Depth of Field", &settings.EnableDoF );
@@ -1046,7 +1138,7 @@ void ImGuiShim::RenderSettingsWindow()
                 settings.DoFBokehRadius = depthOfFieldStrength * 3.5f;
             }
             ImGui::EndDisabled();
-            ImGui::SetItemTooltip( "Controls the blur strength. Blur distance and focus range remain available in Advanced Settings." );
+            ImGui::SetItemTooltip( "Controls camera blur strength. Focus range and near/far blur tuning remain available in Advanced Settings." );
 
 #if defined(BUILD_GOTHIC_2_6_fix) || (defined(BUILD_GOTHIC_1_08k) && !defined(BUILD_1_12F))
 #if defined(BUILD_GOTHIC_1_08k) && !defined(BUILD_1_12F)
@@ -1073,7 +1165,7 @@ void ImGuiShim::RenderSettingsWindow()
             if ( ImGui::Checkbox( "##Enable Characters affect objects", &settings.HeroAffectsObjects ) ) {
                 shadersToReload |= ShaderCategory::Other;
             }
-            ImGui::SetItemTooltip( "Allows nearby grass and wheat to react to the hero and up to five nearby NPCs." );
+            ImGui::SetItemTooltip( "Lets grass and wheat bend locally around the hero and up to five nearby NPCs." );
 #endif //BUILD_GOTHIC_2_6_fix
 
             ImText( "Enable Rain", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
@@ -1084,7 +1176,7 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::SetItemTooltip( "Limits overly bright point lights to reduce blown-out interiors." );
             ImText( "HDR", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
             ImGui::Checkbox( "##Enable HDR", &settings.EnableHDR );
-            ImGui::SetItemTooltip( "Enables high dynamic range rendering." );
+            ImGui::SetItemTooltip( "Enables high dynamic range rendering for the renderer post-processing pipeline." );
             ImGui::EndGroup();
         }
 
@@ -1094,7 +1186,11 @@ void ImGuiShim::RenderSettingsWindow()
         ImGui::SetCursorPosX( std::max( ImGui::GetCursorPosX(), ImGui::GetWindowContentRegionMax().x - advancedHintWidth ) );
         ImGui::TextUnformatted( advancedSettingsHint );
         
-        auto saved = ImGui::Button( "Save Settings", ImVec2( ImGui::GetContentRegionAvail().x, 30.f ) );
+        const float footerButtonWidth = (ImGui::GetContentRegionAvail().x - style.ItemSpacing.x) * 0.5f;
+        const bool cancelled = ImGui::Button( "Abbrechen", ImVec2( footerButtonWidth, 30.f ) );
+        ImGui::SetItemTooltip( "Discard changes made since opening the F11 menu." );
+        ImGui::SameLine();
+        const bool saved = ImGui::Button( "Save Settings", ImVec2( footerButtonWidth, 30.f ) );
         auto worldSettingsPath = Engine::GAPI->GetLoadedWorldSettingsPath(false);
         const bool isInWorld = !worldSettingsPath.empty();
         const bool hasWorldSettings = Toolbox::FileExists( worldSettingsPath );
@@ -1104,7 +1200,12 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::SetItemTooltip("Save settings.\nCTRL+Click to save just for the current world.");
         }
         
-        if ( saved ) {
+        if ( cancelled ) {
+            CancelSettingsEdit();
+            shadersToReload = ShaderCategory::None;
+            Engine::GraphicsEngine->OnUIEvent( BaseGraphicsEngine::UI_ClosedSettings );
+        } else if ( saved ) {
+            CommitSettingsEdit();
             Engine::GraphicsEngine->OnUIEvent( BaseGraphicsEngine::UI_ClosedSettings );
             if ( (ImGui::GetIO().KeyCtrl || hasWorldSettings) && isInWorld ) {
                 Engine::GAPI->SaveRendererWorldSettings( settings );
@@ -1273,6 +1374,9 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
         if ( SliderNormalizedUiStrength( "Blur Strength", &advancedDepthOfFieldStrength ) ) {
             settings.DoFBokehRadius = advancedDepthOfFieldStrength * 3.5f;
         }
+        ImGui::SliderFloat( "Near Blur Distance", &settings.DoFNearBlurDistance, 0.0f, 1000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
+        SliderNormalizedUiStrength( "Near Blur Strength", &settings.DoFNearBlurStrength, 0.0f );
+        ImGui::SetItemTooltip( "Adds blur only to geometry very close to the camera. The existing far-distance blur is unchanged." );
         ImGui::EndDisabled();
 
         ImGui::SeparatorText( "Sharpening" );

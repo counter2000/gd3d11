@@ -16,8 +16,8 @@ cbuffer DepthOfFieldConstantBuffer : register( b0 )
     float4 DoF_ProjParams;
     float DoF_NearPlane;
     float DoF_FarPlane;
-    float DoF_Pad;
-    float DoF_Pad2;
+    float DoF_NearBlurDistance;
+    float DoF_NearBlurStrength;
 };
 
 SamplerState SS_Linear : register( s0 );
@@ -39,7 +39,10 @@ float LinearizeDepth( float d )
 
 float ComputeCoC( float linearDepth, float focusDepth )
 {
-    return saturate( ( linearDepth - focusDepth ) / DoF_FocusRange );
+    const float farCoC = saturate( ( linearDepth - focusDepth ) / DoF_FocusRange );
+    const float nearRange = max( DoF_NearBlurDistance - DoF_NearPlane, 1.0f );
+    const float nearCoC = saturate( ( DoF_NearBlurDistance - linearDepth ) / nearRange ) * DoF_NearBlurStrength;
+    return max( farCoC, nearCoC );
 }
 
 bool IsSkyDepth( float depth )

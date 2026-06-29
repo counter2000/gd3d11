@@ -79,6 +79,7 @@ class BaseGraphicsEngine {
 public:
     enum EUIEvent {
         UI_OpenSettings,
+        UI_OpenSettingsFromGothicVideoSettings,
         UI_ClosedSettings,
         UI_ToggleAdvancedSettings,
     };

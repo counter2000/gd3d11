@@ -127,7 +127,7 @@ float3 ApplyTreeWind(float3 vertexPos, float3 direction, float heightNorm, float
 
 // HERO/NPC INTERACTION CONST (Gothic world units)
 static const float heroAffectInnerRadius = 5.0f;
-static const float heroAffectOuterRadius = 15.0f;
+static const float heroAffectOuterRadius = 25.0f;
 static const float heroAffectVerticalInnerRadius = 55.0f;
 static const float heroAffectVerticalOuterRadius = 105.0f;
 static const float heroAffectStrength = 38.0f;
@@ -156,6 +156,7 @@ float3 CalculateSingleActorInfluence(
     // Full response close to the actor, a tight soft edge, then exactly zero.
     // This keeps interaction local even on large vegetation objects.
     float radialFactor = 1.0f - smoothstep(heroAffectInnerRadius, heroAffectOuterRadius, distanceXZ);
+    radialFactor *= radialFactor;
     float verticalFactor = 1.0f - smoothstep(
         heroAffectVerticalInnerRadius,
         heroAffectVerticalOuterRadius,

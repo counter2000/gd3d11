@@ -593,8 +593,9 @@ struct GothicRendererSettings {
 
     enum E_Upscaler {
         UPSCALER_DEFAULT = 0,
-        UPSCALER_FSR_1 = 1,
-        UPSCALER_FSR_2 = 2,
+        // Values 1 and 2 remain reserved so old INI files migrate safely to FSR3.
+        UPSCALER_LEGACY_FSR_1 = 1,
+        UPSCALER_LEGACY_FSR_2 = 2,
         UPSCALER_FSR_3 = 3,
         _UPSCALER_NUM_MODES
     };
@@ -731,6 +732,8 @@ struct GothicRendererSettings {
         DoFFocusRange = 8000.0f;
         DoFBokehRadius = 3.5f;
         DoFMaxBlur = 12.0f;
+        DoFNearBlurDistance = 300.0f;
+        DoFNearBlurStrength = 1.0f;
 
         WindQuality = WIND_QUALITY_ADVANCED;
         HeroAffectsObjects = false;
@@ -945,6 +948,8 @@ struct GothicRendererSettings {
     float DoFFocusRange;
     float DoFBokehRadius;
     float DoFMaxBlur;
+    float DoFNearBlurDistance;
+    float DoFNearBlurStrength;
     bool EnableOcclusionCulling;
     bool SortRenderQueue;
     bool DrawThreaded;
@@ -1113,18 +1118,15 @@ struct GothicRendererSettings {
         }
 
         if ( AntiAliasingMode == E_AntiAliasingMode::AA_FSR ) {
-            if ( Upscaler != E_Upscaler::UPSCALER_FSR_2
-                && Upscaler != E_Upscaler::UPSCALER_FSR_3 ) {
-                Upscaler = E_Upscaler::UPSCALER_FSR_3;
-            }
+            // FSR3 is the only temporal upscaler. Legacy FSR1/FSR2 INI values
+            // are migrated here without reusing their removed implementations.
+            Upscaler = E_Upscaler::UPSCALER_FSR_3;
             ResolutionScalePercent = SnapFSRResolutionScale( ResolutionScalePercent );
             return;
         }
 
-        ResolutionScalePercent = std::clamp( ResolutionScalePercent, 25, 200 );
-        Upscaler = ResolutionScalePercent < 100
-            ? E_Upscaler::UPSCALER_FSR_1
-            : E_Upscaler::UPSCALER_DEFAULT;
+        ResolutionScalePercent = std::clamp( ResolutionScalePercent, 100, 200 );
+        Upscaler = E_Upscaler::UPSCALER_DEFAULT;
     }
 
     bool GetIsTAAEnabled() const {

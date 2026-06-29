@@ -903,8 +903,6 @@ copy "$(OutDir)$(TargetName).pdb" "$(G1_SYSTEM_PATH)\ddraw.pdb"</Command>
     <ClInclude Include="D3D11PFX_Blur.h" />
     <ClInclude Include="D3D11PFX_DistanceBlur.h" />
     <ClInclude Include="D3D11PFX_Effect.h" />
-    <ClInclude Include="D3D11PFX_FSR1.h" />
-    <ClInclude Include="D3D11PFX_FSR2.h" />
     <ClInclude Include="D3D11PFX_FSR3.h" />
     <ClInclude Include="D3D11PFX_GodRays.h" />
       <ClInclude Include="D3D11PFX_DepthOfField.h" />
@@ -1069,7 +1067,6 @@ copy "$(OutDir)$(TargetName).pdb" "$(G1_SYSTEM_PATH)\ddraw.pdb"</Command>
     <ClInclude Include="SMAA\D3D11SMAA.h" />
     <ClInclude Include="SteamOverlay.h" />
     <ClInclude Include="StackWalker.h" />
-    <ClInclude Include="TAAConstantBuffer.h" />
     <ClInclude Include="TexturePool.h" />
     <ClInclude Include="ThreadPool.h" />
     <ClInclude Include="VersionCheck.h" />
@@ -1157,8 +1154,6 @@ copy "$(OutDir)$(TargetName).pdb" "$(G1_SYSTEM_PATH)\ddraw.pdb"</Command>
     <ClCompile Include="D3D11PFX_Blur.cpp" />
     <ClCompile Include="D3D11PFX_CAS.cpp" />
     <ClCompile Include="D3D11PFX_DistanceBlur.cpp" />
-    <ClCompile Include="D3D11PFX_FSR1.cpp" />
-    <ClCompile Include="D3D11PFX_FSR2.cpp" />
     <ClCompile Include="D3D11PFX_FSR3.cpp" />
     <ClCompile Include="D3D11PFX_GodRays.cpp" />
       <ClCompile Include="D3D11PFX_DepthOfField.cpp" />
@@ -1339,14 +1334,7 @@ copy "$(OutDir)$(TargetName).pdb" "$(G1_SYSTEM_PATH)\ddraw.pdb"</Command>
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="Shaders\PS_PFX_FSR1_EASU.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="Shaders\PS_PFX_FSR1_RCAS.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
+
   <ItemGroup>
     <None Include="Shaders\PS_DS_PointLight.hlsl">
       <FileType>Document</FileType>

@@ -4,8 +4,6 @@
 #include "TexturePool.h"
 
 class D3D11PFX_FSR3;
-class D3D11PFX_FSR2;
-class D3D11PFX_FSR1;
 class D3D11PFX_CAS;
 class D3D11PFX_TAA;
 struct RenderToTextureBuffer;
@@ -109,8 +107,6 @@ public:
 
     D3D11PFX_TAA* GetTAAEffect() { return FX_TAA.get(); }
     D3D11PFX_CAS* GetCAS() { return PFX_CAS.get(); }
-    D3D11PFX_FSR1* GetFSR1() { return PFX_FSR1.get(); }
-    D3D11PFX_FSR2* GetFSR2() { return PFX_FSR2.get(); }
     D3D11PFX_FSR3* GetFSR3() { return PFX_FSR3.get(); }
 
     void OnEndFrame() {
@@ -144,8 +140,6 @@ private:
 
     std::unique_ptr<D3D11PFX_CAS> PFX_CAS;
     std::unique_ptr<D3D11PFX_SimpleSharpen> PFX_SimpleSharpen;
-    std::unique_ptr<D3D11PFX_FSR1> PFX_FSR1;
-    std::unique_ptr<D3D11PFX_FSR2> PFX_FSR2;
     std::unique_ptr<D3D11PFX_FSR3> PFX_FSR3;
     std::unique_ptr<D3D11PFX_ASSAO> PFX_ASSAO;
     std::unique_ptr<TexturePool> m_texturePool;

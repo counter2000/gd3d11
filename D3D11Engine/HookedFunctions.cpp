@@ -393,7 +393,7 @@ void __fastcall HookedFunctionInfo::hooked_zCActiveSndAutoCalcObstruction( void*
 }
 
 int __cdecl HookedFunctionInfo::hooked_GetNumDevices() {
-    Engine::GraphicsEngine->OnUIEvent( BaseGraphicsEngine::EUIEvent::UI_OpenSettings );
+    Engine::GraphicsEngine->OnUIEvent( BaseGraphicsEngine::EUIEvent::UI_OpenSettingsFromGothicVideoSettings );
     return 1;
 }
 

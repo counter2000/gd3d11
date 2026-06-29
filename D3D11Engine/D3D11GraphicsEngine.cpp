@@ -47,8 +47,6 @@
 #include "SteamOverlay.h"
 #include <dxgi1_6.h>
 
-#include "D3D11PFX_FSR1.h"
-#include "D3D11PFX_FSR2.h"
 #include "D3D11PFX_FSR3.h"
 #include "D3D11PFX_TAA.h"
 #include "ImGuiShim.h"
@@ -101,9 +99,13 @@ static void UpdateCharacterInteractionPositions( VS_ExConstantBuffer_Wind& windB
     const XMFLOAT3 playerPosition = player->GetPositionWorld();
     windBuff.interactionPositions[0] = float4( playerPosition.x, playerPosition.y, playerPosition.z, 1.0f );
 
+    // The hero always affects nearby objects, but choose additional NPC
+    // influencers around the camera. That keeps the limited influence slots
+    // focused on what the player can actually see.
+    const XMFLOAT3 interactionSelectionCenter = Engine::GAPI->GetCameraPosition();
     constexpr float NpcInteractionSearchRadius = 1200.0f; // 12 meters in Gothic world units.
     Engine::GAPI->CollectNearbyNpcInteractionPositions(
-        playerPosition,
+        interactionSelectionCenter,
         NpcInteractionSearchRadius,
         MAX_CHARACTER_INTERACTION_NPCS,
         &windBuff.interactionPositions[1] );
@@ -8368,33 +8370,89 @@ void D3D11GraphicsEngine::UpdateShouldBlockGameInput( ) {
     }
 }
 
+void D3D11GraphicsEngine::UpdateSettingsPauseState( bool settingsWindowVisible ) {
+    if ( settingsWindowVisible ) {
+        if ( !m_SettingsPauseActive ) {
+            if ( auto game = oCGame::GetGame() ) {
+                m_SettingsWasGamePaused = game->GetSingleStep();
+                if ( !m_SettingsWasGamePaused ) {
+                    game->SetSingleStep( true );
+                }
+                m_SettingsPauseActive = true;
+            }
+        }
+        return;
+    }
+
+    if ( m_SettingsPauseActive ) {
+        if ( auto game = oCGame::GetGame() ) {
+            if ( !m_SettingsWasGamePaused ) {
+                game->SetSingleStep( false );
+            }
+        }
+        m_SettingsPauseActive = false;
+        m_SettingsWasGamePaused = false;
+    }
+}
+
+void D3D11GraphicsEngine::CloseGothicVideoSettingsMenuIfRequested() {
+    if ( !m_CloseGothicVideoSettingsOnSettingsClose ) {
+        return;
+    }
+
+    m_CloseGothicVideoSettingsOnSettingsClose = false;
+    if ( Engine::GAPI ) {
+        Engine::GAPI->SendMessageToGameWindow( WM_KEYDOWN, VK_ESCAPE, 0 );
+        Engine::GAPI->SendMessageToGameWindow( WM_KEYUP, VK_ESCAPE, 0 );
+    }
+}
+
 /** Handles an UI-Event */
 void D3D11GraphicsEngine::OnUIEvent( EUIEvent uiEvent ) {
 
-    if ( uiEvent == UI_OpenSettings ) {
+    if ( uiEvent == UI_OpenSettings || uiEvent == UI_OpenSettingsFromGothicVideoSettings ) {
+        if ( uiEvent == UI_OpenSettingsFromGothicVideoSettings ) {
+            m_CloseGothicVideoSettingsOnSettingsClose = true;
+        }
+
         if ( auto hImgui = Engine::ImGuiHandle ) {
-            // Show settings
             if ( hImgui->AdvancedSettingsVisible ) {
                 hImgui->AdvancedSettingsVisible = false;
             }
-            hImgui->SettingsVisible = !hImgui->SettingsVisible;
+            const bool openSettings = !hImgui->SettingsVisible;
+            hImgui->SettingsVisible = openSettings;
+            if ( openSettings ) {
+                hImgui->BeginSettingsEdit();
+            } else {
+                // F11 keeps the current session values, exactly as before.
+                hImgui->CommitSettingsEdit();
+            }
             UpdateShouldBlockGameInput();
+            UpdateSettingsPauseState( hImgui->SettingsVisible || hImgui->AdvancedSettingsVisible );
+            if ( !hImgui->SettingsVisible && !hImgui->AdvancedSettingsVisible ) {
+                CloseGothicVideoSettingsMenuIfRequested();
+            }
         }
         UpdateClipCursor( OutputWindow );
     } else if ( uiEvent == UI_ToggleAdvancedSettings ) {
         if ( auto hImgui = Engine::ImGuiHandle ) {
-            // Show settings
             if ( hImgui->SettingsVisible ) {
+                hImgui->CommitSettingsEdit();
                 hImgui->SettingsVisible = false;
             }
             hImgui->AdvancedSettingsVisible = !hImgui->AdvancedSettingsVisible;
             UpdateShouldBlockGameInput();
+            UpdateSettingsPauseState( hImgui->SettingsVisible || hImgui->AdvancedSettingsVisible );
+            if ( !hImgui->SettingsVisible && !hImgui->AdvancedSettingsVisible ) {
+                CloseGothicVideoSettingsMenuIfRequested();
+            }
         }
         UpdateClipCursor( OutputWindow );
     } else if ( uiEvent == UI_ClosedSettings ) {
         // Settings can be closed in multiple ways
         if ( auto hImgui = Engine::ImGuiHandle; hImgui->GetIsActive() ) {
-            // Show settings
+            // ESC and other generic close paths retain current session values.
+            hImgui->CommitSettingsEdit();
             hImgui->SettingsVisible = false;
             hImgui->AdvancedSettingsVisible = false;
         }
@@ -8402,9 +8460,10 @@ void D3D11GraphicsEngine::OnUIEvent( EUIEvent uiEvent ) {
         //     antBar->SetActive( false );
         // }
         UpdateShouldBlockGameInput();
+        UpdateSettingsPauseState( false );
+        CloseGothicVideoSettingsMenuIfRequested();
 
         UpdateClipCursor( OutputWindow );
-UpdateShouldBlockGameInput();
     }
 }
 

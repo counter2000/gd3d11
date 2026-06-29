@@ -30,6 +30,8 @@ static DepthOfFieldConstantBuffer BuildDepthOfFieldConstants() {
     cb.DoF_ProjParams = float4( 1.0f / proj._11, 1.0f / proj._22, proj._34, proj._33 );
     cb.DoF_NearPlane = Engine::GAPI->GetRendererState().RendererInfo.NearPlane;
     cb.DoF_FarPlane = Engine::GAPI->GetRendererState().RendererInfo.FarPlane;
+    cb.DoF_NearBlurDistance = settings.DoFNearBlurDistance;
+    cb.DoF_NearBlurStrength = settings.DoFNearBlurStrength;
     return cb;
 }
 

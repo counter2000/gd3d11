@@ -16,8 +16,8 @@ cbuffer DepthOfFieldConstantBuffer : register( b0 )
     float4 DoF_ProjParams;
     float DoF_NearPlane;
     float DoF_FarPlane;
-    float DoF_Pad;
-    float DoF_Pad2;
+    float DoF_NearBlurDistance;
+    float DoF_NearBlurStrength;
 };
 
 SamplerState SS_Linear : register( s0 );
