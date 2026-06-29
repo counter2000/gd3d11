@@ -444,7 +444,7 @@ void XeGTAO_MainPass( const uint2 pixCoord, lpfloat sliceCount, lpfloat stepsPer
 #ifdef XE_GTAO_SHOW_DEBUG_VIZ
                 int mipLevelU = (int)round(mipLevel);
                 float4 mipColor = saturate( float4( mipLevelU>=3, mipLevelU>=1 && mipLevelU<=3, mipLevelU<=1, 1.0 ) );
-                if( all( sampleOffset == 0 ) )
+                if( sampleOffset.x == 0 && sampleOffset.y == 0 )
                     DebugDraw2DText( pixCoord, float4( 1, 0, 0, 1), pixelTooCloseThreshold );
                 [branch] if (IsUnderCursorRange(pixCoord, int2(1, 1)))
                 {
@@ -638,7 +638,7 @@ void XeGTAO_PrefilterDepths16x16( uint2 dispatchThreadID /*: SV_DispatchThreadID
 
     // MIP 2
     [branch]
-    if( all( ( groupThreadID.xy % uint2( 2, 2 ) ) == 0 ) )
+    if( ( groupThreadID.x % 2 ) == 0 && ( groupThreadID.y % 2 ) == 0 )
     {
         lpfloat inTL = g_scratchDepths[groupThreadID.x+0][groupThreadID.y+0];
         lpfloat inTR = g_scratchDepths[groupThreadID.x+1][groupThreadID.y+0];
@@ -654,7 +654,7 @@ void XeGTAO_PrefilterDepths16x16( uint2 dispatchThreadID /*: SV_DispatchThreadID
 
     // MIP 3
     [branch]
-    if( all( ( groupThreadID.xy % uint2( 4, 4 ) ) == 0 ) )
+    if( ( groupThreadID.x % 4 ) == 0 && ( groupThreadID.y % 4 ) == 0 )
     {
         lpfloat inTL = g_scratchDepths[groupThreadID.x+0][groupThreadID.y+0];
         lpfloat inTR = g_scratchDepths[groupThreadID.x+2][groupThreadID.y+0];
@@ -670,7 +670,7 @@ void XeGTAO_PrefilterDepths16x16( uint2 dispatchThreadID /*: SV_DispatchThreadID
 
     // MIP 4
     [branch]
-    if( all( ( groupThreadID.xy % uint2( 8, 8 ) ) == 0 ) )
+    if( ( groupThreadID.x % 8 ) == 0 && ( groupThreadID.y % 8 ) == 0 )
     {
         lpfloat inTL = g_scratchDepths[groupThreadID.x+0][groupThreadID.y+0];
         lpfloat inTR = g_scratchDepths[groupThreadID.x+4][groupThreadID.y+0];

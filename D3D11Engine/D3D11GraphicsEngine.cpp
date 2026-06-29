@@ -8495,8 +8495,10 @@ void D3D11GraphicsEngine::UpdateSettingsPauseState( bool settingsWindowVisible )
 
     if ( m_SettingsPauseActive ) {
         if ( auto game = oCGame::GetGame() ) {
-            // The renderer owns this pause while either settings window is open.
-            game->SetSingleStep( false );
+            // Release only the pause state that the renderer created for F11.
+            if ( !m_SettingsWasGamePaused ) {
+                game->SetSingleStep( false );
+            }
         }
         m_SettingsPauseActive = false;
         m_SettingsWasGamePaused = false;

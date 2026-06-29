@@ -4093,8 +4093,15 @@ LRESULT GothicAPI::OnWindowMessage( HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
             break;
 
         case VK_ESCAPE:
+        {
+            const bool rendererSettingsActive = Engine::ImGuiHandle &&
+                (Engine::ImGuiHandle->SettingsVisible || Engine::ImGuiHandle->AdvancedSettingsVisible);
             Engine::GraphicsEngine->OnUIEvent( BaseGraphicsEngine::EUIEvent::UI_ClosedSettings );
+            if ( rendererSettingsActive ) {
+                return DefWindowProc( hWnd, msg, wParam, lParam );
+            }
             break;
+        }
 
         }
         default:

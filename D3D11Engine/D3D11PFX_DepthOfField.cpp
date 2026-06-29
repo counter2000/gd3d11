@@ -12,9 +12,28 @@
 #include "ConstantBufferStructs.h"
 #include "GothicAPI.h"
 #include "TexturePool.h"
+#include "zCVob.h"
 #include <cmath>
 
 extern bool FeatureLevel10Compatibility;
+
+static bool IsThirdPersonCameraForNearDoF() {
+    zCVob* player = Engine::GAPI->GetPlayerVob();
+    if ( !player ) {
+        return false;
+    }
+
+    const XMFLOAT3 cameraPosition = Engine::GAPI->GetCameraPosition();
+    const XMFLOAT3 playerPosition = player->GetPositionWorld();
+    const float dx = cameraPosition.x - playerPosition.x;
+    const float dz = cameraPosition.z - playerPosition.z;
+    const float horizontalDistanceSq = dx * dx + dz * dz;
+
+    // First-person keeps the camera almost on the hero. In third-person the visible hero
+    // is separated from the camera, so near-field DoF may be applied.
+    constexpr float THIRD_PERSON_MIN_HORIZONTAL_DISTANCE = 60.0f;
+    return horizontalDistanceSq > THIRD_PERSON_MIN_HORIZONTAL_DISTANCE * THIRD_PERSON_MIN_HORIZONTAL_DISTANCE;
+}
 
 static DepthOfFieldConstantBuffer BuildDepthOfFieldConstants() {
     auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
@@ -31,7 +50,7 @@ static DepthOfFieldConstantBuffer BuildDepthOfFieldConstants() {
     cb.DoF_NearPlane = Engine::GAPI->GetRendererState().RendererInfo.NearPlane;
     cb.DoF_FarPlane = Engine::GAPI->GetRendererState().RendererInfo.FarPlane;
     cb.DoF_NearBlurDistance = settings.DoFNearBlurDistance;
-    cb.DoF_NearBlurStrength = settings.DoFNearBlurStrength;
+    cb.DoF_NearBlurStrength = IsThirdPersonCameraForNearDoF() ? settings.DoFNearBlurStrength : 0.0f;
     return cb;
 }
 

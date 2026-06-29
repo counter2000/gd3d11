@@ -43,11 +43,6 @@ bool IsSkyDepth( float d )
     return d <= 1e-7f;
 }
 
-float GetNearBlurScreenMask( float2 texcoord )
-{
-    const float horizontalDistance = abs( texcoord.x * 2.0f - 1.0f );
-    return smoothstep( 0.18f, 0.85f, horizontalDistance );
-}
 
 float ComputeCoCFromDepth( float d, float focusDepth, float2 texcoord )
 {
@@ -58,7 +53,7 @@ float ComputeCoCFromDepth( float d, float focusDepth, float2 texcoord )
     const float farCoC = saturate( ( linearDepth - focusDepth ) / DoF_FocusRange );
     const float nearRange = max( DoF_NearBlurDistance - DoF_NearPlane, 1.0f );
     const float nearCoC = saturate( ( DoF_NearBlurDistance - linearDepth ) / nearRange )
-        * DoF_NearBlurStrength * GetNearBlurScreenMask( texcoord );
+        * DoF_NearBlurStrength;
     return max( farCoC, nearCoC );
 }
 

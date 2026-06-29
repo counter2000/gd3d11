@@ -10,12 +10,12 @@
 // Conservative occlusion settings. The goal is stable rendering first, saved draw calls second.
 // A single invisible query result is not enough to hide BSP leaves, because camera motion and
 // one-frame GPU latency otherwise cause visible world rebuild/pop-in during fast turns.
-const unsigned int VISIBLE_RECHECK_FRAME_DELAY = 6;
-const unsigned int INVISIBLE_CONFIRM_FRAME_COUNT = 3;
-const unsigned int VISIBLE_GRACE_FRAME_COUNT = 10;
-const unsigned int FAST_CAMERA_GRACE_FRAME_COUNT = 18;
-const float FAST_CAMERA_MOVE_DISTANCE = 180.0f;
-const float FAST_CAMERA_TURN_DOT = 0.985f;
+const unsigned int VISIBLE_RECHECK_FRAME_DELAY = 2;
+const unsigned int INVISIBLE_CONFIRM_FRAME_COUNT = 2;
+const unsigned int VISIBLE_GRACE_FRAME_COUNT = 3;
+const unsigned int FAST_CAMERA_GRACE_FRAME_COUNT = 6;
+const float FAST_CAMERA_MOVE_DISTANCE = 350.0f;
+const float FAST_CAMERA_TURN_DOT = 0.80f;
 
 D3D11OcclusionQuerry::D3D11OcclusionQuerry() {
     FrameID = 0;
@@ -165,8 +165,12 @@ void D3D11OcclusionQuerry::DoOcclusionForBSP( BspInfo* root ) {
                 root->OcclusionInfo.QueryInProgress = true;
             }
         }
-
         root->OcclusionInfo.LastVisitedFrameID = FrameID;
+    } else if ( root->OcclusionInfo.VisibleLastFrame ) {
+        // A visible parent can skip its own expensive query for a few frames, but its
+        // children still need to update. Otherwise the hierarchy becomes effectively inert.
+        DoOcclusionForBSP( root->Front );
+        DoOcclusionForBSP( root->Back );
     }
 }
 /** Begins the occlusion-checks */
