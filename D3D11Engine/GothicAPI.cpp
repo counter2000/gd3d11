@@ -5580,13 +5580,16 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.HbaoSettings.SsaoStepCount = GetPrivateProfileIntA( "HBAO", "SsaoStepCount", defaultHBAOSettings.SsaoStepCount, ini.c_str() );
 
         // Use ASSAO as default when no AO mode is stored.
-        int defaultAoMode = static_cast<int>(ds.AoMode);
-        const int aoMode = std::clamp( GetPrivateProfileIntA( "AO", "Mode", defaultAoMode, ini.c_str() ),
+        const int defaultAoMode = static_cast<int>(ds.AoMode);
+        const int storedAoMode = static_cast<int>(GetPrivateProfileIntA( "AO", "Mode", defaultAoMode, ini.c_str() ));
+        const int aoMode = std::clamp( storedAoMode,
             static_cast<int>(AOMode::AO_NONE), static_cast<int>(AOMode::AO_XEGTAO) );
         s.AoMode = static_cast<AOMode>(aoMode);
         s.AOStrength = std::clamp( GetPrivateProfileFloatA( "AO", "Strength", ds.AOStrength, ini ), 0.01f, 2.0f );
-        s.XegtaoSettings.QualityLevel = std::clamp( GetPrivateProfileIntA( "XeGTAO", "Quality", ds.XegtaoSettings.QualityLevel, ini.c_str() ), 0, 3 );
-        s.XegtaoSettings.DenoisePasses = std::clamp( GetPrivateProfileIntA( "XeGTAO", "DenoisePasses", ds.XegtaoSettings.DenoisePasses, ini.c_str() ), 1, 3 );
+        const int xegtaoQuality = static_cast<int>(GetPrivateProfileIntA( "XeGTAO", "Quality", ds.XegtaoSettings.QualityLevel, ini.c_str() ));
+        const int xegtaoDenoise = static_cast<int>(GetPrivateProfileIntA( "XeGTAO", "DenoisePasses", ds.XegtaoSettings.DenoisePasses, ini.c_str() ));
+        s.XegtaoSettings.QualityLevel = std::clamp( xegtaoQuality, 0, 3 );
+        s.XegtaoSettings.DenoisePasses = std::clamp( xegtaoDenoise, 1, 3 );
         s.XegtaoSettings.Radius = std::clamp( GetPrivateProfileFloatA( "XeGTAO", "Radius", ds.XegtaoSettings.Radius, ini ), 1.0f, 500.0f );
 
         const SAOSettings& defaultSAOSettings = ds.SaoSettings;
