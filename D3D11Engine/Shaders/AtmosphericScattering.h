@@ -30,6 +30,9 @@ cbuffer Atmosphere : register( b1 )
 	float3 AC_LightPos;
 	float AC_SceneWettness;
 
+	float3 AC_MoonPos;
+	float AC_MoonVisibility;
+
 	float3 AC_SpherePosition;
 	float AC_RainFXWeight;
 

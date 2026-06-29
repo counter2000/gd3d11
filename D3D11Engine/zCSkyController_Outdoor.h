@@ -323,6 +323,34 @@ public:
         return pos;
     }
 
+    /** Returns the moon direction in world coordinates using Gothic's original orbit. */
+    XMFLOAT3 GetMoonWorldPosition( float timeScale = 1.0f ) {
+        float skyTime = GetMasterTime();
+        if ( skyTime >= 0.708f ) {
+            skyTime = Toolbox::lerp( 0.75f, 1.0f, (skyTime - 0.708f) / 0.292f );
+        } else if ( skyTime <= 0.292f ) {
+            skyTime = Toolbox::lerp( 0.0f, 0.25f, skyTime / 0.292f );
+        } else if ( skyTime >= 0.5f ) {
+            skyTime = Toolbox::lerp( 0.5f, 0.75f, (skyTime - 0.5f) / 0.208f );
+        } else {
+            skyTime = Toolbox::lerp( 0.25f, 0.5f, (skyTime - 0.292f) / 0.208f );
+        }
+
+        const float angle = timeScale <= -1
+            ? 4.71375f
+            : skyTime * timeScale * XM_2PI - XM_PIDIV2;
+
+        constexpr XMVECTORF32 moonPos = { -60, 0, 100, 0 };
+        const XMFLOAT3 rotAxis = XMFLOAT3( 1, 0, 0 );
+        const XMFLOAT4X4 moonRotation =
+            HookedFunctions::OriginalFunctions.original_Alg_Rotation3DNRad( rotAxis, -angle );
+
+        XMFLOAT3 pos;
+        MatrixVector3Multiply( pos, XMVector3Normalize( moonPos ), XMLoadFloat4x4( &moonRotation ) );
+        return pos;
+    }
+
+
     static float __fastcall FixSunWorldPosition( zCSkyController_Outdoor* _THIS ) {
         float skyTime = _THIS->GetMasterTime();
         if ( skyTime >= 0.708f ) {

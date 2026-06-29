@@ -5485,13 +5485,14 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
             s.AntiAliasingMode = GothicRendererSettings::E_AntiAliasingMode::AA_SMAA;
         }
 
-        s.SharpenFactor = std::clamp( GetPrivateProfileFloatA( "SMAA", "SharpenFactor", 0.30f, ini ), 0.0f, 1.0f );
+        s.AntiAliasingMode = (GothicRendererSettings::E_AntiAliasingMode)GetPrivateProfileIntA( "General", "AntiAliasing", (int)ds.AntiAliasingMode, ini.c_str() );
+        const float defaultSharpenFactor = s.GetIsTAAEnabled() ? 1.0f : 0.2f;
+        s.SharpenFactor = std::clamp( GetPrivateProfileFloatA( "SMAA", "SharpenFactor", defaultSharpenFactor, ini ), 0.0f, 1.0f );
         const int sharpeningMode = std::clamp<int>(
             GetPrivateProfileIntA( "General", "SharpeningMode", static_cast<int>(ds.SharpeningMode), ini.c_str() ),
             static_cast<int>(GothicRendererSettings::SHARPEN_NONE),
             static_cast<int>(GothicRendererSettings::SHARPEN_CAS) );
         s.SharpeningMode = static_cast<GothicRendererSettings::E_SharpeningMode>(sharpeningMode);
-        s.AntiAliasingMode = (GothicRendererSettings::E_AntiAliasingMode)GetPrivateProfileIntA( "General", "AntiAliasing", (int)ds.AntiAliasingMode, ini.c_str() );
 
         const HBAOSettings& defaultHBAOSettings = ds.HbaoSettings;
         s.HbaoSettings.Enabled = GetPrivateProfileBoolA( "HBAO", "Enabled", defaultHBAOSettings.Enabled, ini );
@@ -5607,6 +5608,8 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         }
         s.ChangeWindowPreset = 0;
     }
+
+    s.FixupUpscalingSettings();
 
     return XR_SUCCESS;
 }

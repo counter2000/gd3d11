@@ -12,6 +12,7 @@ SamplerState SS_Linear : register( s0 );
 SamplerState SS_samMirror : register( s1 );
 Texture2D	TX_Texture0 : register( t0 );
 Texture2D	TX_Texture1 : register( t1 );
+Texture2D	TX_Texture2 : register( t2 );
 
 
 //--------------------------------------------------------------------------------------
@@ -35,6 +36,41 @@ float AtmosphereDither(float2 pixelPosition)
 }
 
 //--------------------------------------------------------------------------------------
+float3 ApplyMoonTexture(float3 worldPosition)
+{
+    float3 localPosition = worldPosition - AC_SpherePosition;
+    float3 skyDirection = normalize(localPosition - AC_CameraPos);
+    float3 moonDirection = normalize(AC_MoonPos);
+
+    float3 referenceUp = abs(moonDirection.y) > 0.98f
+        ? float3(0.0f, 0.0f, 1.0f)
+        : float3(0.0f, 1.0f, 0.0f);
+    float3 moonRight = normalize(cross(referenceUp, moonDirection));
+    float3 moonUp = normalize(cross(moonDirection, moonRight));
+
+    float forward = dot(skyDirection, moonDirection);
+    float2 tangentPosition = float2(
+        dot(skyDirection, moonRight),
+        dot(skyDirection, moonUp)) / max(0.001f, forward);
+
+    const float moonAngularHalfSize = 0.055f;
+    float2 moonUV = float2(0.5f, 0.5f) +
+        tangentPosition / (moonAngularHalfSize * 2.0f);
+    moonUV.y = 1.0f - moonUV.y;
+
+    float2 inside = step(0.0f, moonUV) * step(moonUV, 1.0f);
+    float boundsMask = inside.x * inside.y * step(0.0f, forward);
+    float4 moonTexture = TX_Texture2.Sample(SS_Linear, saturate(moonUV));
+    float moonLuminance = max(moonTexture.r, max(moonTexture.g, moonTexture.b));
+    float textureMask = smoothstep(0.015f, 0.16f, moonLuminance) * moonTexture.a;
+    float limb = 1.0f - smoothstep(
+        0.88f, 1.0f, length(moonUV * 2.0f - 1.0f));
+
+    float moonMask = boundsMask * textureMask * limb * AC_MoonVisibility;
+    float3 moonColor = lerp(moonTexture.rgb, float3(0.72f, 0.80f, 1.0f), 0.25f);
+    return moonColor * moonMask * 1.35f;
+}
+
 // Pixel Shader
 //--------------------------------------------------------------------------------------
 float4 PSMain( PS_INPUT Input ) : SV_TARGET
@@ -50,6 +86,8 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	night.rgb = lerp(0.0f, night, saturate(-AC_LightPos.y * 4)); // Make sure stars are only visible at night
 	
 	
+	atmoColor += ApplyMoonTexture(Input.vWorldPosition);
+
 	atmoColor = lerp(atmoColor, clouds.rgb, clouds.a * 0.4f);
 	
 	// Apply stars

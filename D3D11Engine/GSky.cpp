@@ -6,7 +6,6 @@
 #include "GMesh.h"
 #include "oCGame.h"
 #include "zCMaterial.h"
-#include "zCMesh.h"
 #include "zCTimer.h"
 #include "zCTexture.h"
 #include "zCSkyController_Outdoor.h"
@@ -130,6 +129,10 @@ XRESULT GSky::LoadSkyResources() {
     NightTexture.reset( nightTex );
 
     XLE( NightTexture->Init( "system\\GD3D11\\Textures\\starsh.dds" ) );
+    D3D11Texture* moonTex;
+    XLE( Engine::GraphicsEngine->CreateTexture( &moonTex ) );
+    MoonTexture.reset( moonTex );
+    XLE( MoonTexture->Init( "system\\GD3D11\\Textures\\Moon.dds" ) );
 
     VERTEX_INDEX indices[] = { 0, 1, 2, 3, 4, 5 };
     SkyPlane = std::make_unique<MeshInfo>();
@@ -250,17 +253,25 @@ XRESULT GSky::RenderSky() {
 
     XMFLOAT3 camPos = Engine::GAPI->GetCameraPosition();
     XMFLOAT3 LightDir = {};
+    XMFLOAT3 MoonDir = {};
 
     if ( Engine::GAPI->GetRendererState().RendererSettings.ReplaceSunDirection ) {
         LightDir = Atmosphere.LightDirection;
+        XMStoreFloat3( &MoonDir, XMVectorNegate( XMLoadFloat3( &LightDir ) ) );
     } else {
         zCSkyController_Outdoor* sc = oCGame::GetGame()->_zCSession_world->GetSkyControllerOutdoor();
         if ( sc ) {
             LightDir = sc->GetSunWorldPosition( Atmosphere.SkyTimeScale );
+            MoonDir = sc->GetMoonWorldPosition( Atmosphere.SkyTimeScale );
             Atmosphere.LightDirection = LightDir;
         }
     }
     XMStoreFloat3( &LightDir, XMVector3Normalize( XMLoadFloat3( &LightDir ) ) );
+    if ( XMVectorGetX( XMVector3LengthSq( XMLoadFloat3( &MoonDir ) ) ) < 0.001f ) {
+        XMStoreFloat3( &MoonDir, XMVectorNegate( XMLoadFloat3( &LightDir ) ) );
+    } else {
+        XMStoreFloat3( &MoonDir, XMVector3Normalize( XMLoadFloat3( &MoonDir ) ) );
+    }
     //Atmosphere.SpherePosition.y = -Atmosphere.InnerRadius;
 
     Atmosphere.SpherePosition.x = 0;//Engine::GAPI->GetLoadedWorldInfo()->MidPoint.x;
@@ -274,6 +285,9 @@ XRESULT GSky::RenderSky() {
     AtmosphereCB.AC_CameraPos = XMFLOAT3( 0, -Atmosphere.SphereOffsetY, 0 );
     AtmosphereCB.AC_Time = Engine::GAPI->GetTimeSeconds();
     AtmosphereCB.AC_LightPos = LightDir;
+    AtmosphereCB.AC_MoonPos = MoonDir;
+    const float moonFade = std::clamp( MoonDir.y / 0.12f, 0.0f, 1.0f );
+    AtmosphereCB.AC_MoonVisibility = moonFade * moonFade * (3.0f - 2.0f * moonFade);
 
     XMVECTOR lightDirVec = XMVector3Normalize( XMLoadFloat3( &LightDir ) );
     const float lightDistance = std::max( 10000.0f, Engine::GAPI->GetFarPlane() );
@@ -394,6 +408,31 @@ D3D11Texture* GSky::GetNightTexture() {
         }
     }
     return NightTexture.get();
+}
+
+/** Returns the renderer-owned copy of Gothic's moon texture. */
+D3D11Texture* GSky::GetMoonTexture() {
+    return MoonTexture.get();
+}
+
+bool GSky::IsMoonLightActive() const {
+    return AtmosphereCB.AC_LightPos.y < 0.0f;
+}
+
+XMFLOAT3 GSky::GetMainLightDirection() const {
+    const float3& direction =
+        IsMoonLightActive() ? AtmosphereCB.AC_MoonPos : AtmosphereCB.AC_LightPos;
+    XMFLOAT3 result( direction.x, direction.y, direction.z );
+    if ( XMVectorGetX( XMVector3LengthSq( XMLoadFloat3( &result ) ) ) < 0.001f ) {
+        result = Atmosphere.LightDirection;
+    }
+    return result;
+}
+
+float GSky::GetMainLightVisibility() const {
+    const XMFLOAT3 direction = GetMainLightDirection();
+    const float fade = std::clamp( (direction.y - 0.015f) / 0.12f, 0.0f, 1.0f );
+    return fade * fade * (3.0f - 2.0f * fade);
 }
 
 // The scale equation calculated by Vernier's Graphical Analysis

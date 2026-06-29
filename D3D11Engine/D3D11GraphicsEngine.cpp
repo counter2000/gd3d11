@@ -8092,7 +8092,7 @@ XRESULT D3D11GraphicsEngine::DrawSky() {
     SetupVS_ExMeshDrawCall();
     SetupVS_ExConstantBuffer();
 
-    ID3D11ShaderResourceView* srvs[2]{};
+    ID3D11ShaderResourceView* srvs[3]{};
     // Apply sky texture
     D3D11Texture* cloudsTex = Engine::GAPI->GetSky()->GetCloudTexture();
     if ( cloudsTex ) {
@@ -8102,6 +8102,11 @@ XRESULT D3D11GraphicsEngine::DrawSky() {
     D3D11Texture* nightTex = Engine::GAPI->GetSky()->GetNightTexture();
     if ( nightTex ) {
         srvs[1] = nightTex->GetShaderResourceView().Get();
+    }
+
+    D3D11Texture* moonTex = sky->GetMoonTexture();
+    if ( moonTex ) {
+        srvs[2] = moonTex->GetShaderResourceView().Get();
     }
     GetContext()->PSSetShaderResources( 0, std::size( srvs ), srvs);
 

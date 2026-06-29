@@ -219,6 +219,7 @@ float3 FP_ComputeSunLighting(
 
     float4 lightColor = SQ_LightColor;
     float sunStrength = dot( lightColor.rgb, float3( 0.333f, 0.333f, 0.333f ) );
+    sunStrength *= lerp( 1.0f, lightColor.a, saturate( AC_MoonVisibility * 1000.0f ) );
     float sun = saturate( dot( normalize( SQ_LightDirectionVS ), normal ) * shadow );
 
     spec = pow( spec, specPower ) * specIntensity;

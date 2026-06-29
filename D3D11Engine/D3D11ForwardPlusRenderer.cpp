@@ -225,11 +225,22 @@ void D3D11ForwardPlusRenderer::AddGeometryPasses(
             };
 
             constexpr float black[] { 0.f, 0.f, 0.f, 0.f };
-            // skip color target, clear all others.
-            for ( size_t i = 1; i < std::size(rtvs); i++ ) {
+            // Skip color and the T&C mask; clear normals, specular and velocity.
+            for ( size_t i = 1; i + 1 < std::size(rtvs); i++ ) {
                 if ( rtvs[i] )
                     context->ClearRenderTargetView( rtvs[i], black );
             }
+
+            // Sky is rendered later without depth or MRT writes. With FSR3 active, opaque
+            // geometry overwrites this value with 0 and uncovered sky remains fully marked.
+            const auto& rendererSettings = Engine::GAPI->GetRendererState().RendererSettings;
+            const bool fsr3Active = rendererSettings.AntiAliasingMode == GothicRendererSettings::AA_FSR3
+                || (rendererSettings.AntiAliasingMode == GothicRendererSettings::AA_FSR
+                    && rendererSettings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3);
+            const float skyTncValue = fsr3Active ? 1.f : 0.f;
+            const float skyTransparencyAndComposition[] { skyTncValue, skyTncValue, skyTncValue, skyTncValue };
+            if ( rtvs[4] )
+                context->ClearRenderTargetView( rtvs[4], skyTransparencyAndComposition );
 
             context->OMSetRenderTargets( 5, rtvs, engine.GetDepthBuffer()->GetDepthStencilView().Get() );
 

@@ -128,7 +128,7 @@ FORWARD_PLUS_PS_OUTPUT PSMain( PS_INPUT Input )
 	// CSM shadow source is toggleable in Forward+: precomputed screen-space mask or direct CSM.
 	float shadow = vertLighting;
 #if SHD_ENABLE
-	if (AC_LightPos.y > 0)
+	if (AC_LightPos.y > 0.0f || AC_MoonVisibility > 0.001f)
 	{
 		#if FP_USE_SHADOW_MASK
 			float2 screenUV = Input.vPosition.xy / FP_ViewportSize;

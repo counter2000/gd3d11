@@ -25,6 +25,39 @@ const float NUM_FRAME_SHADOW_UPDATES = 2;  // Fraction of lights to update per f
 const int NUM_MIN_FRAME_SHADOW_UPDATES = 4;  // Minimum lights to update per frame
 const int MAX_IMPORTANT_LIGHT_UPDATES = 1;
 
+struct DirectionalLightState {
+    XMFLOAT3 Direction;
+    float3 Color;
+    float Strength;
+    float Visibility;
+    bool IsMoon;
+};
+
+static DirectionalLightState GetDirectionalLightState() {
+    GSky* sky = Engine::GAPI->GetSky();
+    const auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
+    const float rain = std::clamp( Engine::GAPI->GetRainFXWeight(), 0.0f, 1.0f );
+
+    DirectionalLightState state = {};
+    state.Direction = sky->GetMainLightDirection();
+    state.Visibility = sky->GetMainLightVisibility();
+    state.IsMoon = sky->IsMoonLightActive();
+
+    if ( state.IsMoon ) {
+        state.Color = float3( 0.58f, 0.70f, 1.0f );
+        state.Strength = 0.075f * state.Visibility *
+            Toolbox::lerp( 1.0f, 0.35f, rain );
+    } else {
+        state.Color = settings.SunLightColor;
+        state.Strength = Toolbox::lerp(
+            settings.SunLightStrength,
+            settings.RainSunLightStrength,
+            std::min( 1.0f, rain * 2.0f ) ) * state.Visibility;
+    }
+
+    return state;
+}
+
 void CalculateTemporalInterpolatedPosition(
     const XMVECTOR currentDir,
     XMVECTOR& previousDir,
@@ -474,9 +507,9 @@ XRESULT D3D11ShadowMap::PrepareRender()
     m_CascadeSplits.clear();
     m_CascadeSplits.insert( m_CascadeSplits.begin(), splits.begin(), splits.end() );
 
-    // Get current light direction from atmosphere
-    XMVECTOR currentDir = XMLoadFloat3( Engine::GAPI->GetSky()->GetAtmosphereCB().AC_LightPos.toXMFLOAT3() );
-    currentDir = XMVector3Normalize( currentDir );
+    // Use the sun during the day and Gothic's original moon orbit at night.
+    const DirectionalLightState directionalLight = GetDirectionalLightState();
+    XMVECTOR currentDir = XMVector3Normalize( XMLoadFloat3( &directionalLight.Direction ) );
 
     // *** TEMPORAL SMOOTHING FOR LIGHT DIRECTION ***
     // Use static variables to maintain state across frames for smooth shadow transitions
@@ -496,6 +529,14 @@ XRESULT D3D11ShadowMap::PrepareRender()
 
     static XMVECTOR s_previousLightDir = currentDir;
     static bool s_lightDirInitialized = false;
+    // Sun and moon use separate phase-shifted paths. Reset temporal smoothing at the horizon so
+    // interpolation never normalizes a near-zero vector or swings the CSM underground.
+    if ( s_lightDirInitialized &&
+        XMVectorGetX( XMVector3Dot( s_previousLightDir, currentDir ) ) < 0.0f ) {
+        s_previousLightDir = currentDir;
+        lastCascadeData.PreviousLightDir = currentDir;
+        lastCascadeData.LightDir = currentDir;
+    }
 
     XMVECTOR dir;
 
@@ -1111,14 +1152,8 @@ XRESULT D3D11ShadowMap::DrawWorldShadow( )
         if ( m_useAtlas && m_shadowAtlas ) {
             auto dsv = m_shadowAtlas->GetDepthStencilView();
             if ( dsv ) {
-                // Determine clear value based on sun/shadow state
-                bool shouldRenderShadows =
-                    Engine::GAPI->GetSky()->GetAtmoshpereSettings().LightDirection.y > 0 &&
-                    settings.DrawShadowGeometry &&
-                    settings.EnableShadows;
-                float clearValue = shouldRenderShadows ? 1.0f :
-                    (Engine::GAPI->GetSky()->GetAtmoshpereSettings().LightDirection.y <= 0 ? 0.0f : 1.0f);
-                m_context->ClearDepthStencilView( dsv, D3D11_CLEAR_DEPTH, clearValue, 0 );
+                // White means unshadowed; visible sun/moon cascades overwrite it below.
+                m_context->ClearDepthStencilView( dsv, D3D11_CLEAR_DEPTH, 1.0f, 0 );
             }
         }
 
@@ -1299,11 +1334,10 @@ void D3D11ShadowMap::RenderShadowmaps( const RenderShadowmapsParams& params ) {
     }
     Engine::GAPI->GetRendererState().BlendState.SetDirty();
 
-    // Dont render shadows from the sun when it isn't on the sky
+    // Render the main shadow map for the visible sun or moon.
+    const DirectionalLightState directionalLight = GetDirectionalLightState();
     if ( isNotWorldShadowMap ||
-        (Engine::GAPI->GetSky()->GetAtmoshpereSettings().LightDirection.y >
-            0 &&  // Only stop rendering if the sun is down on main-shadowmap
-            // TODO: Take this out of here!
+        (directionalLight.Visibility > 0.001f &&
             Engine::GAPI->GetRendererState().RendererSettings.DrawShadowGeometry &&
             Engine::GAPI->GetRendererState().RendererSettings.EnableShadows) ) {
         if ( !params.SkipClear ) {
@@ -1318,17 +1352,9 @@ void D3D11ShadowMap::RenderShadowmaps( const RenderShadowmapsParams& params ) {
         ZoneScopedN( "Shadows::DrawCascade" );
         graphicsEngine->DrawWorldAroundForWorldShadow( cameraPosition, 2, params );
 
-    } else {
-        if ( !params.SkipClear ) {
-            if ( Engine::GAPI->GetSky()->GetAtmoshpereSettings().LightDirection.y <= 0 ) {
-                m_context->ClearDepthStencilView( dsvOverwrite.Get(), D3D11_CLEAR_DEPTH, 0.0f,
-                    0 );  // Always shadow in the night
-            } else {
-                m_context->ClearDepthStencilView(
-                    dsvOverwrite.Get(), D3D11_CLEAR_DEPTH, 1.0f,
-                    0 );  // Clear shadowmap when shadows not enabled
-            }
-        }
+    } else if ( !params.SkipClear ) {
+        m_context->ClearDepthStencilView(
+            dsvOverwrite.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0 );
     }
 
     // Restore state
@@ -1342,12 +1368,10 @@ void D3D11ShadowMap::RenderShadowmaps( const RenderShadowmapsParams& params ) {
 
 DS_ScreenQuadConstantBuffer D3D11ShadowMap::FillSunCSMConstantBuffer() const {
     auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
-    float rain = Engine::GAPI->GetRainFXWeight();
 
     XMMATRIX viewRaw = Engine::GAPI->GetViewMatrixXM();
     XMMATRIX view = XMMatrixTranspose( viewRaw );
 
-    GSky* sky = Engine::GAPI->GetSky();
     auto& proj = Engine::GAPI->GetProjectionMatrix();
 
     DS_ScreenQuadConstantBuffer scb = {};
@@ -1360,15 +1384,14 @@ DS_ScreenQuadConstantBuffer D3D11ShadowMap::FillSunCSMConstantBuffer() const {
         scb.SQ_FrameIndex = frameCounter++;
     }
 
+    const DirectionalLightState directionalLight = GetDirectionalLightState();
     XMStoreFloat3( scb.SQ_LightDirectionVS.toXMFLOAT3(),
-        XMVector3TransformNormal( XMLoadFloat3( sky->GetAtmosphereCB().AC_LightPos.toXMFLOAT3() ), view ) );
-
-    float3 sunColor = settings.SunLightColor;
-    float sunStrength = Toolbox::lerp(
-        settings.SunLightStrength,
-        settings.RainSunLightStrength,
-        std::min( 1.0f, rain * 2.0f ) );
-    scb.SQ_LightColor = float4( sunColor.x, sunColor.y, sunColor.z, sunStrength );
+        XMVector3TransformNormal( XMLoadFloat3( &directionalLight.Direction ), view ) );
+    scb.SQ_LightColor = float4(
+        directionalLight.Color.x,
+        directionalLight.Color.y,
+        directionalLight.Color.z,
+        directionalLight.Strength );
 
     for ( size_t cascadeIdx = 0; cascadeIdx < MAX_CSM_CASCADES; ++cascadeIdx ) {
         XMStoreFloat4x4( &scb.SQ_ShadowViewProj[cascadeIdx],
@@ -1428,7 +1451,6 @@ XRESULT D3D11ShadowMap::DrawWorldLights()
     Engine::GAPI->GetRendererState().RasterizerState.SetDirty();
 
     // Modify light when raining
-    float rain = Engine::GAPI->GetRainFXWeight();
     float wetness = Engine::GAPI->GetSceneWetness();
 
     XMMATRIX viewRaw = Engine::GAPI->GetViewMatrixXM();
@@ -1469,19 +1491,14 @@ XRESULT D3D11ShadowMap::DrawWorldLights()
         scb.SQ_FrameIndex = frameCounter++;
     }
 
+    const DirectionalLightState directionalLight = GetDirectionalLightState();
     XMStoreFloat3( scb.SQ_LightDirectionVS.toXMFLOAT3(),
-        XMVector3TransformNormal( XMLoadFloat3( sky->GetAtmosphereCB().AC_LightPos.toXMFLOAT3() ), view ) );
-
-    float3 sunColor =
-        settings.SunLightColor;
-
-    float sunStrength = Toolbox::lerp(
-        settings.SunLightStrength,
-        settings.RainSunLightStrength,
-        std::min( 1.0f, rain * 2.0f ) );// Scale the darkening-factor faster here, so it
-    // matches more with the increasing fog-density
-
-    scb.SQ_LightColor = float4( sunColor.x, sunColor.y, sunColor.z, sunStrength );
+        XMVector3TransformNormal( XMLoadFloat3( &directionalLight.Direction ), view ) );
+    scb.SQ_LightColor = float4(
+        directionalLight.Color.x,
+        directionalLight.Color.y,
+        directionalLight.Color.z,
+        directionalLight.Strength );
 
     // CSM: Alle Cascade-Matrizen setzen
 

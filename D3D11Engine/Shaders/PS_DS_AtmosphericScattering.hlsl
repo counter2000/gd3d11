@@ -271,7 +271,7 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 	// CSM: Use soft cascaded shadow map with configurable softness
     float3 wsNormal = normalize(mul(float4(normal, 0.0f), SQ_InvView).xyz);
 
-    if(AC_LightPos.y > 0) // only get shadow value if it isn't night-time
+    if (AC_LightPos.y > 0.0f || AC_MoonVisibility > 0.001f) // sample the active sun or moon shadow map
 	{
         float3 wsLightDirection = normalize(mul(float4(SQ_LightDirectionVS, 0.0f), SQ_InvView).xyz);
 
@@ -320,6 +320,7 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 	
 	// Apply sunlight
     float sunStrength = dot(lightColor.rgb, float3(0.333f, 0.333f, 0.333f));
+    sunStrength *= lerp( 1.0f, lightColor.a, saturate( AC_MoonVisibility * 1000.0f ) );
 	
 	float vl = saturate(vertLighting * 2);
 	float vertAO = lerp(vl * vl, 1.0f, 0.5f);

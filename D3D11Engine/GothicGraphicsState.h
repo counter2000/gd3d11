@@ -1079,6 +1079,28 @@ struct GothicRendererSettings {
         } FeatureSet;
     } DebugSettings;
 
+    void FixupUpscalingSettings() {
+        // AA_FSR3 is a UI-only value. Runtime FSR3 uses AA_FSR plus the FSR3 upscaler.
+        if ( AntiAliasingMode == E_AntiAliasingMode::AA_FSR3 ) {
+            AntiAliasingMode = E_AntiAliasingMode::AA_FSR;
+            Upscaler = E_Upscaler::UPSCALER_FSR_3;
+        }
+
+        if ( AntiAliasingMode == E_AntiAliasingMode::AA_FSR ) {
+            if ( Upscaler != E_Upscaler::UPSCALER_FSR_2
+                && Upscaler != E_Upscaler::UPSCALER_FSR_3 ) {
+                Upscaler = E_Upscaler::UPSCALER_FSR_3;
+            }
+            ResolutionScalePercent = std::clamp( ResolutionScalePercent, 33, 100 );
+            return;
+        }
+
+        ResolutionScalePercent = std::clamp( ResolutionScalePercent, 25, 200 );
+        Upscaler = ResolutionScalePercent < 100
+            ? E_Upscaler::UPSCALER_FSR_1
+            : E_Upscaler::UPSCALER_DEFAULT;
+    }
+
     bool GetIsTAAEnabled() const {
         return AntiAliasingMode == E_AntiAliasingMode::AA_TAA
             || AntiAliasingMode == E_AntiAliasingMode::AA_FSR

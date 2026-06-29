@@ -75,6 +75,14 @@ public:
     /** Returns the night texture */
     D3D11Texture* GetNightTexture();
 
+    /** Returns the high-resolution renderer moon texture. */
+    D3D11Texture* GetMoonTexture();
+
+    /** Returns the active sun/moon direction used for outdoor directional lighting. */
+    XMFLOAT3 GetMainLightDirection() const;
+    float GetMainLightVisibility() const;
+    bool IsMoonLightActive() const;
+
     /** Returns the current sun color */
     float3 GetSunColor();
 
@@ -99,6 +107,7 @@ protected:
 
     std::unique_ptr<D3D11Texture> CloudTexture;
     std::unique_ptr<D3D11Texture> NightTexture;
+    std::unique_ptr<D3D11Texture> MoonTexture;
 
     zCTexture* CloudTexture_Zen = nullptr;
     zCTexture* NightTexture_Zen = nullptr;

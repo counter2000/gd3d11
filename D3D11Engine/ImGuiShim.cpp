@@ -397,6 +397,7 @@ void ApplyGraphicsPresets( GothicRendererSettings& s ) {
         s.AntiAliasingMode = GothicRendererSettings::E_AntiAliasingMode::AA_SMAA;
         s.Upscaler = GothicRendererSettings::E_Upscaler::UPSCALER_DEFAULT;
         s.ResolutionScalePercent = 100;
+        s.SharpenFactor = 0.2f;
         s.AoMode = AOMode::AO_ASSAO;
         s.EnableDoF = true;
         s.WindQuality = GothicRendererSettings::EWindQuality::WIND_QUALITY_ADVANCED;
@@ -412,6 +413,7 @@ void ApplyGraphicsPresets( GothicRendererSettings& s ) {
         s.AntiAliasingMode = GothicRendererSettings::E_AntiAliasingMode::AA_SMAA;
         s.Upscaler = GothicRendererSettings::E_Upscaler::UPSCALER_DEFAULT;
         s.ResolutionScalePercent = 100;
+        s.SharpenFactor = 0.2f;
         s.AoMode = AOMode::AO_ASSAO;
         s.EnableDoF = true;
         s.WindQuality = GothicRendererSettings::EWindQuality::WIND_QUALITY_ADVANCED;
@@ -440,21 +442,13 @@ namespace
         return v == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3
             || v == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_2;
     }
-    void FixupSettings(GothicRendererSettings& s) {
-        if (s.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR) {
-            if ( !IsFSRUpscaler( s.Upscaler ) ) {
-                s.Upscaler = GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3;
-            }
-        }
-        if (s.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_TAA
-            && (s.Upscaler == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_2 || s.Upscaler == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3)) {
-            // don't allow TAA and FSR2 at the same time.
-            s.Upscaler = GothicRendererSettings::E_Upscaler::UPSCALER_FSR_1;
-        }
-        if (s.ResolutionScalePercent > 100 && s.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR) {
-            // switch to regular TAA if upsampled
-            s.AntiAliasingMode = GothicRendererSettings::AA_TAA;
-        }
+    bool UsesTemporalSharpeningBoost( const GothicRendererSettings& s ) {
+        return s.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_TAA
+            || s.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR3
+            || (s.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR && IsFSRUpscaler( s.Upscaler ));
+    }
+    void FixupSettings( GothicRendererSettings& s ) {
+        s.FixupUpscalingSettings();
     }
 }
 
@@ -557,41 +551,12 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::SetItemTooltip( "Adds soft light transmission to grass, leaves, and alpha-tested vegetation." );
             ImGui::Checkbox( "Depth of Field", &settings.EnableDoF );
             ImGui::SetItemTooltip( "Keeps the subject sharp while softly blurring distant scenery and dialog backgrounds." );
-            static std::vector<std::tuple<const char*, GothicRendererSettings::E_AntiAliasingMode, const char*>> antiAliasing = {
-                {"Disabled", GothicRendererSettings::E_AntiAliasingMode::AA_NONE, nullptr },
-                {"SMAA", GothicRendererSettings::E_AntiAliasingMode::AA_SMAA, nullptr },
-                {"TAA", GothicRendererSettings::E_AntiAliasingMode::AA_TAA, "Temporal Anti-Aliasing" },
-                {"FSR 2", GothicRendererSettings::E_AntiAliasingMode::AA_FSR, "FidelityFX Super Resolution 2" },
-                {"FSR 3", GothicRendererSettings::E_AntiAliasingMode::AA_FSR3, "FidelityFX Super Resolution 3"},
-
-            };
-            {
-                ImGui::PushID( "AntiAliasingSettings" );
-                auto selectedMode = settings.AntiAliasingMode;
-                if ( selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR && settings.Upscaler == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3 ) {
-                    selectedMode = GothicRendererSettings::E_AntiAliasingMode::AA_FSR3;
-                }
-                ImGui::TextUnformatted( "Anti Aliasing" );
-                ImGui::SameLine( standardComboStart );
-                ImGui::SetNextItemWidth( standardComboWidth );
-                if ( ImComboBoxCT( "##AntiAliasing", antiAliasing, &selectedMode, [&selectedMode, &settings] {
-                    if ( selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR3 ) {
-                        selectedMode = GothicRendererSettings::E_AntiAliasingMode::AA_FSR;
-                        settings.Upscaler = GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3;
-                    } else if ( selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR ) {
-                        settings.Upscaler = GothicRendererSettings::E_Upscaler::UPSCALER_FSR_2;
-                    }
-                    settings.AntiAliasingMode = selectedMode;
-                    } ) ) {
-                    ImGui::EndCombo();
-                }
-                ImGui::PopID();
-            }
 
             ImGui::Checkbox( "HDR", &settings.EnableHDR );
-            if ( ImGui::Checkbox( "Shadows", &settings.EnableShadows ) ) {
+            if ( ImGui::Checkbox( "World Shadows", &settings.EnableShadows ) ) {
                 shadersToReload |= ShaderCategory::LightsAndShadows;
             }
+            ImGui::SetItemTooltip( "Enables cascaded world shadows from the current directional light. Point-light shadows are configured separately." );
             {
                 static std::vector<std::pair<const char*, GothicRendererSettings::E_ShadowFilterMode>> shadowFilterModes = {
                     {"Disabled", GothicRendererSettings::E_ShadowFilterMode::SHADOW_FILTER_DISABLED},
@@ -679,7 +644,37 @@ void ImGuiShim::RenderSettingsWindow()
                 ImGui::EndCombo();
             }
 
-            ImText( "Resolution Scale", buttonWidth ); ImGui::SameLine();
+            static std::vector<std::tuple<const char*, GothicRendererSettings::E_AntiAliasingMode, const char*>> antiAliasing = {
+                {"Disabled", GothicRendererSettings::E_AntiAliasingMode::AA_NONE, nullptr },
+                {"SMAA", GothicRendererSettings::E_AntiAliasingMode::AA_SMAA, nullptr },
+                {"TAA", GothicRendererSettings::E_AntiAliasingMode::AA_TAA, "Temporal Anti-Aliasing" },
+                {"FSR 2", GothicRendererSettings::E_AntiAliasingMode::AA_FSR, "FidelityFX Super Resolution 2" },
+                {"FSR 3", GothicRendererSettings::E_AntiAliasingMode::AA_FSR3, "FidelityFX Super Resolution 3"},
+            };
+            {
+                ImGui::PushID( "AntiAliasingSettings" );
+                auto selectedMode = settings.AntiAliasingMode;
+                if ( selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR && settings.Upscaler == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3 ) {
+                    selectedMode = GothicRendererSettings::E_AntiAliasingMode::AA_FSR3;
+                }
+                ImText( "Anti Aliasing", buttonWidth ); ImGui::SameLine();
+                if ( ImComboBoxCT( "##AntiAliasing", antiAliasing, &selectedMode, [&selectedMode, &settings] {
+                    if ( selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR3 ) {
+                        selectedMode = GothicRendererSettings::E_AntiAliasingMode::AA_FSR;
+                        settings.Upscaler = GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3;
+                    } else if ( selectedMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR ) {
+                        settings.Upscaler = GothicRendererSettings::E_Upscaler::UPSCALER_FSR_2;
+                    }
+                    settings.AntiAliasingMode = selectedMode;
+                    FixupSettings( settings );
+                    settings.SharpenFactor = UsesTemporalSharpeningBoost( settings ) ? 1.0f : 0.2f;
+                    } ) ) {
+                    ImGui::EndCombo();
+                }
+                ImGui::PopID();
+            }
+
+            ImText( "Render Scale", buttonWidth ); ImGui::SameLine();
             if ( settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_2 || settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3 ) {
                 settings.ResolutionScalePercent = std::clamp( settings.ResolutionScalePercent, 33, 100 );
                 // Display "levels" as typical for FSR
@@ -699,37 +694,16 @@ void ImGuiShim::RenderSettingsWindow()
                     CurrentResolution.y * settings.ResolutionScalePercent / 100
                 );
             } else {
-                static float previousResolutionScale = static_cast<float>(settings.ResolutionScalePercent);
-                if ( ImGui::SliderFloat( "##ResolutionScalePercent", &previousResolutionScale, 25.0f, 200.0f, "%.0f%%" ) ) {
-                    previousResolutionScale = std::clamp( previousResolutionScale, 25.0f, 200.0f );
-                    settings.ResolutionScalePercent = static_cast<int>(previousResolutionScale);
+                float resolutionScale = static_cast<float>(settings.ResolutionScalePercent);
+                if ( ImGui::SliderFloat( "##ResolutionScalePercent", &resolutionScale, 25.0f, 200.0f, "%.0f%%" ) ) {
+                    resolutionScale = std::clamp( resolutionScale, 25.0f, 200.0f );
+                    settings.ResolutionScalePercent = static_cast<int>(resolutionScale);
+                    FixupSettings( settings );
                 }
                 ImGui::SetItemTooltip("Effective resolution: %d x %d",
                     CurrentResolution.x * settings.ResolutionScalePercent / 100,
                     CurrentResolution.y * settings.ResolutionScalePercent / 100
                 );
-            }
-
-            ImText( "Upscaler", buttonWidth ); ImGui::SameLine();
-            static std::vector<std::pair<const char*, GothicRendererSettings::E_Upscaler>> upscalers = {
-                { "Simple", GothicRendererSettings::E_Upscaler::UPSCALER_DEFAULT },
-                { "FSR 1", GothicRendererSettings::E_Upscaler::UPSCALER_FSR_1 },
-                { "FSR 2", GothicRendererSettings::E_Upscaler::UPSCALER_FSR_2 },
-                { "FSR 3", GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3 },
-            };
-            if ( ImComboBox( "##Upscaler", upscalers, &settings.Upscaler ) ) {
-                ImGui::EndCombo();
-            }
-            ImGui::BeginDisabled( settings.ResolutionScalePercent >= 100 );
-            {
-                if ( settings.Upscaler ) {
-                    ImText( "Upscaler sharpening", buttonWidth ); ImGui::SameLine();
-                    if ( ImGui::SliderFloat( "##Upscale sharpening", &settings.SharpenFactor, 0.0f, 1.0f, "%.3f%" ) ) {
-                        settings.SharpenFactor = std::clamp( settings.SharpenFactor, 0.0f, 1.0f );
-                    }
-                }
-
-                ImGui::EndDisabled();
             }
 
 

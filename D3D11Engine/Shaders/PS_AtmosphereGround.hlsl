@@ -81,6 +81,7 @@ DEFERRED_PS_OUTPUT PSMain( PS_INPUT Input ) : SV_TARGET
 	//color.rgb = ApplyAtmosphericScatteringGround(Input.vWorldPosition, color.rgb);
 	
 	DEFERRED_PS_OUTPUT output;
+	output.vReactiveMask = 0.0f;
 	output.vDiffuse = float4(color.rgb, Input.vDiffuse.a);
 	
 	output.vNrm = EncodeNormalGBuffer(nrm);
