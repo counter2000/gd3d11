@@ -305,7 +305,11 @@ XRESULT D3D11PFX_FSR3::Apply(
     };
     dispatch.jitterOffset = { jitterOffset.x, jitterOffset.y };
     dispatch.motionVectorScale = { motionVectorScale.x, motionVectorScale.y };
-    dispatch.reset = resetAccumulation || ForceFrameGenerationReset;
+    // Keep FSR3 upscaling history independent from frame-generation history.
+    // Present() resets frame generation whenever interpolation is inactive or unsafe;
+    // feeding that reset into the upscaler would discard FSR3 temporal history every
+    // frame and causes strong flickering even when frame interpolation is disabled.
+    dispatch.reset = resetAccumulation;
     dispatch.enableSharpening = enableSharpening;
     dispatch.sharpness = std::clamp( sharpness, 0.0f, 1.0f );
     dispatch.frameTimeDelta = std::max( deltaTimeMs, 1.0f );
