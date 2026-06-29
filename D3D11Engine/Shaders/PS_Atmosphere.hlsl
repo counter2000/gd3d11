@@ -62,13 +62,9 @@ float3 ApplyMoonTexture(float3 worldPosition)
     float boundsMask = inside.x * inside.y * step(0.0f, forward);
     float4 moonTexture = TX_Texture2.Sample(SS_Linear, saturate(moonUV));
     float moonLuminance = max(moonTexture.r, max(moonTexture.g, moonTexture.b));
-    float textureMask = smoothstep(0.015f, 0.16f, moonLuminance) * moonTexture.a;
-    float limb = 1.0f - smoothstep(
-        0.88f, 1.0f, length(moonUV * 2.0f - 1.0f));
-
-    float moonMask = boundsMask * textureMask * limb * AC_MoonVisibility;
-    float3 moonColor = lerp(moonTexture.rgb, float3(0.72f, 0.80f, 1.0f), 0.25f);
-    return moonColor * moonMask * 1.35f;
+    float textureMask = smoothstep(0.005f, 0.03f, moonLuminance) * moonTexture.a;
+    float moonMask = boundsMask * textureMask * AC_MoonVisibility;
+    return moonTexture.rgb * moonMask;
 }
 
 // Pixel Shader

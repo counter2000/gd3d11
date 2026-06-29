@@ -30,7 +30,6 @@ struct DirectionalLightState {
     float3 Color;
     float Strength;
     float Visibility;
-    bool IsMoon;
 };
 
 static DirectionalLightState GetDirectionalLightState() {
@@ -41,19 +40,14 @@ static DirectionalLightState GetDirectionalLightState() {
     DirectionalLightState state = {};
     state.Direction = sky->GetMainLightDirection();
     state.Visibility = sky->GetMainLightVisibility();
-    state.IsMoon = sky->IsMoonLightActive();
 
-    if ( state.IsMoon ) {
-        state.Color = float3( 0.58f, 0.70f, 1.0f );
-        state.Strength = 0.075f * state.Visibility *
-            Toolbox::lerp( 1.0f, 0.35f, rain );
-    } else {
-        state.Color = settings.SunLightColor;
-        state.Strength = Toolbox::lerp(
-            settings.SunLightStrength,
-            settings.RainSunLightStrength,
-            std::min( 1.0f, rain * 2.0f ) ) * state.Visibility;
-    }
+    // Preserve the pre-moon light color and strength exactly. Moon illumination
+    // is a tiny additive term in the shaders and must never replace night ambient.
+    state.Color = settings.SunLightColor;
+    state.Strength = Toolbox::lerp(
+        settings.SunLightStrength,
+        settings.RainSunLightStrength,
+        std::min( 1.0f, rain * 2.0f ) );
 
     return state;
 }

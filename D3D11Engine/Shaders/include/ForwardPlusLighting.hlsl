@@ -219,22 +219,39 @@ float3 FP_ComputeSunLighting(
 
     float4 lightColor = SQ_LightColor;
     float sunStrength = dot( lightColor.rgb, float3( 0.333f, 0.333f, 0.333f ) );
-    sunStrength *= lerp( 1.0f, lightColor.a, saturate( AC_MoonVisibility * 1000.0f ) );
     float sun = saturate( dot( normalize( SQ_LightDirectionVS ), normal ) * shadow );
 
     spec = pow( spec, specPower ) * specIntensity;
-    float3 specBare = spec * lightColor.rgb * sun;
-    float3 specColored = saturate( lerp( specBare, specBare * diffuseColor, specMod ) );
 
     float shadowAO = lerp( 1.0f, vertLighting, SQ_ShadowAOStrength );
     float worldAO = lerp( 1.0f, vertLighting, SQ_WorldAOStrength );
 
-    float3 litPixel = lerp( diffuseColor * SQ_ShadowStrength * sunStrength * shadowAO,
-                            diffuseColor * lightColor.rgb * lightColor.a * worldAO, sun )
-                    + specColored;
+    float3 litPixel;
+    if ( AC_LightPos.y <= 0.0f )
+    {
+        // Preserve the old night base and add only a tiny shadowed moon term.
+        litPixel = diffuseColor * SQ_ShadowStrength * sunStrength * shadowAO;
 
+        const float moonLightStrength = 0.015f;
+        float moonDirect = sun * AC_MoonVisibility;
+        float3 moonColor = float3( 0.42f, 0.56f, 1.0f );
+        litPixel += diffuseColor * moonColor * moonLightStrength * moonDirect * worldAO;
+        litPixel += spec * moonColor * (moonLightStrength * 0.25f) * moonDirect;
+    }
+    else
+    {
+        float3 specBare = spec * lightColor.rgb * sun;
+        float3 specColored = saturate(
+            lerp( specBare, specBare * diffuseColor, specMod ) );
+        litPixel = lerp(
+            diffuseColor * SQ_ShadowStrength * sunStrength * shadowAO,
+            diffuseColor * lightColor.rgb * lightColor.a * worldAO,
+            sun ) + specColored;
+    }
+
+    float baselineSun = AC_LightPos.y <= 0.0f ? 0.0f : sun;
     float fresnel = pow( 1.0f - saturate( dot( normal, V ) ), 10.0f );
-    litPixel += lerp( fresnel * litPixel * 0.5f, 0.0f, sun );
+    litPixel += lerp( fresnel * litPixel * 0.5f, 0.0f, baselineSun );
 
     return litPixel;
 }
