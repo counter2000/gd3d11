@@ -126,11 +126,11 @@ float3 ApplyTreeWind(float3 vertexPos, float3 direction, float heightNorm, float
 #if SHD_INFLUENCE
 
 // HERO/NPC INTERACTION CONST (Gothic world units)
-static const float heroAffectInnerRadius = 5.0f;
-static const float heroAffectOuterRadius = 25.0f;
-static const float heroAffectVerticalInnerRadius = 55.0f;
-static const float heroAffectVerticalOuterRadius = 105.0f;
-static const float heroAffectStrength = 38.0f;
+static const float heroAffectInnerRadius = 15.0f;
+static const float heroAffectOuterRadius = 55.0f;
+static const float heroAffectVerticalInnerRadius = 70.0f;
+static const float heroAffectVerticalOuterRadius = 130.0f;
+static const float heroAffectStrength = 65.0f;
 
 float3 CalculateSingleActorInfluence(
     float4 actorPositionAndActive,

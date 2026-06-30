@@ -740,11 +740,11 @@ struct GothicRendererSettings {
         DoFFocusRange = 8000.0f;
         DoFBokehRadius = 3.5f;
         DoFMaxBlur = 12.0f;
-        DoFNearBlurDistance = 300.0f;
-        DoFNearBlurStrength = 1.0f;
+        DoFNearBlurDistance = 200.0f;
+        DoFNearBlurStrength = 2.0f;
 
         WindQuality = WIND_QUALITY_ADVANCED;
-        HeroAffectsObjects = false;
+        HeroAffectsObjects = true;
         HeroAffectsObjectsStrength = 1.0f;
         EnablePointlightShadows = PLS_UPDATE_DYNAMIC;
         MinLightShadowUpdateRange = 300.0f;

@@ -4,7 +4,6 @@
 #include <ShellScalingApi.h>
 
 #include "zCParser.h"
-#include <sstream>
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -216,6 +215,11 @@ namespace {
             return true;
         }
         return false;
+    }
+
+    void SetNextAdvancedSteppedSliderWidth()
+    {
+        ImGui::SetNextItemWidth( std::min( 250.0f, ImGui::GetContentRegionAvail().x * 0.55f ) );
     }
     int SnapRenderScalePercentNonFSR( int value )
     {
@@ -768,19 +772,7 @@ void ImGuiShim::RenderSettingsWindow()
                     break;
                 }
             }
-
-            static std::string resolutionLabel = "Resolution";
-
-            if ( settings.ResolutionScalePercent != 100 ) {
-                std::stringstream ss;
-                ss << "Resolution (scaled: " << (CurrentResolution.x * settings.ResolutionScalePercent / 100)
-                    << " x "
-                    << (CurrentResolution.y * settings.ResolutionScalePercent / 100)
-                    << ")";
-                resolutionLabel = ss.str();
-            }
-
-            ImText( settings.ResolutionScalePercent != 100 ? resolutionLabel.c_str() : "Resolution", buttonWidth ); ImGui::SameLine();
+            ImText( "Resolution", buttonWidth ); ImGui::SameLine();
             if ( ImGui::BeginCombo( "##Resolution", Resolutions[ResolutionState].second.c_str() ) ) {
                 for ( size_t i = 0; i < Resolutions.size(); i++ ) {
                     bool isSelected = (ResolutionState == i);
@@ -919,6 +911,8 @@ void ImGuiShim::RenderSettingsWindow()
                 ImGui::EndCombo();
             }
 
+
+            ImGui::SetItemTooltip( "Selects fullscreen or window mode. Entries marked with [*] take effect after restarting the game." );
             const static std::vector<std::pair<const char*, int>> shadowMapSizesMax = {
                 {"very low", 512},
                 {"low", 1024},
@@ -1088,6 +1082,8 @@ void ImGuiShim::RenderSettingsWindow()
                 } ) ) {
                 ImGui::EndCombo();
             }
+
+            ImGui::SetItemTooltip( "Selects the ambient occlusion method. The strength slider adjusts the overall intensity; mode-specific fine tuning remains available in Advanced Settings." );
             ImGui::SameLine();
             ImGui::BeginDisabled( settings.AoMode == AOMode::AO_NONE );
             ImGui::SetNextItemWidth( standardComboWidth );
@@ -1101,6 +1097,7 @@ void ImGuiShim::RenderSettingsWindow()
                 settings.EnableScreenSpaceGI = screenSpaceLightFX;
                 shadersToReload |= ShaderCategory::Other;
             }
+            ImGui::SetItemTooltip( "Adds small contact shadows and subtle screen-space indirect light. Separate fine tuning remains available in Advanced Settings." );
             ImGui::SameLine();
             ImGui::BeginDisabled( !screenSpaceLightFX );
             ImGui::SetNextItemWidth( standardComboWidth );
@@ -1117,6 +1114,7 @@ void ImGuiShim::RenderSettingsWindow()
             if ( ImGui::Checkbox( "##Enable Godrays", &settings.EnableGodRays ) ) {
                 Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
             }
+            ImGui::SetItemTooltip( "Adds sunlight beams when the sun is partially blocked by trees, buildings, or terrain." );
             ImGui::SameLine();
             ImGui::BeginDisabled( !settings.EnableGodRays );
             ImGui::SetNextItemWidth( standardComboWidth );
@@ -1130,6 +1128,7 @@ void ImGuiShim::RenderSettingsWindow()
                 settings.EnableWaterAnimation = enhancedWater;
                 shadersToReload |= ShaderCategory::Water;
             }
+            ImGui::SetItemTooltip( "Enables water reflections, animated water movement, and wet-ground reflection strength." );
             ImGui::SameLine();
             ImGui::BeginDisabled( !enhancedWater );
             ImGui::SetNextItemWidth( standardComboWidth );
@@ -1139,6 +1138,7 @@ void ImGuiShim::RenderSettingsWindow()
 
             ImText( "Backlit Vegetation", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
             ImGui::Checkbox( "##Enable Backlit Vegetation", &settings.EnableSSS );
+            ImGui::SetItemTooltip( "Adds soft backlighting through leaves, grass, and alpha-tested vegetation." );
             ImGui::SameLine();
             ImGui::BeginDisabled( !settings.EnableSSS );
             ImGui::SetNextItemWidth( standardComboWidth );
@@ -1151,6 +1151,7 @@ void ImGuiShim::RenderSettingsWindow()
 
             ImText( "Depth of Field", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
             ImGui::Checkbox( "##Enable Depth of Field", &settings.EnableDoF );
+            ImGui::SetItemTooltip( "Controls camera blur strength. Focus range and near/far blur tuning remain available in Advanced Settings." );
             ImGui::SameLine();
             ImGui::BeginDisabled( !settings.EnableDoF );
             ImGui::SetNextItemWidth( standardComboWidth );
@@ -1174,6 +1175,7 @@ void ImGuiShim::RenderSettingsWindow()
                         : GothicRendererSettings::EWindQuality::WIND_QUALITY_NONE;
                     shadersToReload |= ShaderCategory::Other;
                 }
+                ImGui::SetItemTooltip( "Controls animated wind movement for trees, grass, and wheat." );
                 ImGui::SameLine();
                 ImGui::BeginDisabled( !windEffect );
                 ImGui::SetNextItemWidth( standardComboWidth );
@@ -1309,6 +1311,7 @@ void ImGuiShim::RenderAdvancedColumn2( GothicRendererSettings& settings, GothicA
 #endif
         {
             ImGui::SeparatorText( "Wind" );
+            SetNextAdvancedSteppedSliderWidth();
             SliderNormalizedUiStrength( "Wind Strength", &settings.GlobalWindStrength );
             ImGui::SetItemTooltip( "Normalized wind strength. 1.0 equals the stronger default wind used by this build." );
         }
@@ -1374,6 +1377,7 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
 
         ImGui::SeparatorText( "Water Effects" );
         ImGui::BeginDisabled( !settings.EnableSSR );
+        SetNextAdvancedSteppedSliderWidth();
         SliderNormalizedUiStrength( "SSR Strength", &settings.SSRStrength );
         ImGui::EndDisabled();
 
@@ -1381,7 +1385,9 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
         const bool screenSpaceLightFX = settings.EnableContactShadows || settings.EnableScreenSpaceGI;
         ImGui::BeginDisabled( !screenSpaceLightFX );
         bool reloadScreenSpaceLightFX = false;
+        SetNextAdvancedSteppedSliderWidth();
         reloadScreenSpaceLightFX |= SliderNormalizedUiStrength( "Contact Shadows", &settings.ContactShadowStrength );
+        SetNextAdvancedSteppedSliderWidth();
         reloadScreenSpaceLightFX |= SliderNormalizedUiStrength( "Indirect Light", &settings.ScreenSpaceGIStrength );
         if ( reloadScreenSpaceLightFX ) Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
         ImGui::EndDisabled();
@@ -1389,12 +1395,14 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
         ImGui::SeparatorText( "Particles" );
         ImGui::Checkbox( "Adapt to Scene Lighting", &settings.EnableParticleLighting );
         ImGui::BeginDisabled( !settings.EnableParticleLighting );
+        SetNextAdvancedSteppedSliderWidth();
         SliderNormalizedUiStrength( "Lighting Adaptation", &settings.ParticleLightingStrength );
         ImGui::EndDisabled();
 
         ImGui::SeparatorText( "Backlit Vegetation" );
         ImGui::BeginDisabled( !settings.EnableSSS );
         float advancedBacklitVegetationStrength = settings.SSSIntensity / 0.75f;
+        SetNextAdvancedSteppedSliderWidth();
         if ( SliderNormalizedUiStrength( "Intensity", &advancedBacklitVegetationStrength ) ) {
             settings.SSSIntensity = advancedBacklitVegetationStrength * 0.75f;
         }
@@ -1405,10 +1413,12 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
         ImGui::SliderFloat( "Blur Distance", &settings.DoFFocusDistance, 0.0f, 30000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
         ImGui::SliderFloat( "Focus Range", &settings.DoFFocusRange, 100.0f, 30000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
         float advancedDepthOfFieldStrength = settings.DoFBokehRadius / 3.5f;
+        SetNextAdvancedSteppedSliderWidth();
         if ( SliderNormalizedUiStrength( "Blur Strength", &advancedDepthOfFieldStrength ) ) {
             settings.DoFBokehRadius = advancedDepthOfFieldStrength * 3.5f;
         }
         ImGui::SliderFloat( "Near Blur Distance", &settings.DoFNearBlurDistance, 0.0f, 1000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
+        SetNextAdvancedSteppedSliderWidth();
         SliderNormalizedUiStrength( "Near Blur Strength", &settings.DoFNearBlurStrength, 0.0f );
         ImGui::SetItemTooltip( "Controls near-camera blur in third-person view. First-person disables the near blur; far-distance blur is unchanged." );
         ImGui::EndDisabled();
