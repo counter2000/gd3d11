@@ -4093,15 +4093,8 @@ LRESULT GothicAPI::OnWindowMessage( HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
             break;
 
         case VK_ESCAPE:
-        {
-            const bool rendererSettingsActive = Engine::ImGuiHandle &&
-                (Engine::ImGuiHandle->SettingsVisible || Engine::ImGuiHandle->AdvancedSettingsVisible);
             Engine::GraphicsEngine->OnUIEvent( BaseGraphicsEngine::EUIEvent::UI_ClosedSettings );
-            if ( rendererSettingsActive ) {
-                return DefWindowProc( hWnd, msg, wParam, lParam );
-            }
             break;
-        }
 
         }
         default:
@@ -5535,7 +5528,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.ResolutionScalePercent = std::clamp<int>( GetPrivateProfileIntA( "Display", "ResolutionScale", ds.ResolutionScalePercent, ini.c_str() ), 33, 200 );
         s.Upscaler = (GothicRendererSettings::E_Upscaler)std::clamp<int>( GetPrivateProfileIntA( "Display", "Upscaler", ds.Upscaler, ini.c_str() ), 0, GothicRendererSettings::E_Upscaler::_UPSCALER_NUM_MODES - 1 );
         s.EnableVSync = GetPrivateProfileBoolA( "Display", "VSync", ds.EnableVSync, ini );
-        s.EnableFrameGeneration = GetPrivateProfileBoolA( "Display", "FrameGeneration", ds.EnableFrameGeneration, ini );
+        s.EnableFrameGeneration = false;
         s.ForceFOV = GetPrivateProfileBoolA( "Display", "ForceFOV", ds.ForceFOV, ini );
         s.FOVHoriz = GetPrivateProfileIntA( "Display", "FOVHoriz", 90, ini.c_str() );
         s.FOVVert = GetPrivateProfileIntA( "Display", "FOVVert", 90, ini.c_str() );

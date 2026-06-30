@@ -263,9 +263,7 @@ XRESULT D3D11PFX_FSR3::Apply(
     float sharpness )
 {
     const auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
-    const bool frameGenerationRequested = settings.EnableFrameGeneration
-        && settings.AntiAliasingMode == GothicRendererSettings::AA_FSR
-        && settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3;
+    const bool frameGenerationRequested = false;
 
     if ( !Init( inputSize, outputSize, frameGenerationRequested ) ) {
         LogError() << "FSR3: Failed to initialize.";

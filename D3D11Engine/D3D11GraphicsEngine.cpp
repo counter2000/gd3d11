@@ -8479,55 +8479,10 @@ void D3D11GraphicsEngine::UpdateShouldBlockGameInput( ) {
     }
 }
 
-void D3D11GraphicsEngine::UpdateSettingsPauseState( bool settingsWindowVisible ) {
-    if ( settingsWindowVisible ) {
-        if ( !m_SettingsPauseActive ) {
-            if ( auto game = oCGame::GetGame() ) {
-                m_SettingsWasGamePaused = game->GetSingleStep();
-                if ( !m_SettingsWasGamePaused ) {
-                    game->SetSingleStep( true );
-                }
-                m_SettingsPauseActive = true;
-            }
-        }
-        return;
-    }
-
-    if ( m_SettingsPauseActive ) {
-        if ( auto game = oCGame::GetGame() ) {
-            // Release only the pause state that the renderer created for F11.
-            if ( !m_SettingsWasGamePaused ) {
-                game->SetSingleStep( false );
-            }
-        }
-        m_SettingsPauseActive = false;
-        m_SettingsWasGamePaused = false;
-    }
-}
-
-void D3D11GraphicsEngine::CloseGothicVideoSettingsMenuIfRequested() {
-    if ( !m_CloseGothicVideoSettingsOnSettingsClose ) {
-        return;
-    }
-
-    m_CloseGothicVideoSettingsOnSettingsClose = false;
-    if ( Engine::GAPI ) {
-        const unsigned int scanCode = MapVirtualKey( VK_ESCAPE, MAPVK_VK_TO_VSC );
-        const LPARAM keyDown = static_cast<LPARAM>( 1u | ( scanCode << 16 ) );
-        const LPARAM keyUp = static_cast<LPARAM>( static_cast<unsigned int>( keyDown ) | ( 1u << 30 ) | ( 1u << 31 ) );
-        Engine::GAPI->SendMessageToGameWindow( WM_KEYDOWN, VK_ESCAPE, keyDown );
-        Engine::GAPI->SendMessageToGameWindow( WM_KEYUP, VK_ESCAPE, keyUp );
-    }
-}
-
 /** Handles an UI-Event */
 void D3D11GraphicsEngine::OnUIEvent( EUIEvent uiEvent ) {
 
     if ( uiEvent == UI_OpenSettings || uiEvent == UI_OpenSettingsFromGothicVideoSettings ) {
-        if ( uiEvent == UI_OpenSettingsFromGothicVideoSettings ) {
-            m_CloseGothicVideoSettingsOnSettingsClose = true;
-        }
-
         if ( auto hImgui = Engine::ImGuiHandle ) {
             if ( hImgui->AdvancedSettingsVisible ) {
                 hImgui->AdvancedSettingsVisible = false;
@@ -8541,10 +8496,7 @@ void D3D11GraphicsEngine::OnUIEvent( EUIEvent uiEvent ) {
                 hImgui->CommitSettingsEdit();
             }
             UpdateShouldBlockGameInput();
-            UpdateSettingsPauseState( hImgui->SettingsVisible || hImgui->AdvancedSettingsVisible );
-            if ( !hImgui->SettingsVisible && !hImgui->AdvancedSettingsVisible ) {
-                CloseGothicVideoSettingsMenuIfRequested();
-            }
+
         }
         UpdateClipCursor( OutputWindow );
     } else if ( uiEvent == UI_ToggleAdvancedSettings ) {
@@ -8555,10 +8507,7 @@ void D3D11GraphicsEngine::OnUIEvent( EUIEvent uiEvent ) {
             }
             hImgui->AdvancedSettingsVisible = !hImgui->AdvancedSettingsVisible;
             UpdateShouldBlockGameInput();
-            UpdateSettingsPauseState( hImgui->SettingsVisible || hImgui->AdvancedSettingsVisible );
-            if ( !hImgui->SettingsVisible && !hImgui->AdvancedSettingsVisible ) {
-                CloseGothicVideoSettingsMenuIfRequested();
-            }
+
         }
         UpdateClipCursor( OutputWindow );
     } else if ( uiEvent == UI_ClosedSettings ) {
@@ -8573,8 +8522,6 @@ void D3D11GraphicsEngine::OnUIEvent( EUIEvent uiEvent ) {
         //     antBar->SetActive( false );
         // }
         UpdateShouldBlockGameInput();
-        UpdateSettingsPauseState( false );
-        CloseGothicVideoSettingsMenuIfRequested();
 
         UpdateClipCursor( OutputWindow );
     }

@@ -518,7 +518,7 @@ struct HBAOSettings {
 struct XeGTAOConfig {
     int QualityLevel = 2;   // 0 low, 1 medium, 2 high, 3 ultra
     int DenoisePasses = 1;  // 1 sharp, 2 medium, 3 soft
-    float Radius = 50.0f;   // Gothic view-space units (100 units = 1 meter)
+    float Radius = 50.0f;   // Gothic view-space units; matches Intel XeGTAO default radius 0.5 in Gothic scale.
 };
 
 enum class AOMode : int {

@@ -678,6 +678,7 @@ namespace
     }
     void FixupSettings( GothicRendererSettings& s ) {
         s.FixupUpscalingSettings();
+        s.EnableFrameGeneration = false;
     }
 }
 
@@ -838,21 +839,12 @@ void ImGuiShim::RenderSettingsWindow()
                 ImGui::SetItemTooltip( "Selects edge smoothing. FSR 3 also uses Render Scale for its quality presets." );
                 ImGui::PopID();
             }
-
-            const bool frameGenerationAvailable = !FeatureLevel10Compatibility
-                && settings.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR
-                && settings.Upscaler == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3;
-            if ( !frameGenerationAvailable ) {
-                settings.EnableFrameGeneration = false;
-            }
+            settings.EnableFrameGeneration = false;
             ImText( "Frame Generation", buttonWidth ); ImGui::SameLine();
-            ImGui::BeginDisabled( !frameGenerationAvailable );
+            ImGui::BeginDisabled( true );
             ImGui::Checkbox( "##Enable Frame Generation", &settings.EnableFrameGeneration );
             ImGui::EndDisabled();
-            ImGui::SetItemTooltip( frameGenerationAvailable
-                ? "Uses FidelityFX Optical Flow and Frame Interpolation to generate one additional frame between rendered frames."
-                : "Available with FSR 3 on DirectX 11 feature level 11 hardware." );
-
+            ImGui::SetItemTooltip( "Disabled for now: the DX11 frame-interpolation path is not stable enough for this build." );
             ImText( "Render Scale", buttonWidth ); ImGui::SameLine();
             if ( settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3 ) {
                 settings.ResolutionScalePercent = std::clamp( settings.ResolutionScalePercent, 33, 100 );

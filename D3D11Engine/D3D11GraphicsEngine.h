@@ -352,13 +352,6 @@ public:
     LRESULT OnWindowMessage( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam ) override;
 
     static void UpdateShouldBlockGameInput();
-
-    /** Keeps the game simulation paused while a renderer settings window is open */
-    void UpdateSettingsPauseState( bool settingsWindowVisible );
-
-    /** Closes Gothics original video-settings menu after it spawned the renderer settings window */
-    void CloseGothicVideoSettingsMenuIfRequested();
-
     /** Reloads shaders */
     XRESULT ReloadShaders( ShaderCategory categories = ShaderCategory::All) override;
 
@@ -703,9 +696,6 @@ private:
     int m_previousFpsLimit;
     bool m_isWindowActive;
     bool m_FrameNeedsJitter;
-    bool m_SettingsPauseActive = false;
-    bool m_SettingsWasGamePaused = false;
-    bool m_CloseGothicVideoSettingsOnSettingsClose = false;
     float unionCurrentCustomFontMultiplier;
 
     std::unique_ptr<RenderToTextureBuffer> VelocityBuffer;
