@@ -24,7 +24,13 @@ struct PS_INPUT
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
-float4 PSMain( PS_INPUT Input ) : SV_TARGET
+struct PS_OUTPUT
+{
+    float4 color : SV_TARGET0;
+    float4 reactiveMask : SV_TARGET1;
+};
+
+PS_OUTPUT PSMain( PS_INPUT Input )
 {
 	float2 uv = Input.vTexcoord;
 	
@@ -50,6 +56,10 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 	//return float4(saturate(+ distortion),0,1);
 	//return float4(color.aaa, 1);
 	
-	return float4(scene + color.rgb, 1);
+    PS_OUTPUT output;
+    output.color = float4(scene + color.rgb, 1);
+    float particleReactive = saturate(alpha * 0.65f);
+    output.reactiveMask = float4(particleReactive, particleReactive, particleReactive, particleReactive);
+    return output;
 }
 

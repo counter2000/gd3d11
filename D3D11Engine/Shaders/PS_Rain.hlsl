@@ -236,7 +236,13 @@ void rainResponse(PS_INPUT input, float3 lightVector, float lightIntensity, floa
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
-float4 PSMain( PS_INPUT Input ) : SV_TARGET
+struct PS_OUTPUT
+{
+    float4 color : SV_TARGET0;
+    float4 reactiveMask : SV_TARGET1;
+};
+
+PS_OUTPUT PSMain( PS_INPUT Input )
 {
 	//float4 color = pow(TX_Texture0.Sample(SS_Linear, Input.vTexcoord), 1.0f);
 	float4 color = float4(1,1,1, 0.2f);
@@ -267,7 +273,11 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 		1.0-(1.0/250.0),
 		directionalLight.w);
 #endif
-	return directionalLight;
+    PS_OUTPUT output;
+    output.color = directionalLight;
+    float rainReactive = saturate(directionalLight.w * 0.85f);
+    output.reactiveMask = float4(rainReactive, rainReactive, rainReactive, rainReactive);
+    return output;
 }
 
 

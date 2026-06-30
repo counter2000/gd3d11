@@ -26,13 +26,15 @@ static bool HasCenteredNearbyNpc( D3D11GraphicsEngine* engine, float maxViewDist
     zCWorld* playerWorld = player ? player->GetHomeWorld() : nullptr;
     const auto& candidates = engine->GetFrameVisibleNpcVobs();
 
+    XMFLOAT3 cameraPosition;
+    XMStoreFloat3( &cameraPosition, Engine::GAPI->GetCameraPositionXM() );
     const XMMATRIX rawView = Engine::GAPI->GetViewMatrixXM();
     const XMMATRIX view = XMMatrixTranspose( rawView );
     XMFLOAT4X4 projection = Engine::GAPI->GetProjectionMatrix();
     projection._13 = 0.0f;
     projection._23 = 0.0f;
-    const XMMATRIX viewProjection = XMMatrixTranspose(
-        XMMatrixMultiply( XMLoadFloat4x4( &projection ), rawView ) );
+    const XMMATRIX proj = XMMatrixTranspose( XMLoadFloat4x4( &projection ) );
+    const XMMATRIX viewProjection = XMMatrixMultiply( view, proj );
 
     const float horizontalLimit = relaxedCenter ? 0.24f : 0.16f;
     const float verticalLimit = relaxedCenter ? 0.30f : 0.20f;
@@ -51,9 +53,12 @@ static bool HasCenteredNearbyNpc( D3D11GraphicsEngine* engine, float maxViewDist
             (bounds.Min.z + bounds.Max.z) * 0.5f );
         const XMVECTOR centerWorld = XMLoadFloat3( &center );
 
-        XMFLOAT3 centerView;
-        XMStoreFloat3( &centerView, XMVector3TransformCoord( centerWorld, view ) );
-        if ( centerView.z <= 0.0f || centerView.z > maxViewDistance ) {
+
+        const float dx = std::max( std::max( bounds.Min.x - cameraPosition.x, 0.0f ), cameraPosition.x - bounds.Max.x );
+        const float dy = std::max( std::max( bounds.Min.y - cameraPosition.y, 0.0f ), cameraPosition.y - bounds.Max.y );
+        const float dz = std::max( std::max( bounds.Min.z - cameraPosition.z, 0.0f ), cameraPosition.z - bounds.Max.z );
+        const float distanceToCamera = std::sqrt( dx * dx + dy * dy + dz * dz );
+        if ( distanceToCamera > maxViewDistance ) {
             continue;
         }
 

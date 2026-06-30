@@ -323,17 +323,17 @@ static FfxErrorCode createPipelineStates(FfxFrameInterpolationContext_Private* c
     };
 
     // Frame Interpolation Pipelines
-    CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_RECONSTRUCT_AND_DILATE,               L"RECONSTRUCT_AND_DILATE", &context->pipelineFiReconstructAndDilate);
-    CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_SETUP,                                L"SETUP", &context->pipelineFiSetup);
-    CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_RECONSTRUCT_PREV_DEPTH,               L"RECONSTRUCT_PREV_DEPTH", &context->pipelineFiReconstructPreviousDepth);
-    CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_GAME_MOTION_VECTOR_FIELD,             L"GAME_MOTION_VECTOR_FIELD", &context->pipelineFiGameMotionVectorField);
-    CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_OPTICAL_FLOW_VECTOR_FIELD,            L"OPTICAL_FLOW_VECTOR_FIELD", &context->pipelineFiOpticalFlowVectorField);
-    CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_DISOCCLUSION_MASK,                    L"DISOCCLUSION_MASK", &context->pipelineFiDisocclusionMask);
-    CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_INTERPOLATION,                        L"INTERPOLATION", &context->pipelineFiScfi);
-    CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_INPAINTING_PYRAMID,                   L"INPAINTING_PYRAMID", &context->pipelineInpaintingPyramid);
-    CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_INPAINTING,                           L"INPAINTING", &context->pipelineInpainting);
-    CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_GAME_VECTOR_FIELD_INPAINTING_PYRAMID, L"GAME_VECTOR_FIELD_INPAINTING_PYRAMID", & context->pipelineGameVectorFieldInpaintingPyramid);
-    CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_DEBUG_VIEW,                           L"DEBUG_VIEW", &context->pipelineDebugView);
+    FFX_VALIDATE(CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_RECONSTRUCT_AND_DILATE,               L"RECONSTRUCT_AND_DILATE", &context->pipelineFiReconstructAndDilate));
+    FFX_VALIDATE(CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_SETUP,                                L"SETUP", &context->pipelineFiSetup));
+    FFX_VALIDATE(CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_RECONSTRUCT_PREV_DEPTH,               L"RECONSTRUCT_PREV_DEPTH", &context->pipelineFiReconstructPreviousDepth));
+    FFX_VALIDATE(CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_GAME_MOTION_VECTOR_FIELD,             L"GAME_MOTION_VECTOR_FIELD", &context->pipelineFiGameMotionVectorField));
+    FFX_VALIDATE(CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_OPTICAL_FLOW_VECTOR_FIELD,            L"OPTICAL_FLOW_VECTOR_FIELD", &context->pipelineFiOpticalFlowVectorField));
+    FFX_VALIDATE(CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_DISOCCLUSION_MASK,                    L"DISOCCLUSION_MASK", &context->pipelineFiDisocclusionMask));
+    FFX_VALIDATE(CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_INTERPOLATION,                        L"INTERPOLATION", &context->pipelineFiScfi));
+    FFX_VALIDATE(CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_INPAINTING_PYRAMID,                   L"INPAINTING_PYRAMID", &context->pipelineInpaintingPyramid));
+    FFX_VALIDATE(CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_INPAINTING,                           L"INPAINTING", &context->pipelineInpainting));
+    FFX_VALIDATE(CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_GAME_VECTOR_FIELD_INPAINTING_PYRAMID, L"GAME_VECTOR_FIELD_INPAINTING_PYRAMID", &context->pipelineGameVectorFieldInpaintingPyramid));
+    FFX_VALIDATE(CreateComputePipeline(FFX_FRAMEINTERPOLATION_PASS_DEBUG_VIEW,                           L"DEBUG_VIEW", &context->pipelineDebugView));
 
     return FFX_OK;
 }

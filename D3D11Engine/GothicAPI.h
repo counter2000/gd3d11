@@ -609,7 +609,8 @@ public:
     /** Draws particles, in a simple way */
     void DrawParticlesSimple(
         RenderToTextureBuffer* bufferParticleColor,
-        RenderToTextureBuffer* bufferParticleDistortion);
+        RenderToTextureBuffer* bufferParticleDistortion,
+        RenderToTextureBuffer* bufferParticleReactiveMask = nullptr);
 
     /** Prepares poly strips for feeding into renderer (weapon and effect trails) */
     void CalcPolyStripMeshes();

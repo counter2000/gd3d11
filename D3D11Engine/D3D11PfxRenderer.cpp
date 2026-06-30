@@ -250,7 +250,7 @@ XRESULT D3D11PfxRenderer::UnbindPSResources( int num ) {
 }
 
 /** Copies the given texture to the given RTV */
-XRESULT D3D11PfxRenderer::CopyTextureToRTV( const Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& texture, const Microsoft::WRL::ComPtr<ID3D11RenderTargetView>& rtv, INT2 targetResolution, bool useCustomPS, INT2 offset ) {
+XRESULT D3D11PfxRenderer::CopyTextureToRTV( const Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& texture, const Microsoft::WRL::ComPtr<ID3D11RenderTargetView>& rtv, INT2 targetResolution, bool useCustomPS, INT2 offset, ID3D11RenderTargetView* extraRTV ) {
     D3D11GraphicsEngine* engine = reinterpret_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
 
     D3D11_VIEWPORT oldVP;
@@ -285,12 +285,45 @@ XRESULT D3D11PfxRenderer::CopyTextureToRTV( const Microsoft::WRL::ComPtr<ID3D11S
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
     engine->GetContext()->PSSetShaderResources( 0, 1, srv.GetAddressOf() );
 
-    engine->GetContext()->OMSetRenderTargets( 1, rtv.GetAddressOf(), nullptr );
+    Microsoft::WRL::ComPtr<ID3D11BlendState> oldBlendState;
+    FLOAT oldBlendFactor[4] = {};
+    UINT oldSampleMask = 0xffffffff;
+    if ( extraRTV ) {
+        engine->GetContext()->OMGetBlendState( oldBlendState.GetAddressOf(), oldBlendFactor, &oldSampleMask );
+
+        static Microsoft::WRL::ComPtr<ID3D11BlendState> s_extraMaskBlendState;
+        if ( !s_extraMaskBlendState ) {
+            D3D11_BLEND_DESC blendDesc = {};
+            blendDesc.IndependentBlendEnable = TRUE;
+            blendDesc.RenderTarget[0].BlendEnable = FALSE;
+            blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+            blendDesc.RenderTarget[1].BlendEnable = TRUE;
+            blendDesc.RenderTarget[1].SrcBlend = D3D11_BLEND_ONE;
+            blendDesc.RenderTarget[1].DestBlend = D3D11_BLEND_ONE;
+            blendDesc.RenderTarget[1].BlendOp = D3D11_BLEND_OP_ADD;
+            blendDesc.RenderTarget[1].SrcBlendAlpha = D3D11_BLEND_ONE;
+            blendDesc.RenderTarget[1].DestBlendAlpha = D3D11_BLEND_ONE;
+            blendDesc.RenderTarget[1].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+            blendDesc.RenderTarget[1].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_RED;
+            engine->GetDevice()->CreateBlendState( &blendDesc, s_extraMaskBlendState.GetAddressOf() );
+        }
+        if ( s_extraMaskBlendState ) {
+            const FLOAT blendFactor[4] = {};
+            engine->GetContext()->OMSetBlendState( s_extraMaskBlendState.Get(), blendFactor, 0xffffffff );
+        }
+    }
+
+    ID3D11RenderTargetView* rtvs[2] = { rtv.Get(), extraRTV };
+    engine->GetContext()->OMSetRenderTargets( extraRTV ? 2 : 1, rtvs, nullptr );
 
     if ( texture.Get() )
         engine->GetContext()->PSSetShaderResources( 0, 1, texture.GetAddressOf() );
 
     DrawFullScreenQuad();
+
+    if ( extraRTV ) {
+        engine->GetContext()->OMSetBlendState( oldBlendState.Get(), oldBlendFactor, oldSampleMask );
+    }
 
     engine->GetContext()->PSSetShaderResources( 0, 1, srv.GetAddressOf() );
     engine->GetContext()->OMSetRenderTargets( 1, oldRTV.GetAddressOf(), oldDSV.Get() );

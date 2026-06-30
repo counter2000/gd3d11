@@ -379,7 +379,7 @@ public:
 
     /** Draws particle effects */
     void DrawFrameParticles(std::map<ParticleBatchKey, std::vector<ParticleInstanceInfo>>& particles, std::map<ParticleBatchKey, ParticleRenderInfo>& info, RenderToTextureBuffer
-                            * bufferParticleColor, RenderToTextureBuffer* bufferParticleDistortion) override;
+                            * bufferParticleColor, RenderToTextureBuffer* bufferParticleDistortion, RenderToTextureBuffer* bufferParticleReactiveMask = nullptr) override;
 
     /** Returns the settings window availability */
     bool HasSettingsWindow();

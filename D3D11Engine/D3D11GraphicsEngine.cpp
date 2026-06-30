@@ -4284,8 +4284,9 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         && rendererState.RendererSettings.EnableRain
         && Engine::GAPI->GetSceneWetness() > 1e-6f && isOutdoor;
     RGResourceHandle waterMaskResource = RG_INVALID_HANDLE;
-    const bool fsr3ActiveForReactiveMask = rendererState.RendererSettings.AntiAliasingMode == GothicRendererSettings::AA_FSR
-        && rendererState.RendererSettings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3;
+    const bool fsr3ActiveForReactiveMask = rendererState.RendererSettings.AntiAliasingMode == GothicRendererSettings::AA_FSR3
+        || (rendererState.RendererSettings.AntiAliasingMode == GothicRendererSettings::AA_FSR
+            && rendererState.RendererSettings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3);
 
     graph.AddPass( RG_PASS_NAME("DrawWaterSurfaces"), [&]( RGBuilder& builder, RenderPass& pass ) {
         builder.Read( backBufferHandle );
@@ -4444,9 +4445,22 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
             graph.AddPass( RG_PASS_NAME("Draw Rain"), [&]( RGBuilder& builder, RenderPass& pass ) {
                 builder.Read( backBufferHandle );
                 builder.Write( backBufferHandle );
+                if ( fsr3ActiveForReactiveMask ) {
+                    builder.Read( reactiveMaskResource );
+                    builder.Write( reactiveMaskResource );
+                }
 
-                pass.m_executeCallback = [this](const RenderGraph&) {
+                pass.m_executeCallback = [this, backBufferHandle, fsr3ActiveForReactiveMask, reactiveMaskResource](const RenderGraph& graph) {
                     TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Draw Rain" );
+                    if ( fsr3ActiveForReactiveMask ) {
+                        auto* backBuffer = graph.GetPhysicalTexture( backBufferHandle );
+                        auto* fsr3Mask = graph.GetPhysicalTexture( reactiveMaskResource );
+                        ID3D11RenderTargetView* rtvs[2] = {
+                            backBuffer ? backBuffer->GetRenderTargetView().Get() : nullptr,
+                            fsr3Mask ? fsr3Mask->GetRenderTargetView().Get() : nullptr
+                        };
+                        GetContext()->OMSetRenderTargets( 2, rtvs, DepthStencilBuffer->GetDepthStencilView().Get() );
+                    }
                     Effects->DrawRain();
                 };
             });
@@ -4454,9 +4468,22 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
             graph.AddPass( RG_PASS_NAME("Draw Rain CS"), [&]( RGBuilder& builder, RenderPass& pass ) {
                 builder.Read( backBufferHandle );
                 builder.Write( backBufferHandle );
+                if ( fsr3ActiveForReactiveMask ) {
+                    builder.Read( reactiveMaskResource );
+                    builder.Write( reactiveMaskResource );
+                }
 
-                pass.m_executeCallback = [this](const RenderGraph&) {
+                pass.m_executeCallback = [this, backBufferHandle, fsr3ActiveForReactiveMask, reactiveMaskResource](const RenderGraph& graph) {
                     TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Draw Rain (CS)" );
+                    if ( fsr3ActiveForReactiveMask ) {
+                        auto* backBuffer = graph.GetPhysicalTexture( backBufferHandle );
+                        auto* fsr3Mask = graph.GetPhysicalTexture( reactiveMaskResource );
+                        ID3D11RenderTargetView* rtvs[2] = {
+                            backBuffer ? backBuffer->GetRenderTargetView().Get() : nullptr,
+                            fsr3Mask ? fsr3Mask->GetRenderTargetView().Get() : nullptr
+                        };
+                        GetContext()->OMSetRenderTargets( 2, rtvs, DepthStencilBuffer->GetDepthStencilView().Get() );
+                    }
                     Effects->DrawRain_CS();
                 };
             });
@@ -4598,14 +4625,19 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         builder.Read( particleColorHandle );
         builder.Read( particleDistortionHandle );
         builder.Write( backBufferHandle );
+        if ( fsr3ActiveForReactiveMask ) {
+            builder.Read( reactiveMaskResource );
+            builder.Write( reactiveMaskResource );
+        }
 
-        pass.m_executeCallback = [particleColorHandle, particleDistortionHandle](const RenderGraph& graph) {
+        pass.m_executeCallback = [particleColorHandle, particleDistortionHandle, fsr3ActiveForReactiveMask, reactiveMaskResource](const RenderGraph& graph) {
             TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Draw ParticlesSimple" );
 
             Engine::GAPI->ResetRenderStates();
             Engine::GAPI->DrawParticlesSimple(
                 graph.GetPhysicalTexture( particleColorHandle ),
-                graph.GetPhysicalTexture( particleDistortionHandle ) );
+                graph.GetPhysicalTexture( particleDistortionHandle ),
+                fsr3ActiveForReactiveMask ? graph.GetPhysicalTexture( reactiveMaskResource ) : nullptr );
         };
     });
 
@@ -9280,7 +9312,8 @@ void D3D11GraphicsEngine::DrawFrameParticles(
     std::map<ParticleBatchKey, std::vector<ParticleInstanceInfo>>& particles,
     std::map<ParticleBatchKey, ParticleRenderInfo>& info,
     RenderToTextureBuffer* bufferParticleColor,
-    RenderToTextureBuffer* bufferParticleDistortion ) {
+    RenderToTextureBuffer* bufferParticleDistortion,
+    RenderToTextureBuffer* bufferParticleReactiveMask ) {
     if ( particles.empty() ) return;
     SetDefaultStates();
 
@@ -9431,7 +9464,8 @@ void D3D11GraphicsEngine::DrawFrameParticles(
     PfxRenderer->CopyTextureToRTV(
         tempBuffer->GetShaderResView(),
         HDRBackBuffer->GetRenderTargetView(),
-        GetResolution(), true );
+        GetResolution(), true, INT2( 0, 0 ),
+        bufferParticleReactiveMask ? bufferParticleReactiveMask->GetRenderTargetView().Get() : nullptr );
 
     GetContext()->PSSetShaderResources( 1, 2, s_nullSRVs );
 }

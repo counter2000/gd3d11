@@ -229,7 +229,8 @@ public:
     virtual void DrawFrameParticles(std::map<ParticleBatchKey, std::vector<ParticleInstanceInfo>>& particles,
         std::map<ParticleBatchKey, ParticleRenderInfo>& info,
         RenderToTextureBuffer* bufferParticleColor,
-        RenderToTextureBuffer* bufferParticleDistortion) {}
+        RenderToTextureBuffer* bufferParticleDistortion,
+        RenderToTextureBuffer* bufferParticleReactiveMask = nullptr) {}
 
     virtual void DrawString( const std::string& str, float x, float y, const zFont* font, zColor& fontColor ) {};
     

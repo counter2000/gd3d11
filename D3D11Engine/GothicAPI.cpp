@@ -1655,7 +1655,8 @@ void GothicAPI::DrawWorldMeshNaive() {
 /** Draws particles, in a simple way */
 void GothicAPI::DrawParticlesSimple(
     RenderToTextureBuffer* bufferParticleColor,
-    RenderToTextureBuffer* bufferParticleDistortion) {
+    RenderToTextureBuffer* bufferParticleDistortion,
+    RenderToTextureBuffer* bufferParticleReactiveMask) {
     ZoneScopedN( "GothicAPI::DrawParticlesSimple" );
     ParticleFrameData data;
 
@@ -1672,7 +1673,7 @@ void GothicAPI::DrawParticlesSimple(
         }
 
         Engine::GraphicsEngine->DrawFrameParticleMeshes( ParticleEffectProgMeshes );
-        Engine::GraphicsEngine->DrawFrameParticles( FrameParticles, FrameParticleInfo, bufferParticleColor, bufferParticleDistortion);
+        Engine::GraphicsEngine->DrawFrameParticles( FrameParticles, FrameParticleInfo, bufferParticleColor, bufferParticleDistortion, bufferParticleReactiveMask);
     }
 }
 

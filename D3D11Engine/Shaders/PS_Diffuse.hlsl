@@ -100,7 +100,7 @@ FORWARD_PLUS_PS_OUTPUT PSMain( PS_INPUT Input )
 
 #if ALPHATEST == 1
 	DoAlphaTest(color.a);
-	output.vReactiveMask = 0.1f;
+	output.vReactiveMask = 0.04f;
 #endif
 
 #if NORMALMAPPING == 1
@@ -217,7 +217,7 @@ DEFERRED_PS_OUTPUT PSMain( PS_INPUT Input ) : SV_TARGET
 	
 	// WorldMesh can always do the alphatest
 	DoAlphaTest(color.a);
-	output.vReactiveMask = 0.1f; // 0.1f seemed fine, no blur and just tiiiiiny bit of flickering
+	output.vReactiveMask = 0.04f; // low value keeps distant alpha-tested vegetation stable while still blocking SSR on cutouts
 #endif
 	
 	// Apply normalmapping if wanted
