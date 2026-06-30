@@ -67,6 +67,7 @@ struct PS_OUTPUT
 {
 	float4 color : SV_TARGET0;
 	float waterMask : SV_TARGET1;
+	float fsr3ReactiveMask : SV_TARGET2;
 };
 
 PS_OUTPUT PSMain( PS_INPUT Input )
@@ -273,5 +274,8 @@ PS_OUTPUT PSMain( PS_INPUT Input )
 	finalColor = lerp(finalColor, reflectionSSRColor, ssrBlend);
 	output.color = float4(finalColor, 1);
 	output.waterMask = 1.0f;
+	// Water and SSR reflections change without reliable object motion vectors, so feed
+	// FSR3 a moderate reactive value. Full 1.0 is too unstable on animated water.
+	output.fsr3ReactiveMask = 0.45f;
 	return output;
 }

@@ -24,7 +24,7 @@ static bool HasCenteredNearbyNpc( D3D11GraphicsEngine* engine, float maxViewDist
 
     zCVob* player = Engine::GAPI->GetPlayerVob();
     zCWorld* playerWorld = player ? player->GetHomeWorld() : nullptr;
-    const auto& candidates = engine->GetFrameVisibleSkeletalVobs();
+    const auto& candidates = engine->GetFrameVisibleNpcVobs();
 
     const XMMATRIX rawView = Engine::GAPI->GetViewMatrixXM();
     const XMMATRIX view = XMMatrixTranspose( rawView );

@@ -22,6 +22,7 @@ public:
         ID3D11ShaderResourceView* depth,
         ID3D11ShaderResourceView* motionVectors,
         ID3D11ShaderResourceView* reactiveMask,
+        ID3D11ShaderResourceView* transparencyAndCompositionMask,
         ID3D11RenderTargetView* output,
         const INT2& inputSize,
         const INT2& outputSize,

@@ -129,7 +129,11 @@ bool D3D11PFX_FSR3::Init(
     MaxOutputSize = maxOutputSize;
     ContextFrameGenerationEnabled = enableFrameGeneration;
 
-    const int effectCounts[BACKEND_COUNT] = { 1, 1, 2 };
+    const int effectCounts[BACKEND_COUNT] = {
+        FFX_FSR3_CONTEXT_COUNT,
+        FFX_FSR3UPSCALER_CONTEXT_COUNT,
+        FFX_OPTICALFLOW_CONTEXT_COUNT + FFX_FRAMEINTERPOLATION_CONTEXT_COUNT
+    };
     for ( int i = 0; i < BACKEND_COUNT; ++i ) {
         const size_t scratchSize = ffxGetScratchMemorySizeDX11( effectCounts[i] );
         ScratchMemory[i] = calloc( 1, scratchSize );
@@ -270,6 +274,7 @@ XRESULT D3D11PFX_FSR3::Apply(
     ID3D11ShaderResourceView* depth,
     ID3D11ShaderResourceView* motionVectors,
     ID3D11ShaderResourceView* reactiveMask,
+    ID3D11ShaderResourceView* transparencyAndCompositionMask,
     ID3D11RenderTargetView* output,
     const INT2& inputSize,
     const INT2& outputSize,
@@ -283,15 +288,24 @@ XRESULT D3D11PFX_FSR3::Apply(
     bool enableSharpening,
     float sharpness )
 {
-    const auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
+    auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
     const bool frameGenerationRequested = settings.EnableFrameGeneration
         && settings.AntiAliasingMode == GothicRendererSettings::AA_FSR
         && settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3
         && !FeatureLevel10Compatibility;
 
     if ( !Init( inputSize, outputSize, frameGenerationRequested ) ) {
-        LogError() << "FSR3: Failed to initialize.";
-        return XR_FAILED;
+        if ( frameGenerationRequested ) {
+            LogError() << "FSR3: Frame Generation initialization failed; falling back to FSR3 upscaling only.";
+            settings.EnableFrameGeneration = false;
+            if ( !Init( inputSize, outputSize, false ) ) {
+                LogError() << "FSR3: Failed to initialize.";
+                return XR_FAILED;
+            }
+        } else {
+            LogError() << "FSR3: Failed to initialize.";
+            return XR_FAILED;
+        }
     }
 
     auto* engine = static_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
@@ -314,7 +328,10 @@ XRESULT D3D11PFX_FSR3::Apply(
     dispatch.motionVectors = WrapView( motionVectors, L"FSR3 Input Motion Vectors" );
     dispatch.upscaleOutput = WrapView( output, L"FSR3 Upscale Output", FFX_RESOURCE_STATE_UNORDERED_ACCESS );
     if ( reactiveMask ) {
-        dispatch.transparencyAndComposition = WrapView( reactiveMask, L"FSR3 Transparency and Composition" );
+        dispatch.reactive = WrapView( reactiveMask, L"FSR3 Reactive Mask" );
+    }
+    if ( transparencyAndCompositionMask ) {
+        dispatch.transparencyAndComposition = WrapView( transparencyAndCompositionMask, L"FSR3 Transparency and Composition" );
     }
 
     dispatch.renderSize = {

@@ -60,6 +60,7 @@ namespace {
                     depth,
                     velocityBufferTex->GetShaderResView().Get(),
                     reactiveMask ? reactiveMask->GetShaderResView().Get() : nullptr,
+                    reactiveMask ? reactiveMask->GetShaderResView().Get() : nullptr,
                     outputRTV,
                     inputSize,
                     engine.GetBackbufferResolution(),

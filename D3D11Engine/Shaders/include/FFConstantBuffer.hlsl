@@ -24,3 +24,5 @@ cbuffer FFPipelineConstantBuffer : register( b0 )
 	unsigned int FF_GSwitches;
 	float2 ggs_pad2;
 };
+
+static const uint GSWITCH_FSR3_REACTIVE = 32;

@@ -357,7 +357,7 @@ public:
 
     /** Draws the given mesh infos as water */
     void DrawWaterSurfaces() override;
-    void DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRTV );
+    void DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRTV, ID3D11RenderTargetView* fsr3ReactiveMaskRTV = nullptr );
 
     /** Handles an UI-Event */
     void OnUIEvent( EUIEvent uiEvent ) override;
@@ -407,6 +407,12 @@ public:
 
     RenderToTextureBuffer* GetVelocityBuffer() const { return VelocityBuffer.get(); }
     const std::vector<SkeletalVobInfo*>& GetFrameVisibleSkeletalVobs() const { return m_FrameGeometryCache.cachedMobs; }
+    const std::vector<SkeletalVobInfo*>& GetFrameVisibleNpcVobs() const { return m_FrameGeometryCache.visibleNpcs; }
+    void RegisterFrameVisibleNpcVob( SkeletalVobInfo* vobInfo ) {
+        if ( vobInfo ) {
+            m_FrameGeometryCache.visibleNpcs.push_back( vobInfo );
+        }
+    }
 
     const XMFLOAT4X4& GetPrevViewProjMatrix() const { return m_PrevViewProjMatrix; }
     void StorePrevViewProjMatrix();
@@ -618,6 +624,7 @@ private:
         std::vector<CachedVobVisual>    vobVisuals;
         std::vector<CachedInstancedMeshDraw> sortedInstancedMeshes;
         std::vector<SkeletalVobInfo*>   cachedMobs;
+        std::vector<SkeletalVobInfo*>   visibleNpcs;
         std::vector<SkeletalVobInfo*> skeletalBoneVisOrder;
         std::vector<VS_ExConstantBuffer_SkeletalBoneRange> skeletalBoneRanges;
 
@@ -635,6 +642,7 @@ private:
             vobVisuals.clear();
             sortedInstancedMeshes.clear();
             cachedMobs.clear();
+            visibleNpcs.clear();
             skeletalBoneVisOrder.clear();
             skeletalBoneRanges.clear();
         }

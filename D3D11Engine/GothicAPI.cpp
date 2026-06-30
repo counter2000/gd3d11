@@ -1576,6 +1576,7 @@ void GothicAPI::DrawWorldMeshNaive() {
         zCCamera::GetCamera()->Activate();
 
         auto drawRadius = RendererState.RendererSettings.SkeletalMeshDrawRadius;
+        D3D11GraphicsEngine* g = reinterpret_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
 
         static std::vector<SkeletalVobInfo*> drawAsMorphMesh;
         static std::vector<SkeletalVobInfo*> drawRegular;
@@ -1606,6 +1607,10 @@ void GothicAPI::DrawWorldMeshNaive() {
             if ( !model )
                 continue; // Gothic fortunately sets this to 0 when it throws the model out of the cache
 
+            if ( vobInfo->Vob->GetVobType() == zVOB_TYPE_NSC ) {
+                g->RegisterFrameVisibleNpcVob( vobInfo );
+            }
+
             // This is important, because gothic only lerps between animation when this distance is set and below ~2000
             model->SetDistanceToCamera( dist );
 
@@ -1625,7 +1630,6 @@ void GothicAPI::DrawWorldMeshNaive() {
             if( RendererState.RendererSettings.ShowSkeletalVertexNormals )
                 VNSkeletalVobs.emplace_back( vobInfo );
         }
-        D3D11GraphicsEngine* g = reinterpret_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
 
         if (!drawAsMorphMesh.empty()) {
             auto _ = Engine::GraphicsEngine->RecordGraphicsEvent( GE_NAME( "Draw Skeletal Morph Meshes" ) ); 
@@ -5765,6 +5769,19 @@ void GothicAPI::DrawMorphMesh( zCMorphMesh* msh, std::map<zCMaterial*, std::vect
 
     const bool isZPrepass = g->GetRenderingStage() == DES_Z_PRE_PASS;
     const bool bindShader = g->GetRenderingStage() == DES_MAIN || isZPrepass;
+    auto& graphicsState = RendererState.GraphicsState;
+    const unsigned int oldSwitches = graphicsState.FF_GSwitches;
+    if ( bindShader && !isZPrepass
+        && RendererState.RendererSettings.AntiAliasingMode == GothicRendererSettings::AA_FSR
+        && RendererState.RendererSettings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3 ) {
+        graphicsState.FF_GSwitches |= GSWITCH_FSR3_REACTIVE;
+    }
+    auto bindFixedFunctionState = [&]() {
+        if ( auto ps = g->GetActivePS() ) {
+            ps->GetBuffer( "FFPipelineConstantBuffer" ).Update( &graphicsState ).Bind();
+        }
+    };
+    bindFixedFunctionState();
 
     zCTexture* lastTex = nullptr;
     for ( int i = 0; i < morphMesh->GetNumSubmeshes(); i++ ) {
@@ -5777,8 +5794,11 @@ void GothicAPI::DrawMorphMesh( zCMorphMesh* msh, std::map<zCMaterial*, std::vect
                 lastTex = texture;
                 if ( isZPrepass ) {
                     texture->GetSurface()->GetEngineTexture()->BindToPixelShader( 0 );
-                } else if ( !g->BindTextureNRFX( texture, bindShader ) ) {
-                    continue;
+                } else {
+                    if ( !g->BindTextureNRFX( texture, bindShader ) ) {
+                        continue;
+                    }
+                    bindFixedFunctionState();
                 }
             }
         }
@@ -5793,6 +5813,8 @@ void GothicAPI::DrawMorphMesh( zCMorphMesh* msh, std::map<zCMaterial*, std::vect
         }
         Out_Of_Nested_Loop:;
     }
+    graphicsState.FF_GSwitches = oldSwitches;
+    bindFixedFunctionState();
 }
 
 void GothicAPI::DrawMorphMesh_Layered( zCMorphMesh* msh, std::map<zCMaterial*, std::vector<MeshInfo*>>& meshes ) {

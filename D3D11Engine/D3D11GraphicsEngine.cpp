@@ -4284,6 +4284,8 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         && rendererState.RendererSettings.EnableRain
         && Engine::GAPI->GetSceneWetness() > 1e-6f && isOutdoor;
     RGResourceHandle waterMaskResource = RG_INVALID_HANDLE;
+    const bool fsr3ActiveForReactiveMask = rendererState.RendererSettings.AntiAliasingMode == GothicRendererSettings::AA_FSR
+        && rendererState.RendererSettings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3;
 
     graph.AddPass( RG_PASS_NAME("DrawWaterSurfaces"), [&]( RGBuilder& builder, RenderPass& pass ) {
         builder.Read( backBufferHandle );
@@ -4295,8 +4297,12 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
                 DXGI_FORMAT_R8_UNORM, L"WaterMask" } );
             builder.Write( waterMaskResource );
         }
+        if ( fsr3ActiveForReactiveMask ) {
+            builder.Read( reactiveMaskResource );
+            builder.Write( reactiveMaskResource );
+        }
 
-        pass.m_executeCallback = [this, renderWetGroundSSR, waterMaskResource](const RenderGraph& graph) {
+        pass.m_executeCallback = [this, renderWetGroundSSR, waterMaskResource, fsr3ActiveForReactiveMask, reactiveMaskResource](const RenderGraph& graph) {
             SetViewport( ViewportInfo( 0, 0, GetResolution() ) );
             ID3D11RenderTargetView* waterMaskRTV = nullptr;
             if ( renderWetGroundSSR ) {
@@ -4305,7 +4311,12 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
                 GetContext()->ClearRenderTargetView( waterMask->GetRenderTargetView().Get(), clearMask );
                 waterMaskRTV = waterMask->GetRenderTargetView().Get();
             }
-            DrawWaterSurfaces( waterMaskRTV );
+            ID3D11RenderTargetView* fsr3ReactiveMaskRTV = nullptr;
+            if ( fsr3ActiveForReactiveMask ) {
+                auto* fsr3Mask = graph.GetPhysicalTexture( reactiveMaskResource );
+                fsr3ReactiveMaskRTV = fsr3Mask ? fsr3Mask->GetRenderTargetView().Get() : nullptr;
+            }
+            DrawWaterSurfaces( waterMaskRTV, fsr3ReactiveMaskRTV );
             if ( renderWetGroundSSR ) {
                 DrawWaterfallMask( waterMaskRTV );
             }
@@ -5534,10 +5545,10 @@ XRESULT D3D11GraphicsEngine::DrawWorldMesh( bool noTextures ) {
 
 /** Draws the given mesh infos as water */
 void D3D11GraphicsEngine::DrawWaterSurfaces() {
-    DrawWaterSurfaces( nullptr );
+    DrawWaterSurfaces( nullptr, nullptr );
 }
 
-void D3D11GraphicsEngine::DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRTV ) {
+void D3D11GraphicsEngine::DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRTV, ID3D11RenderTargetView* fsr3ReactiveMaskRTV ) {
     if ( FrameWaterSurfaces.empty() ) {
         return;
     }
@@ -5568,10 +5579,11 @@ void D3D11GraphicsEngine::DrawWaterSurfaces( ID3D11RenderTargetView* waterMaskRT
     float totalTime = Engine::GAPI->GetTotalTime();
     ActiveVS->GetBuffer( "Matrices_PerInstances" ).Update( &totalTime, 4 ).Bind();
 
-    ID3D11RenderTargetView* waterTargets[2] = {
-        HDRBackBuffer->GetRenderTargetView().Get(), waterMaskRTV
+    ID3D11RenderTargetView* waterTargets[3] = {
+        HDRBackBuffer->GetRenderTargetView().Get(), waterMaskRTV, fsr3ReactiveMaskRTV
     };
-    GetContext()->OMSetRenderTargets( waterMaskRTV ? 2 : 1, waterTargets,
+    const UINT waterTargetCount = fsr3ReactiveMaskRTV ? 3u : ( waterMaskRTV ? 2u : 1u );
+    GetContext()->OMSetRenderTargets( waterTargetCount, waterTargets,
         DepthStencilBuffer->GetDepthStencilView().Get() );
 
     // Bind wrapped mesh vertex buffers

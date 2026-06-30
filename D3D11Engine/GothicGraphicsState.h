@@ -12,6 +12,7 @@ const int GSWITCH_ALPHAREF = 2;
 const int GSWITCH_LIGHING = 4;
 const int GSWITCH_REFLECTIONS = 8;
 const int GSWITCH_LINEAR_DEPTH = 16;
+const int GSWITCH_FSR3_REACTIVE = 32;
 
 enum RenderStage {
     STAGE_DRAW_UNKNOWN = 0,

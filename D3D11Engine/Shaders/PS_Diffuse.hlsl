@@ -86,7 +86,7 @@ float2 CalculateVelocity(float4 currClipPos, float4 prevClipPos)
 FORWARD_PLUS_PS_OUTPUT PSMain( PS_INPUT Input )
 {
 	FORWARD_PLUS_PS_OUTPUT output;
-	output.vReactiveMask = 0.0f;
+	output.vReactiveMask = (FF_GSwitches & GSWITCH_FSR3_REACTIVE) != 0 ? 0.35f : 0.0f;
 
 	float2 materialUV = Input.vTexcoord;
 #if NORMALMAPPING == 1
@@ -201,7 +201,7 @@ DEFERRED_PS_OUTPUT PSMain( PS_INPUT Input ) : SV_TARGET
 #endif
 {
 	DEFERRED_PS_OUTPUT output;
-	output.vReactiveMask = 0.0f;
+	output.vReactiveMask = (FF_GSwitches & GSWITCH_FSR3_REACTIVE) != 0 ? 0.35f : 0.0f;
 
 	float2 materialUV = Input.vTexcoord;
 #if NORMALMAPPING == 1
