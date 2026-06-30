@@ -69,6 +69,15 @@ namespace {
         context->CSSetShader( nullptr, nullptr, 0 );
     }
 
+    void UnbindFrameGenerationInputs( ID3D11DeviceContext* context ) {
+        ID3D11RenderTargetView* nullRtvs[8] = {};
+        ID3D11ShaderResourceView* nullSrvs[16] = {};
+        context->OMSetRenderTargets( static_cast<UINT>(std::size( nullRtvs )), nullRtvs, nullptr );
+        context->VSSetShaderResources( 0, static_cast<UINT>(std::size( nullSrvs )), nullSrvs );
+        context->PSSetShaderResources( 0, static_cast<UINT>(std::size( nullSrvs )), nullSrvs );
+        UnbindComputeResources( context );
+    }
+
     void FfxLog( FfxMsgType type, const wchar_t* message ) {
         LogError() << "FidelityFX FSR3 (" << type << "): " << message;
     }
@@ -263,7 +272,10 @@ XRESULT D3D11PFX_FSR3::Apply(
     float sharpness )
 {
     const auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
-    const bool frameGenerationRequested = false;
+    const bool frameGenerationRequested = settings.EnableFrameGeneration
+        && settings.AntiAliasingMode == GothicRendererSettings::AA_FSR
+        && settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3
+        && !FeatureLevel10Compatibility;
 
     if ( !Init( inputSize, outputSize, frameGenerationRequested ) ) {
         LogError() << "FSR3: Failed to initialize.";
@@ -368,6 +380,10 @@ void D3D11PFX_FSR3::CaptureHUDLess( ID3D11ShaderResourceView* source ) {
         return;
     }
 
+    auto* engine = static_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
+    ID3D11DeviceContext* context = engine->GetContext().Get();
+    UnbindFrameGenerationInputs( context );
+
     Renderer->CopyTextureToRTV(
         source,
         HudlessColor->GetRenderTargetView(),
@@ -390,6 +406,7 @@ ID3D11ShaderResourceView* D3D11PFX_FSR3::GenerateInterpolatedFrame(
 
     auto* engine = static_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
     ID3D11DeviceContext* context = engine->GetContext().Get();
+    UnbindFrameGenerationInputs( context );
 
     Renderer->CopyTextureToRTV(
         presentColor,

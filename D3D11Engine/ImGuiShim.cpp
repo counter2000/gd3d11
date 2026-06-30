@@ -676,9 +676,16 @@ namespace
             || s.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR3
             || (s.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR && IsFSRUpscaler( s.Upscaler ));
     }
+    bool FrameGenerationAvailable( const GothicRendererSettings& s ) {
+        return !FeatureLevel10Compatibility
+            && s.AntiAliasingMode == GothicRendererSettings::E_AntiAliasingMode::AA_FSR
+            && s.Upscaler == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3;
+    }
     void FixupSettings( GothicRendererSettings& s ) {
         s.FixupUpscalingSettings();
-        s.EnableFrameGeneration = false;
+        if ( !FrameGenerationAvailable( s ) ) {
+            s.EnableFrameGeneration = false;
+        }
     }
 }
 
@@ -839,12 +846,14 @@ void ImGuiShim::RenderSettingsWindow()
                 ImGui::SetItemTooltip( "Selects edge smoothing. FSR 3 also uses Render Scale for its quality presets." );
                 ImGui::PopID();
             }
-            settings.EnableFrameGeneration = false;
+            const bool frameGenerationAvailable = FrameGenerationAvailable( settings );
             ImText( "Frame Generation", buttonWidth ); ImGui::SameLine();
-            ImGui::BeginDisabled( true );
+            ImGui::BeginDisabled( !frameGenerationAvailable );
             ImGui::Checkbox( "##Enable Frame Generation", &settings.EnableFrameGeneration );
             ImGui::EndDisabled();
-            ImGui::SetItemTooltip( "Disabled for now: the DX11 frame-interpolation path is not stable enough for this build." );
+            ImGui::SetItemTooltip( frameGenerationAvailable
+                ? "Generates intermediate frames for smoother motion. Requires FSR 3 anti-aliasing."
+                : "Requires Anti Aliasing: FSR 3." );
             ImText( "Render Scale", buttonWidth ); ImGui::SameLine();
             if ( settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3 ) {
                 settings.ResolutionScalePercent = std::clamp( settings.ResolutionScalePercent, 33, 100 );
