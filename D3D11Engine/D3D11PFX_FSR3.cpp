@@ -87,7 +87,7 @@ namespace {
     // normal FidelityFX error handling can then disable only the failed request.
     FfxErrorCode GuardedFsr3ContextCreate(
         FfxFsr3Context* context,
-        const FfxFsr3ContextDescription* description )
+        FfxFsr3ContextDescription* description )
     {
         __try {
             return ffxFsr3ContextCreate( context, description );
