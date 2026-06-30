@@ -5461,7 +5461,7 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.DoFBokehRadius = std::clamp( GetPrivateProfileFloatA( "General", "DoFBokehRadius", ds.DoFBokehRadius, ini ), 0.035f, 7.0f );
         s.DoFMaxBlur = GetPrivateProfileFloatA( "General", "DoFMaxBlur", ds.DoFMaxBlur, ini );
         s.DoFNearBlurDistance = std::clamp( GetPrivateProfileFloatA( "General", "DoFNearBlurDistance", ds.DoFNearBlurDistance, ini ), 0.0f, 1000.0f );
-        s.DoFNearBlurStrength = std::clamp( GetPrivateProfileFloatA( "General", "DoFNearBlurStrength", ds.DoFNearBlurStrength, ini ), 0.0f, 5.0f );
+        s.DoFNearBlurStrength = std::clamp( GetPrivateProfileFloatA( "General", "DoFNearBlurStrength", ds.DoFNearBlurStrength, ini ), 0.0f, 2.0f );
         s.AllowNormalmaps = GetPrivateProfileBoolA( "General", "AllowNormalmaps", ds.AllowNormalmaps, ini );
         s.EnableParallaxOcclusionMapping = GetPrivateProfileBoolA( "General", "EnableParallaxOcclusionMapping", ds.EnableParallaxOcclusionMapping, ini );
         s.ParallaxOcclusionStrength = std::clamp( GetPrivateProfileFloatA( "General", "ParallaxOcclusionStrength", ds.ParallaxOcclusionStrength, ini ), 0.0f, 4.0f );

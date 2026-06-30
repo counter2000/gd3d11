@@ -37,7 +37,8 @@ float ComputeCoC( float linearDepth, float focusDepth, float2 texcoord )
 {
     const float farCoC = saturate( ( linearDepth - focusDepth ) / DoF_FocusRange );
     const float nearRange = max( DoF_NearBlurDistance - DoF_NearPlane, 1.0f );
-    const float nearCoC = saturate( ( DoF_NearBlurDistance - linearDepth ) / nearRange )
+    const float nearDepth = max( linearDepth, DoF_NearPlane );
+    const float nearCoC = saturate( ( DoF_NearBlurDistance - nearDepth ) / nearRange )
         * DoF_NearBlurStrength;
     return max( farCoC, nearCoC );
 }

@@ -39,6 +39,21 @@ bool IsSkyDepth( float d )
 }
 
 
+float ComputeNearCoCFromLinearDepth( float linearDepth )
+{
+    const float nearRange = max( DoF_NearBlurDistance - DoF_NearPlane, 1.0f );
+    const float nearDepth = max( linearDepth, DoF_NearPlane );
+    return saturate( ( DoF_NearBlurDistance - nearDepth ) / nearRange ) * DoF_NearBlurStrength;
+}
+
+float ComputeNearCoCFromDepth( float d )
+{
+    if ( IsSkyDepth( d ) )
+        return 0.0f;
+
+    return ComputeNearCoCFromLinearDepth( LinearizeDepth( d ) );
+}
+
 float ComputeCoCFromDepth( float d, float focusDepth, float2 texcoord )
 {
     if ( IsSkyDepth( d ) )
@@ -46,9 +61,7 @@ float ComputeCoCFromDepth( float d, float focusDepth, float2 texcoord )
 
     const float linearDepth = LinearizeDepth( d );
     const float farCoC = saturate( ( linearDepth - focusDepth ) / DoF_FocusRange );
-    const float nearRange = max( DoF_NearBlurDistance - DoF_NearPlane, 1.0f );
-    const float nearCoC = saturate( ( DoF_NearBlurDistance - linearDepth ) / nearRange )
-        * DoF_NearBlurStrength;
+    const float nearCoC = ComputeNearCoCFromLinearDepth( linearDepth );
     return max( farCoC, nearCoC );
 }
 
@@ -105,8 +118,8 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
 
     float focusDepth = TX_Focus.SampleLevel( SS_Linear, float2( 0.5, 0.5 ), 0 ).r;
 
-    // Compute CoC at center and 4 neighbours, use the minimum.
-    // This erodes the blur zone by 1 pixel at depth discontinuities.
+    // Compute CoC at center and 4 neighbours. Normal/far edges still use erosion;
+    // near foreground edges are handled separately so close objects blur across silhouettes.
     float2 depthSize;
     TX_Depth.GetDimensions( depthSize.x, depthSize.y );
     float2 dtexel = 1.0 / depthSize;
@@ -128,14 +141,27 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
     float cocR = IsSkyDepth( depthR ) ? cocC : ComputeCoCFromDepth( depthR, focusDepth, texcoord + float2(  dtexel.x, 0 ) );
     float cocU = IsSkyDepth( depthU ) ? cocC : ComputeCoCFromDepth( depthU, focusDepth, texcoord + float2( 0, -dtexel.y ) );
     float cocD = IsSkyDepth( depthD ) ? cocC : ComputeCoCFromDepth( depthD, focusDepth, texcoord + float2( 0,  dtexel.y ) );
+    float nearC = ComputeNearCoCFromDepth( depthC );
+    float nearL = ComputeNearCoCFromDepth( depthL );
+    float nearR = ComputeNearCoCFromDepth( depthR );
+    float nearU = ComputeNearCoCFromDepth( depthU );
+    float nearD = ComputeNearCoCFromDepth( depthD );
+    float nearNeighbourCoC = max( max( nearC, nearL ), max( nearR, max( nearU, nearD ) ) );
 
     float2 inwardShift = float2(
         (IsSkyDepth(depthL) ? 1.0f : 0.0f) - (IsSkyDepth(depthR) ? 1.0f : 0.0f),
         (IsSkyDepth(depthU) ? 1.0f : 0.0f) - (IsSkyDepth(depthD) ? 1.0f : 0.0f));
+
+    const float nearEdgeThreshold = 0.04f;
+    inwardShift.x += (nearL > nearC + nearEdgeThreshold ? -1.0f : 0.0f)
+        + (nearR > nearC + nearEdgeThreshold ? 1.0f : 0.0f);
+    inwardShift.y += (nearU > nearC + nearEdgeThreshold ? -1.0f : 0.0f)
+        + (nearD > nearC + nearEdgeThreshold ? 1.0f : 0.0f);
+
     float inwardLength = length(inwardShift);
     if ( inwardLength > 0.0f )
     {
-        float shiftStrength = saturate((DoF_BokehRadius - 5.0f) / 27.0f);
+        float shiftStrength = saturate((DoF_BokehRadius - 2.0f) / 8.0f);
         float2 inwardDirection = inwardShift / inwardLength;
         float2 shiftedBlurUV = texcoord + inwardDirection * dtexel * shiftStrength;
         float2 edgeTangent = float2(-inwardDirection.y, inwardDirection.x) * dtexel * 0.5f;
@@ -145,9 +171,14 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
 
     float minCoC = min( min( cocC, cocL ), min( cocR, min( cocU, cocD ) ) );
 
+    // Keep the old erosion for normal/far DoF edges, but not for near foreground blur:
+    // close NPCs and objects must soften across their silhouette instead of staying cut out.
+    float nearForegroundWeight = smoothstep( 0.02f, 0.20f, nearNeighbourCoC );
+    float compositeCoC = lerp( minCoC, max( cocC, blurSample.a ), nearForegroundWeight );
+
     // Bilinear-upsampled half-res bokeh blur
 
-    float blendFactor = smoothstep( 0.0, 1.0, minCoC );
+    float blendFactor = smoothstep( 0.0, 1.0, compositeCoC );
     float3 finalColor = lerp( sharpColor, blurSample.rgb, blendFactor );
 
     OutputComposite[DTid.xy] = float4( finalColor, 1.0 );

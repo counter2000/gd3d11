@@ -217,22 +217,6 @@ namespace {
         }
         return false;
     }
-
-    bool SliderNearDoFStrength( const char* label, float* value )
-    {
-        const std::array<float, 11> levels = {
-            0.0f, 0.5f, 1.0f, 1.5f, 2.0f, 2.5f,
-            3.0f, 3.5f, 4.0f, 4.5f, 5.0f
-        };
-        int index = FindNearestStepIndex( *value, levels.data(), static_cast<int>(levels.size()) );
-        *value = levels[index];
-        if ( SliderSteppedIndex( label, &index, 10, true, 2 ) ) {
-            *value = levels[index];
-            return true;
-        }
-        return false;
-    }
-
     int SnapRenderScalePercentNonFSR( int value )
     {
         const int clamped = std::clamp( value, 100, 200 );
@@ -1425,8 +1409,8 @@ void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) 
             settings.DoFBokehRadius = advancedDepthOfFieldStrength * 3.5f;
         }
         ImGui::SliderFloat( "Near Blur Distance", &settings.DoFNearBlurDistance, 0.0f, 1000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
-        SliderNearDoFStrength( "Near Blur Strength", &settings.DoFNearBlurStrength );
-        ImGui::SetItemTooltip( "Controls near-camera blur up to 5x. The image center stays sharp while the effect increases toward the sides; far-distance blur is unchanged." );
+        SliderNormalizedUiStrength( "Near Blur Strength", &settings.DoFNearBlurStrength, 0.0f );
+        ImGui::SetItemTooltip( "Controls near-camera blur in third-person view. First-person disables the near blur; far-distance blur is unchanged." );
         ImGui::EndDisabled();
 
         ImGui::SeparatorText( "Sharpening" );
