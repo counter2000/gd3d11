@@ -4,7 +4,6 @@
 
 #include "pch.h"
 #include "BasePipelineStates.h"
-#include <ASSAO/ASSAO.h>
 
 /** Struct handling all the graphical states set by the game. Can be used as Constantbuffer */
 const int GSWITCH_FOG = 1;
@@ -489,34 +488,6 @@ struct GothicTransformInfo {
     XMFLOAT4X4 TransformProjUnjittered;
 };
 
-struct HBAOSettings {
-    HBAOSettings() {
-        MetersToViewSpaceUnits = 100.0f;
-        Radius = 1.00f;
-        Bias = 0.5f;
-        PowerExponent = 3.0f;
-        BlurSharpness = 4.0f;
-        BlendMode = 1;
-        Enabled = true;
-        EnableDualLayerAO = false;
-        EnableBlur = true;
-        SsaoBlurRadius = 1; // GFSDK_SSAO_BlurRadius::GFSDK_SSAO_BLUR_RADIUS_4;
-        SsaoStepCount = 0; // GFSDK_SSAO_StepCount::GFSDK_SSAO_STEP_COUNT_4;
-    }
-
-    float Bias;
-    float PowerExponent;
-    float BlurSharpness;
-    float Radius;
-    float MetersToViewSpaceUnits;
-    int BlendMode;
-    bool Enabled;
-    bool EnableDualLayerAO;
-    bool EnableBlur;
-    int SsaoBlurRadius;
-    int SsaoStepCount;
-};
-
 struct XeGTAOConfig {
     int QualityLevel = 2;   // 0 low, 1 medium, 2 high, 3 ultra
     int DenoisePasses = 3;  // 1 sharp, 2 medium, 3 soft
@@ -525,26 +496,8 @@ struct XeGTAOConfig {
 
 enum class AOMode : int {
     AO_NONE = 0,
-    AO_HBAO = 1,
-    AO_SAO = 2,
-    AO_ASSAO = 3,
+    // Preserve value 4 for compatibility with existing UserSettings.ini files.
     AO_XEGTAO = 4,
-};
-
-struct SAOSettings {
-    SAOSettings() {
-        Radius = 1.5f;
-        Bias = 0.02f;
-        Intensity = 3.0f;
-        NumSamples = 16;
-        BlurSharpness = 1.0f;
-    }
-
-    float Radius;
-    float Bias;
-    float Intensity;
-    int NumSamples;
-    float BlurSharpness;
 };
 
 struct GothicRendererSettings {
@@ -807,7 +760,7 @@ struct GothicRendererSettings {
         EnableDebugLog = true;
         EnableCustomFontRendering = true;
 
-        ForceFOV = false;
+        ForceFOV = true;
 
         ChangeWindowPreset = 2; // WINDOW_MODE_FULLSCREEN_BORDERLESS;
         StretchWindow = true;
@@ -825,48 +778,10 @@ struct GothicRendererSettings {
         EnableWaterAnimation = true;
 
         GraphicsPreset = E_GraphicsPreset::GRAPHICS_CUSTOM;
-        ApplyAssaoPreset(1);
 
         ResetDebugSettings();
     }
 
-    void ApplyAssaoPreset( int preset ) {
-        AssaoSettings = ASSAO_Settings();
-        // personal taste.
-        AssaoSettings.ShadowPower = 1.0f; // i feel defaults are too dark
-        AssaoSettings.HorizonAngleThreshold = 0.2f; // way too harsh shadowing otherwise
-
-        if ( preset <= 0 ) {
-            // default
-        } else if ( preset == 1 ) {
-            // higher quality but still default look
-            AssaoSettings.QualityLevel = 3;
-            AssaoSettings.AdaptiveQualityLimit = 0.6f;
-        } else if ( preset == 2 ) {
-            // Fake HBAO+ look, dark punchy shadowing
-            AssaoSettings.Radius = 1.0f;
-            AssaoSettings.ShadowMultiplier = 1.3f;
-            AssaoSettings.ShadowPower = 1.5f;
-            AssaoSettings.ShadowClamp = 1.0f;
-            AssaoSettings.HorizonAngleThreshold = 0.200f;
-            AssaoSettings.QualityLevel = 3;
-            AssaoSettings.AdaptiveQualityLimit = 0.6f;
-
-            AssaoSettings.BlurPassCount = 4;
-            AssaoSettings.Sharpness = 1.0f;
-            AssaoSettings.DetailShadowStrength = 0.5f;
-        } else if ( preset >= 3 ) {
-            // Fake GTAO look, broader radius, more details
-            AssaoSettings.Radius = 1.6f;
-            AssaoSettings.ShadowPower = 1.3f;
-            AssaoSettings.ShadowClamp = 0.95f;
-            AssaoSettings.HorizonAngleThreshold = 0.150f;
-            AssaoSettings.QualityLevel = 3;
-            AssaoSettings.AdaptiveQualityLimit = 0.6f;
-            AssaoSettings.DetailShadowStrength = 2.5f;
-        }
-    }
-    
     void ResetDebugSettings() {
         DebugSettings = {};
         DebugSettings.Culling.CullBspSections = true;
@@ -1025,9 +940,6 @@ struct GothicRendererSettings {
     float3 GodRayColorMod;
     bool EnableGodRays;
 
-    HBAOSettings HbaoSettings;
-    SAOSettings SaoSettings;
-    ASSAO_Settings AssaoSettings;
     XeGTAOConfig XegtaoSettings;
     AOMode AoMode;
     float AOStrength;

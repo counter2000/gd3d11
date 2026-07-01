@@ -453,7 +453,7 @@ typedef enum FfxEffect
     FFX_EFFECT_FSR1,                   ///< FidelityFX Super Resolution
     FFX_EFFECT_SPD,                    ///< FidelityFX Single Pass Downsampler
     FFX_EFFECT_BLUR,                   ///< FidelityFX Blur
-    FFX_EFFECT_CACAO,                  ///< FidelityFX Combined Adaptive Compute Ambient Occlusion
+    FFX_EFFECT_RESERVED_AMBIENT_OCCLUSION_SLOT, ///< Reserved to keep later FidelityFX effect IDs stable
     FFX_EFFECT_CAS,                    ///< FidelityFX Contrast Adaptive Sharpening
     FFX_EFFECT_DENOISER,               ///< FidelityFX Denoiser
     FFX_EFFECT_LENS,                   ///< FidelityFX Lens

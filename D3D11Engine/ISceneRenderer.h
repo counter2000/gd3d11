@@ -22,7 +22,7 @@ public:
 
     /** Add the primary geometry rendering pass(es) to the render graph.
         Deferred: writes GBuffer.  Forward+: depth prepass + lit geometry.
-        Outputs resource handles consumed by later passes (HBAO, post-FX). */
+        Outputs resource handles consumed by later lighting and post-FX passes. */
     virtual void AddGeometryPasses(
         RenderGraph& graph,
         D3D11GraphicsEngine& engine,

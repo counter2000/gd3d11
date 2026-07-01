@@ -22,7 +22,6 @@ public:
     bool Initiated = false;
     bool IsActive = false;
     bool SettingsVisible = false;
-    bool AdvancedSettingsVisible = false;
     bool LibShowBlockingThisFrame = false;
     bool LibShowNonBlockingThisFrame = false;
     //bool DemoVisible = false;
@@ -60,8 +59,6 @@ public:
     }
 private:
     void RenderSettingsWindow();
-    void RenderAdvancedSettingsWindow();
-    void RenderAdvancedColumn2(GothicRendererSettings& settings, GothicAPI* gapi);
     bool m_lastFrameBlockGameInput = false;
     bool m_settingsEditActive = false;
     GothicRendererSettings m_settingsSnapshot;

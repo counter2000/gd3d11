@@ -879,7 +879,6 @@ copy "$(OutDir)$(TargetName).pdb" "$(G1_SYSTEM_PATH)\ddraw.pdb"</Command>
     <ClInclude Include="D3D11CascadedShadowMapBuffer.h" />
     <ClInclude Include="D3D11FileRelativeInclude.h" />
     <ClInclude Include="D3D11GraphicsShader.h" />
-    <ClInclude Include="D3D11PFX_ASSAO.h" />
     <ClInclude Include="D3D11ShadowAtlas.h" />
     <ClInclude Include="CGameManager.h" />
     <ClInclude Include="D3D11AGS.h" />
@@ -897,7 +896,6 @@ copy "$(OutDir)$(TargetName).pdb" "$(G1_SYSTEM_PATH)\ddraw.pdb"</Command>
     <ClInclude Include="D3D11IndirectBuffer.h" />
     <ClInclude Include="D3D11LineRenderer.h" />
     <ClInclude Include="D3D11NVAPI.h" />
-    <ClInclude Include="D3D11NVHBAO.h" />
     <ClInclude Include="D3D11OcclusionQuerry.h" />
     <ClInclude Include="D3D11PfxRenderer.h" />
     <ClInclude Include="D3D11PFX_Blur.h" />
@@ -907,7 +905,6 @@ copy "$(OutDir)$(TargetName).pdb" "$(G1_SYSTEM_PATH)\ddraw.pdb"</Command>
     <ClInclude Include="D3D11PFX_XeGTAO.h" />
     <ClInclude Include="D3D11PFX_GodRays.h" />
       <ClInclude Include="D3D11PFX_DepthOfField.h" />
-    <ClInclude Include="D3D11PFX_SAO.h" />
     <ClInclude Include="D3D11PFX_HDR.h" />
     <ClInclude Include="D3D11PFX_HeightFog.h" />
     <ClInclude Include="D3D11PFX_SimpleSharpen.h" />
@@ -947,7 +944,6 @@ copy "$(OutDir)$(TargetName).pdb" "$(G1_SYSTEM_PATH)\ddraw.pdb"</Command>
     <ClInclude Include="Detours\detver.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="Frustum.h" />
-    <ClInclude Include="GFSDK_SSAO.h" />
     <ClInclude Include="GInventory.h" />
     <ClInclude Include="GMesh.h" />
     <ClInclude Include="GothicAPI.h" />
@@ -1134,7 +1130,6 @@ copy "$(OutDir)$(TargetName).pdb" "$(G1_SYSTEM_PATH)\ddraw.pdb"</Command>
     <ClCompile Include="D3D11CascadedShadowMapBuffer.cpp" />
     <ClCompile Include="D3D11FileRelativeInclude.cpp" />
     <ClCompile Include="D3D11GraphicsShader.cpp" />
-    <ClCompile Include="D3D11PFX_ASSAO.cpp" />
     <ClCompile Include="D3D11ShadowAtlas.cpp" />
     <ClCompile Include="D3D11AGS.cpp" />
     <ClCompile Include="D3D11ConstantBuffer.cpp" />
@@ -1149,7 +1144,6 @@ copy "$(OutDir)$(TargetName).pdb" "$(G1_SYSTEM_PATH)\ddraw.pdb"</Command>
     <ClCompile Include="D3D11IndirectBuffer.cpp" />
     <ClCompile Include="D3D11LineRenderer.cpp" />
     <ClCompile Include="D3D11NVAPI.cpp" />
-    <ClCompile Include="D3D11NVHBAO.cpp" />
     <ClCompile Include="D3D11OcclusionQuerry.cpp" />
     <ClCompile Include="D3D11PfxRenderer.cpp" />
     <ClCompile Include="D3D11PFX_Blur.cpp" />
@@ -1170,7 +1164,6 @@ copy "$(OutDir)$(TargetName).pdb" "$(G1_SYSTEM_PATH)\ddraw.pdb"</Command>
     </ClCompile>
     <ClCompile Include="D3D11PFX_GodRays.cpp" />
       <ClCompile Include="D3D11PFX_DepthOfField.cpp" />
-    <ClCompile Include="D3D11PFX_SAO.cpp" />
     <ClCompile Include="D3D11PFX_HDR.cpp" />
     <ClCompile Include="D3D11PFX_HeightFog.cpp" />
     <ClCompile Include="D3D11PFX_SimpleSharpen.cpp" />

@@ -2008,12 +2008,14 @@ XRESULT D3D11GraphicsEngine::Present() {
         GetContext()->OMSetRenderTargets( 1, BackbufferRTV.GetAddressOf(), nullptr );
     };
 
-    auto presentSwapchain = [&]() -> HRESULT {
+    auto presentSwapchain = [&]( bool generatedFrame ) -> HRESULT {
+        const UINT syncInterval = ( vsync && !generatedFrame ) ? 1u : 0u;
         HRESULT result = S_OK;
         if ( m_flipWithTearing ) {
-            result = SwapChain->Present( vsync ? 1 : 0, vsync ? 0 : DXGI_PRESENT_ALLOW_TEARING );
+            const UINT presentFlags = ( !vsync && syncInterval == 0u ) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
+            result = SwapChain->Present( syncInterval, presentFlags );
         } else {
-            result = SwapChain->Present( vsync ? 1 : 0, 0 );
+            result = SwapChain->Present( syncInterval, 0 );
         }
 
         // The two FSR3 Present calls already provide DXGI pacing. Waiting on
@@ -2033,7 +2035,7 @@ XRESULT D3D11GraphicsEngine::Present() {
     if ( interpolatedFrame ) {
         blitToSwapchain( interpolatedFrame, false );
         paceFrameGenerationPresent();
-        hr = presentSwapchain();
+        hr = presentSwapchain( true );
     }
 
     if ( SUCCEEDED( hr ) ) {
@@ -2050,7 +2052,7 @@ XRESULT D3D11GraphicsEngine::Present() {
         }
 
         paceFrameGenerationPresent();
-        hr = presentSwapchain();
+        hr = presentSwapchain( false );
     }
 
     // Restore the depth buffer from the copy.
@@ -3012,6 +3014,33 @@ void D3D11GraphicsEngine::DrawSkeletalMeshVobs(
     packedPrevBoneTransforms.clear();
 
     GothicGraphicsState& graphicsState = Engine::GAPI->GetRendererState().GraphicsState;
+
+    struct ScopedSkeletalShadowBias {
+        D3D11GraphicsEngine* Engine;
+        GothicRasterizerStateInfo& RasterizerState;
+        int PreviousZBias;
+        bool Active;
+
+        ScopedSkeletalShadowBias( D3D11GraphicsEngine* engine, GothicRasterizerStateInfo& rasterizerState, bool active )
+            : Engine( engine )
+            , RasterizerState( rasterizerState )
+            , PreviousZBias( rasterizerState.ZBias )
+            , Active( active ) {
+            if ( Active ) {
+                RasterizerState.ZBias = std::max( RasterizerState.ZBias, 96 );
+                RasterizerState.SetDirty();
+                Engine->UpdateRenderStates();
+            }
+        }
+
+        ~ScopedSkeletalShadowBias() {
+            if ( Active ) {
+                RasterizerState.ZBias = PreviousZBias;
+                RasterizerState.SetDirty();
+                Engine->UpdateRenderStates();
+            }
+        }
+    } skeletalShadowBias( this, graphicsState.RasterizerState, GetRenderingStage() == DES_SHADOWMAP );
 
     const bool isZPrepass = GetRenderingStage() == DES_Z_PRE_PASS;
     const bool isMainStage = GetRenderingStage() == DES_MAIN;
@@ -4073,7 +4102,6 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
 
     if ( FeatureLevel10Compatibility ) {
         // Disable here what we can't draw in feature level 10 compatibility
-        rendererState.RendererSettings.HbaoSettings.Enabled = false;
         rendererState.RendererSettings.AoMode = AOMode::AO_NONE;
         rendererState.RendererSettings.AntiAliasingMode = GothicRendererSettings::E_AntiAliasingMode::AA_NONE;
         rendererState.RendererSettings.EnableFrameGeneration = false;
@@ -4218,69 +4246,15 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         }
     );
 
-    // Draw Ambient Occlusion
-    // Shared state for PostFX composition pass
+    // Shared state for the PostFX composition pass
     ID3D11ShaderResourceView* compositionGodRaysSRV = nullptr;
     bool isOutdoor = Engine::GAPI->GetLoadedWorldInfo()->BspTree->GetBspTreeMode() == zBSP_MODE_OUTDOOR;
-    bool compositionSAO = (rendererState.RendererSettings.AoMode == AOMode::AO_SAO);
     bool compositionGodRays = (rendererState.RendererSettings.EnableGodRays && isOutdoor);
     bool compositionHeightFog = (rendererState.RendererSettings.DrawFog && isOutdoor);
     bool compositionContactShadows = rendererState.RendererSettings.EnableContactShadows && rendererState.RendererSettings.ContactShadowStrength > 0.0f;
     bool compositionSSGI = rendererState.RendererSettings.EnableScreenSpaceGI && rendererState.RendererSettings.ScreenSpaceGIStrength > 0.0f;
     bool compositionNeedsDepth = compositionHeightFog || compositionContactShadows || compositionSSGI;
-    bool compositionActive = compositionSAO || compositionGodRays || compositionNeedsDepth;
-
-    if ( rendererState.RendererSettings.AoMode == AOMode::AO_HBAO ) {
-        graph.AddPass( RG_PASS_NAME("HBAO+"), [&]( RGBuilder& builder, RenderPass& pass ) {
-            builder.Read( normalsResource );
-            builder.Write( backBufferHandle );
-
-            pass.m_executeCallback = [this, normalsResource, backBufferHandle](const RenderGraph& graph) {
-                TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Draw HBAO+" );
-                auto normalsTexture = graph.GetPhysicalTexture(normalsResource);
-                auto backBuffer = graph.GetPhysicalTexture(backBufferHandle);
-
-                PfxRenderer->DrawHBAO( backBuffer->GetRenderTargetView(),
-                    GetDepthBufferCopy()->GetShaderResView(),
-                    normalsTexture->GetShaderResView());
-                GetContext()->PSSetSamplers( 0, 1, DefaultSamplerState.GetAddressOf() );
-            };
-        });
-    }
-    else if ( rendererState.RendererSettings.AoMode == AOMode::AO_ASSAO ) {
-        graph.AddPass( RG_PASS_NAME("ASSAO"), [&]( RGBuilder& builder, RenderPass& pass ) {
-            builder.Read( normalsResource );
-            builder.Write( backBufferHandle );
-
-            pass.m_executeCallback = [this, normalsResource, backBufferHandle]( const RenderGraph& graph ) {
-                TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Draw ASSAO" );
-
-                auto normalsTexture = graph.GetPhysicalTexture( normalsResource );
-                auto backBuffer = graph.GetPhysicalTexture( backBufferHandle );
-
-                PfxRenderer->RenderASSAO( backBuffer->GetRenderTargetView().Get(),
-                    GetDepthBufferCopy()->GetShaderResView().Get(),
-                    normalsTexture->GetShaderResView().Get() );
-                GetContext()->PSSetSamplers( 0, 1, DefaultSamplerState.GetAddressOf() );
-            };
-        } );
-    }
-    else if ( compositionSAO ) {
-        // SAO compute-only pass skips the final modulate blit (composition handles it)
-        graph.AddPass( RG_PASS_NAME("SAO Compute"), [&]( RGBuilder& builder, RenderPass& pass ) {
-            builder.Read( normalsResource );
-
-            pass.m_executeCallback = [this, normalsResource](const RenderGraph& graph) {
-                TracyD3D11ZoneCGX( "D3D11GraphicsEngine::Draw SAO (Compute)" );
-                auto normalsTexture = graph.GetPhysicalTexture(normalsResource);
-
-                PfxRenderer->RenderSAOCompute(
-                    GetDepthBufferCopy()->GetShaderResView().Get(),
-                    normalsTexture->GetShaderResView().Get());
-                GetContext()->PSSetSamplers( 0, 1, DefaultSamplerState.GetAddressOf() );
-            };
-        });
-    }
+    bool compositionActive = compositionGodRays || compositionNeedsDepth;
 
     if ( rendererState.RendererSettings.DrawSky ) {
         graph.AddPass( RG_PASS_NAME( "Draw Sky" ), [&]( RGBuilder& builder, RenderPass& pass ) {
@@ -4591,13 +4565,13 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
             });
         }
     }
-    // PostFX Composition pass merges SAO, HeightFog, and GodRays in a single full-screen blit.
+    // PostFX Composition pass merges enabled atmospheric and lighting effects in one full-screen blit.
     if ( compositionActive ) {
         graph.AddPass( RG_PASS_NAME("PostFX Composition"), [&]( RGBuilder& builder, RenderPass& pass ) {
             builder.Read( backBufferHandle );
             builder.Write( backBufferHandle );
 
-            pass.m_executeCallback = [this, backBufferHandle, compositionSAO, compositionNeedsDepth,
+            pass.m_executeCallback = [this, backBufferHandle, compositionNeedsDepth,
                                       &compositionGodRaysSRV](const RenderGraph& graph) {
                 TracyD3D11ZoneCGX( "D3D11GraphicsEngine::PostFX Composition" );
 
@@ -4607,13 +4581,11 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
                 GetContext()->CopyResource( tempBuffer->GetTexture().Get(), backBuffer->GetTexture().Get() );
 
                 // Gather SRVs for composition
-                ID3D11ShaderResourceView* saoSRV = compositionSAO ? PfxRenderer->GetSAOResultSRV() : nullptr;
                 ID3D11ShaderResourceView* depthSRV = compositionNeedsDepth ? GetDepthBuffer()->GetShaderResView().Get() : nullptr;
 
                 PfxRenderer->RenderPostFXComposition(
                     backBuffer->GetRenderTargetView().Get(),
                     tempBuffer->GetShaderResView().Get(),
-                    saoSRV,
                     compositionGodRaysSRV,
                     depthSRV );
 
@@ -8552,7 +8524,7 @@ LRESULT D3D11GraphicsEngine::OnWindowMessage( HWND hWnd, UINT msg, WPARAM wParam
 void D3D11GraphicsEngine::UpdateShouldBlockGameInput( ) {
     if ( auto hImgui = Engine::ImGuiHandle ) {
         auto oldIsActive = hImgui->IsActive;
-        hImgui->IsActive = hImgui->SettingsVisible || hImgui->AdvancedSettingsVisible || hImgui->LibShowBlockingThisFrame;
+        hImgui->IsActive = hImgui->SettingsVisible || hImgui->LibShowBlockingThisFrame;
         hImgui->UpdateBlockGameInput();
 
         if ( oldIsActive != hImgui->IsActive ) {
@@ -8566,9 +8538,6 @@ void D3D11GraphicsEngine::OnUIEvent( EUIEvent uiEvent ) {
 
     if ( uiEvent == UI_OpenSettings || uiEvent == UI_OpenSettingsFromGothicVideoSettings ) {
         if ( auto hImgui = Engine::ImGuiHandle ) {
-            if ( hImgui->AdvancedSettingsVisible ) {
-                hImgui->AdvancedSettingsVisible = false;
-            }
             const bool openSettings = !hImgui->SettingsVisible;
             hImgui->SettingsVisible = openSettings;
             if ( openSettings ) {
@@ -8581,24 +8550,12 @@ void D3D11GraphicsEngine::OnUIEvent( EUIEvent uiEvent ) {
 
         }
         UpdateClipCursor( OutputWindow );
-    } else if ( uiEvent == UI_ToggleAdvancedSettings ) {
-        if ( auto hImgui = Engine::ImGuiHandle ) {
-            if ( hImgui->SettingsVisible ) {
-                hImgui->CommitSettingsEdit();
-                hImgui->SettingsVisible = false;
-            }
-            hImgui->AdvancedSettingsVisible = !hImgui->AdvancedSettingsVisible;
-            UpdateShouldBlockGameInput();
-
-        }
-        UpdateClipCursor( OutputWindow );
     } else if ( uiEvent == UI_ClosedSettings ) {
         // Settings can be closed in multiple ways
         if ( auto hImgui = Engine::ImGuiHandle; hImgui->GetIsActive() ) {
             // ESC and other generic close paths retain current session values.
             hImgui->CommitSettingsEdit();
             hImgui->SettingsVisible = false;
-            hImgui->AdvancedSettingsVisible = false;
         }
         // else if ( auto antBar = Engine::AntTweakBar; antBar->GetActive() ) {
         //     antBar->SetActive( false );

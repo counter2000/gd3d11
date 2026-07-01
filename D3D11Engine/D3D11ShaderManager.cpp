@@ -277,7 +277,6 @@ XRESULT D3D11ShaderManager::Init() {
         .with_category( ShaderCategory::Other )
         .with_macros( [](std::vector<D3D_SHADER_MACRO>& list) {
             const auto& s = Engine::GAPI->GetRendererState().RendererSettings;
-            list.push_back( { "COMPOSE_SAO", (s.AoMode == AOMode::AO_SAO) ? "1" : "0" } );
             list.push_back( { "COMPOSE_GODRAYS", s.EnableGodRays ? "1" : "0" } );
             list.push_back( { "COMPOSE_HEIGHTFOG", s.DrawFog ? "1" : "0" } );
             list.push_back( { "COMPOSE_CONTACT_SHADOWS", (s.EnableContactShadows && s.ContactShadowStrength > 0.0f) ? "1" : "0" } );
@@ -479,10 +478,6 @@ XRESULT D3D11ShaderManager::Init() {
         Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_DoF_Gauss>( "CS_PFX_DoF.hlsl" )
             .with_macros( {{ "DOF_GAUSS_BLUR", "1" }} ) );
         Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_DoF_Composite>( "CS_PFX_DoF_Composite.hlsl" ));
-
-        Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_SAO>( "CS_PFX_SAO.hlsl" ));
-
-        Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_SAO_Blur>( "CS_PFX_SAO_Blur.hlsl" ));
 
         Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_XeGTAO_Prefilter>( "CS_PFX_XeGTAO.hlsl" ).with_entrypoint( "CSPrefilterDepths16x16" ) );
         Shaders.push_back( ShaderInfo::make<CShaderID::CS_PFX_XeGTAO_Low>( "CS_PFX_XeGTAO.hlsl" ).with_entrypoint( "CSGTAOLow" ) );

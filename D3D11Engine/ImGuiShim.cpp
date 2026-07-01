@@ -12,6 +12,7 @@
 #include <numeric>
 #include <codecvt>
 #include <cstdio>
+#include <cmath>
 
 namespace ImGui {
     void TextUnformatted( const wchar_t* text ) {
@@ -217,10 +218,7 @@ namespace {
         return false;
     }
 
-    void SetNextAdvancedSteppedSliderWidth()
-    {
-        ImGui::SetNextItemWidth( std::min( 250.0f, ImGui::GetContentRegionAvail().x * 0.55f ) );
-    }
+
     int SnapRenderScalePercentNonFSR( int value )
     {
         const int clamped = std::clamp( value, 100, 200 );
@@ -386,8 +384,6 @@ void ImGuiShim::RenderLoop()
     auto oldSettings = Engine::GAPI->GetRendererState().RendererSettings;
     if ( SettingsVisible ) {
         RenderSettingsWindow();
-    } else if ( AdvancedSettingsVisible ) {
-        RenderAdvancedSettingsWindow();
     }
 
     if ( memcmp( &oldSettings, &Engine::GAPI->GetRendererState().RendererSettings, sizeof( GothicRendererSettings ) ) != 0 ) {
@@ -417,7 +413,7 @@ void ImGuiShim::RenderLoop()
 bool ImGuiShim::GetIsActive() {
     return Initiated && (
         SettingsVisible
-        || AdvancedSettingsVisible        || LibShowBlockingThisFrame
+        || LibShowBlockingThisFrame
         || LibShowNonBlockingThisFrame
     );
 }
@@ -428,7 +424,6 @@ bool ImGuiShim::GetBlockGameInput()
         return false;
     }
     if ( SettingsVisible
-        || AdvancedSettingsVisible
         || LibShowBlockingThisFrame ) {
         return true;
         }
@@ -574,9 +569,7 @@ void ApplyFeatureLevel10Downgrades(GothicRendererSettings& s) {
         s.ResolutionScalePercent = 100;
         s.SharpenFactor = 0.2f;
     }
-    if ( s.AoMode == AOMode::AO_XEGTAO ) {
-        s.AoMode = AOMode::AO_ASSAO;
-    }
+    s.AoMode = AOMode::AO_NONE;
 
     if (s.NumShadowCascades >= 2) {
         s.DebugSettings.ShadowCascades.Lambda = D3D11ShadowMap::lambdaBiasTable[s.NumShadowCascades].lambda;
@@ -733,6 +726,11 @@ namespace
         if ( !FrameGenerationAvailable( s ) ) {
             s.EnableFrameGeneration = false;
         }
+
+        // One public aspect-ratio-aware FOV control replaces the legacy pair.
+        s.FOVHoriz = std::clamp( static_cast<float>( std::round( s.FOVHoriz / 5.0f ) * 5.0f ), 70.0f, 110.0f );
+        s.FOVVert = s.FOVHoriz;
+        s.ForceFOV = true;
     }
 }
 
@@ -818,8 +816,6 @@ void ImGuiShim::RenderSettingsWindow()
         // All right-column value controls start at the same x position.
         const float inlineToggleWidth = (buttonWidth.x - style.ItemSpacing.x) * 0.5f;
         const float inlineToggleLabelWidth = inlineToggleWidth - ImGui::GetFrameHeight() - style.ItemSpacing.x;
-        const float compactComboWidth = inlineToggleWidth;
-        const float aoModeLabelWidth = inlineToggleWidth;
         
         {
             ImGui::BeginGroup();
@@ -966,6 +962,22 @@ void ImGuiShim::RenderSettingsWindow()
 
 
             ImGui::SetItemTooltip( "Selects fullscreen or windowed display mode." );
+
+            static constexpr std::array<float, 9> fieldOfViewLevels = {
+                70.0f, 75.0f, 80.0f, 85.0f, 90.0f, 95.0f, 100.0f, 105.0f, 110.0f
+            };
+            int fieldOfViewIndex = FindNearestStepIndex(
+                settings.FOVHoriz, fieldOfViewLevels.data(), static_cast<int>(fieldOfViewLevels.size()) );
+            char fieldOfViewText[16] = {};
+            snprintf( fieldOfViewText, sizeof( fieldOfViewText ), "%.0f deg", fieldOfViewLevels[fieldOfViewIndex] );
+            ImText( "Field of View", buttonWidth ); ImGui::SameLine();
+            if ( SliderSteppedIndex( "##FieldOfView", &fieldOfViewIndex, 8, true, 4, fieldOfViewText ) ) {
+                settings.FOVHoriz = fieldOfViewLevels[fieldOfViewIndex];
+                settings.FOVVert = settings.FOVHoriz;
+                settings.ForceFOV = true;
+            }
+            ImGui::SetItemTooltip( "Controls how much of the game world is visible through the camera." );
+
             const static std::vector<std::pair<const char*, int>> shadowMapSizesMax = {
                 {"very low", 512},
                 {"low", 1024},
@@ -1136,24 +1148,17 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::EndDisabled();
             ImGui::SetItemTooltip( "Selects normal mapping or parallax surface depth." );
 
-            static std::vector<std::tuple<const char*, AOMode, const char*>> aoModes = {
-                    {"Disabled", AOMode::AO_NONE, nullptr},
-                    {"HBAO+", AOMode::AO_HBAO, "NVIDIA HBAO+ (Horizon-Based Ambient Occlusion Plus)"},
-                    {"SAO", AOMode::AO_SAO, nullptr},
-                    {"ASSAO", AOMode::AO_ASSAO, "Intel ASSAO (Adaptive Screen Space Ambient Occlusion)"},
-                    {"XeGTAO", AOMode::AO_XEGTAO, "Intel XeGTAO (Ground Truth Ambient Occlusion)"},
-            };
-            ImText( "AO Mode", { aoModeLabelWidth, buttonWidth.y } ); ImGui::SameLine();
-            ImGui::SetNextItemWidth( compactComboWidth );
-            if ( ImComboBoxCT( "##AOMode", aoModes, &settings.AoMode, [] {
-                Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
-                } ) ) {
-                ImGui::EndCombo();
+            const bool ambientOcclusionAvailable = !FeatureLevel10Compatibility;
+            bool ambientOcclusionEnabled = ambientOcclusionAvailable && settings.AoMode == AOMode::AO_XEGTAO;
+            ImText( "Ambient Occlusion", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
+            ImGui::BeginDisabled( !ambientOcclusionAvailable );
+            if ( ImGui::Checkbox( "##Enable Ambient Occlusion", &ambientOcclusionEnabled ) ) {
+                settings.AoMode = ambientOcclusionEnabled ? AOMode::AO_XEGTAO : AOMode::AO_NONE;
             }
-
-            ImGui::SetItemTooltip( "Selects the ambient-occlusion method." );
+            ImGui::EndDisabled();
+            ImGui::SetItemTooltip( "Adds natural contact shading where surfaces meet." );
             ImGui::SameLine();
-            ImGui::BeginDisabled( settings.AoMode == AOMode::AO_NONE );
+            ImGui::BeginDisabled( !ambientOcclusionEnabled );
             ImGui::SetNextItemWidth( standardComboWidth );
             SliderNormalizedUiStrength( "##AOStrength", &settings.AOStrength );
             ImGui::EndDisabled();
@@ -1275,12 +1280,10 @@ void ImGuiShim::RenderSettingsWindow()
         }
 
         ImGui::Spacing();
-        static const char* advancedSettingsHint = "Advanced settings: CTRL+F11 ";
-        const float advancedHintWidth = ImGui::CalcTextSize( advancedSettingsHint ).x;
-        ImGui::SetCursorPosX( std::max( ImGui::GetCursorPosX(), ImGui::GetWindowContentRegionMax().x - advancedHintWidth ) );
-        ImGui::TextUnformatted( advancedSettingsHint );
-        
-        const float footerButtonWidth = (ImGui::GetContentRegionAvail().x - style.ItemSpacing.x) * 0.5f;
+        const float footerButtonWidth = (ImGui::GetContentRegionAvail().x - style.ItemSpacing.x * 2.0f) / 3.0f;
+        const bool resetToDefaults = ImGui::Button( "Reset to Defaults", ImVec2( footerButtonWidth, 30.f ) );
+        ImGui::SetItemTooltip( "Restores the default renderer settings." );
+        ImGui::SameLine();
         const bool cancelled = ImGui::Button( "Cancel", ImVec2( footerButtonWidth, 30.f ) );
         ImGui::SetItemTooltip( "Discard changes made since opening the F11 menu." );
         ImGui::SameLine();
@@ -1294,7 +1297,16 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::SetItemTooltip("Save settings.\nCTRL+Click to save just for the current world.");
         }
         
-        if ( cancelled ) {
+        if ( resetToDefaults ) {
+            settings.SetDefault();
+            FixupSettings( settings );
+            if ( FeatureLevel10Compatibility ) {
+                ApplyFeatureLevel10Downgrades( settings );
+            }
+            Engine::GAPI->UpdateTextureMaxSize();
+            Engine::GraphicsEngine->TriggerResize( settings.LoadedResolution );
+            shadersToReload = ShaderCategory::All;
+        } else if ( cancelled ) {
             CancelSettingsEdit();
             shadersToReload = ShaderCategory::None;
             Engine::GraphicsEngine->OnUIEvent( BaseGraphicsEngine::UI_ClosedSettings );
@@ -1314,216 +1326,4 @@ void ImGuiShim::RenderSettingsWindow()
     if ( shadersToReload != ShaderCategory::None ) {
         Engine::GraphicsEngine->ReloadShaders( shadersToReload );
     }
-}
-
-void ImGuiShim::RenderAdvancedColumn2( GothicRendererSettings& settings, GothicAPI* gapi ) {
-    if ( ImGui::Begin( "General", nullptr, ImGuiWindowFlags_NoCollapse ) ) {
-#ifdef IS_DEV_BUILD
-        ImGui::Text( "Version: %s", VERSION_NUMBER " - (" BUILD_DATE ")" );
-#else
-        ImGui::Text( "Version: %s", VERSION_NUMBER );
-#endif
-
-        if ( ImGui::Button( "Reset Settings", ImVec2( ImGui::GetContentRegionAvail().x, 30.f ) ) ) {
-            settings.SetDefault();
-            Engine::GraphicsEngine->ReloadShaders( ShaderCategory::All );
-        }
-        ImGui::SetItemTooltip( "Reset all renderer settings to their defaults." );
-
-        auto worldSettingsPath = Engine::GAPI->GetLoadedWorldSettingsPath(false);
-        if (!worldSettingsPath.empty() && Toolbox::FileExists( worldSettingsPath ) ) {
-            const bool shouldDelete = ImGui::Button( "Delete World Settings", ImVec2( ImGui::GetContentRegionAvail().x, 30.f ) );
-            ImGui::SetItemTooltip("Delete the world-settings file for the current world. Current values will be saved into the global settings file.");
-            if ( shouldDelete ) {
-                std::error_code ec;
-                std::filesystem::remove(worldSettingsPath, ec);
-                Engine::GAPI->SaveRendererWorldSettings(settings, MENU_SETTINGS_FILE);
-            }
-        }
-
-        ImGui::SeparatorText( "Rendering" );
-        ImGui::Checkbox( "Animate Static Vobs", &settings.AnimateStaticVobs );
-        ImGui::SetItemTooltip( "Animates morph meshes on static world objects." );
-        if ( ImGui::Checkbox( "Compress Backbuffer", &settings.CompressBackBuffer ) ) {
-            Engine::GAPI->UpdateCompressBackBuffer();
-        }
-        ImGui::SetItemTooltip( "Reduces backbuffer memory bandwidth." );
-
-        ImGui::Checkbox( "Sort Render Queue", &settings.SortRenderQueue );
-        ImGui::Checkbox( "Draw Threaded", &settings.DrawThreaded );
-        ImGui::Checkbox( "Do Z Prepass", &settings.DoZPrepass );
-        ImGui::SetItemTooltip("Enables a preliminary depth pass." );
-
-        float largeObjectDrawDistance = settings.OutdoorVobDrawRadius / 1000.0f;
-        if ( ImGui::SliderFloat( "Large Object Draw Distance", &largeObjectDrawDistance, 1.0f, 100.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp ) ) {
-            settings.OutdoorVobDrawRadius = largeObjectDrawDistance * 1000.0f;
-        }
-        ImGui::SetItemTooltip( "Controls the draw distance of large static objects." );
-
-        float visualFXDrawDistance = settings.VisualFXDrawRadius / 1000.0f;
-        if ( ImGui::SliderFloat( "VisualFX Draw Distance", &visualFXDrawDistance, 0.1f, 10.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp ) ) {
-            settings.VisualFXDrawRadius = visualFXDrawDistance * 1000.0f;
-        }
-        ImGui::SetItemTooltip( "Controls the draw distance of visual effects." );
-
-        ImGui::SeparatorText( "Interface and Camera" );
-        ImGui::DragFloat( "Gothic UI Scale", &settings.GothicUIScale, 0.01f, 0.01f, 20.0f, "%.2f" );
-        ImGui::DragFloat( "Horizontal FOV", &settings.FOVHoriz, 1.0f, 1.0f, 360.0f, "%.0f" );
-        ImGui::DragFloat( "Vertical FOV", &settings.FOVVert, 1.0f, 1.0f, 360.0f, "%.0f" );
-        ImGui::Checkbox( "Force FOV", &settings.ForceFOV );
-        ImGui::Checkbox( "Fix View Frustum", &settings.FixViewFrustum );
-
-#if defined(BUILD_GOTHIC_2_6_fix) || (defined(BUILD_GOTHIC_1_08k) && !defined(BUILD_1_12F))
-#if defined(BUILD_GOTHIC_1_08k) && !defined(BUILD_1_12F)
-        if ( haveWindAnimations )
-#endif
-        {
-            ImGui::SeparatorText( "Wind" );
-            SetNextAdvancedSteppedSliderWidth();
-            SliderNormalizedUiStrength( "Wind Strength", &settings.GlobalWindStrength );
-            ImGui::SetItemTooltip( "Controls wind-animation strength." );
-        }
-#endif
-    }
-    ImGui::End();
-}
-void RenderAdvancedColumn4( GothicRendererSettings& settings, GothicAPI* gapi ) {
-    if ( ImGui::Begin( "Post Processing", nullptr, ImGuiWindowFlags_NoCollapse ) ) {
-        ImGui::SeparatorText( "Ambient Occlusion" );
-        ImGui::PushID( "AOSettings" );
-        if ( settings.AoMode == AOMode::AO_HBAO ) {
-            ImGui::DragFloat( "Radius", &settings.HbaoSettings.Radius, 0.01f );
-            ImGui::DragFloat( "Meters To View Units", &settings.HbaoSettings.MetersToViewSpaceUnits, 0.01f );
-            ImGui::DragFloat( "Power Exponent", &settings.HbaoSettings.PowerExponent, 0.01f, 1.0f, 4.0f, "%.2f", ImGuiSliderFlags_ClampOnInput );
-            ImGui::DragFloat( "Bias", &settings.HbaoSettings.Bias, 0.01f, 0.0f, 0.5f, "%.2f", ImGuiSliderFlags_ClampOnInput );
-            ImGui::Checkbox( "Enable Blur", &settings.HbaoSettings.EnableBlur );
-            ImGui::DragFloat( "Blur Sharpness", &settings.HbaoSettings.BlurSharpness, 0.01f );
-        } else if ( settings.AoMode == AOMode::AO_SAO ) {
-            ImGui::DragFloat( "Radius", &settings.SaoSettings.Radius, 0.01f, 0.1f, 10.0f );
-            ImGui::DragFloat( "Bias", &settings.SaoSettings.Bias, 0.001f, 0.0f, 0.1f );
-            ImGui::DragFloat( "Intensity", &settings.SaoSettings.Intensity, 0.01f, 0.0f, 10.0f );
-            ImGui::SliderInt( "Samples", &settings.SaoSettings.NumSamples, 4, 64 );
-            ImGui::DragFloat( "Blur Sharpness", &settings.SaoSettings.BlurSharpness, 0.01f, 0.0f, 16.0f );
-        } else if ( settings.AoMode == AOMode::AO_ASSAO ) {
-            ImGui::TextUnformatted( "Preset" ); ImGui::SameLine();
-            if ( ImGui::Button( "Low" ) ) settings.ApplyAssaoPreset(0);
-            ImGui::SameLine();
-            if ( ImGui::Button( "High" ) ) settings.ApplyAssaoPreset(1);
-            ImGui::SameLine();
-            if ( ImGui::Button( "Dark" ) ) settings.ApplyAssaoPreset(2);
-            ImGui::SameLine();
-            if ( ImGui::Button( "Soft" ) ) settings.ApplyAssaoPreset(3);
-            ImGui::DragFloat( "Radius", &settings.AssaoSettings.Radius, 0.01f, 0.0f, 0.0f, "%.2f" );
-            ImGui::DragFloat( "Shadow Multiplier", &settings.AssaoSettings.ShadowMultiplier, 0.01f, 0.0f, 5.0f, "%.2f", ImGuiSliderFlags_ClampOnInput );
-            ImGui::DragFloat( "Shadow Power", &settings.AssaoSettings.ShadowPower, 0.01f, 0.5f, 5.0f, "%.2f", ImGuiSliderFlags_ClampOnInput );
-            ImGui::DragFloat( "Shadow Clamp", &settings.AssaoSettings.ShadowClamp, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_ClampOnInput );
-            static std::vector<std::pair<const char*, int>> assaoQuality = {
-                {"Lowest (-1)", -1}, {"Low (0)", 0}, {"Medium (1)", 1}, {"High (2)", 2}, {"Very High/Adaptive (3)", 3}
-            };
-            if ( ImComboBox( "Quality Level", assaoQuality, &settings.AssaoSettings.QualityLevel ) ) ImGui::EndCombo();
-            ImGui::SliderInt( "Blur Pass Count", &settings.AssaoSettings.BlurPassCount, 0, 6 );
-            ImGui::DragFloat( "Sharpness", &settings.AssaoSettings.Sharpness, 0.01f, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_ClampOnInput );
-            ImGui::DragFloat( "Detail Shadow Strength", &settings.AssaoSettings.DetailShadowStrength, 0.01f, 0.0f, 5.0f, "%.2f", ImGuiSliderFlags_ClampOnInput );
-        } else if ( settings.AoMode == AOMode::AO_XEGTAO ) {
-            static std::vector<std::pair<const char*, int>> xegtaoQuality = {
-                {"Low", 0}, {"Medium", 1}, {"High", 2}, {"Ultra", 3}
-            };
-            if ( ImComboBox( "Quality", xegtaoQuality, &settings.XegtaoSettings.QualityLevel ) ) ImGui::EndCombo();
-            static std::vector<std::pair<const char*, int>> xegtaoDenoising = {
-                {"Sharp", 1}, {"Medium", 2}, {"Soft", 3}
-            };
-            if ( ImComboBox( "Denoising", xegtaoDenoising, &settings.XegtaoSettings.DenoisePasses ) ) ImGui::EndCombo();
-            ImGui::SliderFloat( "Effect Radius", &settings.XegtaoSettings.Radius, 10.0f, 200.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
-            ImGui::SetItemTooltip( "Controls ambient-occlusion radius." );
-        }
-        ImGui::PopID();
-
-        ImGui::SeparatorText( "Parallax Occlusion Mapping" );
-        ImGui::BeginDisabled( !settings.AllowNormalmaps || !settings.EnableParallaxOcclusionMapping );
-        ImGui::SliderFloat( "POM Strength", &settings.ParallaxOcclusionStrength, 0.0f, 4.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp );
-        ImGui::EndDisabled();
-
-        ImGui::SeparatorText( "Water Effects" );
-        ImGui::BeginDisabled( !settings.EnableSSR );
-        SetNextAdvancedSteppedSliderWidth();
-        SliderNormalizedUiStrength( "SSR Strength", &settings.SSRStrength );
-        ImGui::EndDisabled();
-
-        ImGui::SeparatorText( "Screen-Space Light FX" );
-        const bool screenSpaceLightFX = settings.EnableContactShadows || settings.EnableScreenSpaceGI;
-        ImGui::BeginDisabled( !screenSpaceLightFX );
-        bool reloadScreenSpaceLightFX = false;
-        SetNextAdvancedSteppedSliderWidth();
-        reloadScreenSpaceLightFX |= SliderNormalizedUiStrength( "Contact Shadows", &settings.ContactShadowStrength );
-        SetNextAdvancedSteppedSliderWidth();
-        reloadScreenSpaceLightFX |= SliderNormalizedUiStrength( "Indirect Light", &settings.ScreenSpaceGIStrength );
-        if ( reloadScreenSpaceLightFX ) Engine::GraphicsEngine->ReloadShaders( ShaderCategory::Other );
-        ImGui::EndDisabled();
-
-        ImGui::SeparatorText( "Particles" );
-        ImGui::Checkbox( "Adapt to Scene Lighting", &settings.EnableParticleLighting );
-        ImGui::BeginDisabled( !settings.EnableParticleLighting );
-        SetNextAdvancedSteppedSliderWidth();
-        SliderNormalizedUiStrength( "Lighting Adaptation", &settings.ParticleLightingStrength );
-        ImGui::EndDisabled();
-
-        ImGui::SeparatorText( "Backlit Vegetation" );
-        ImGui::BeginDisabled( !settings.EnableSSS );
-        float advancedBacklitVegetationStrength = settings.SSSIntensity / 0.75f;
-        SetNextAdvancedSteppedSliderWidth();
-        if ( SliderNormalizedUiStrength( "Intensity", &advancedBacklitVegetationStrength ) ) {
-            settings.SSSIntensity = advancedBacklitVegetationStrength * 0.75f;
-        }
-        ImGui::EndDisabled();
-
-        ImGui::SeparatorText( "Depth of Field" );
-        ImGui::BeginDisabled( !settings.EnableDoF );
-        ImGui::SliderFloat( "Blur Distance", &settings.DoFFocusDistance, 0.0f, 30000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
-        ImGui::SliderFloat( "Focus Range", &settings.DoFFocusRange, 100.0f, 30000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
-        float advancedDepthOfFieldStrength = settings.DoFBokehRadius / 3.5f;
-        SetNextAdvancedSteppedSliderWidth();
-        if ( SliderNormalizedUiStrength( "Blur Strength", &advancedDepthOfFieldStrength ) ) {
-            settings.DoFBokehRadius = advancedDepthOfFieldStrength * 3.5f;
-        }
-        ImGui::SliderFloat( "Near Blur Distance", &settings.DoFNearBlurDistance, 0.0f, 1000.0f, "%.0f", ImGuiSliderFlags_AlwaysClamp );
-        SetNextAdvancedSteppedSliderWidth();
-        SliderNormalizedUiStrength( "Near Blur Strength", &settings.DoFNearBlurStrength, 0.0f );
-        ImGui::SetItemTooltip( "Controls near-camera blur and character refocusing." );
-        ImGui::EndDisabled();
-
-        ImGui::SeparatorText( "Sharpening" );
-        static std::vector<std::pair<const char*, GothicRendererSettings::E_SharpeningMode>> sharpenModes = {
-            {"Disabled", GothicRendererSettings::E_SharpeningMode::SHARPEN_NONE},
-            {"Simple", GothicRendererSettings::E_SharpeningMode::SHARPEN_SIMPLE},
-            {"CAS", GothicRendererSettings::E_SharpeningMode::SHARPEN_CAS},
-        };
-        if ( ImComboBox( "Mode", sharpenModes, &settings.SharpeningMode ) ) ImGui::EndCombo();
-        ImGui::BeginDisabled( !settings.SharpeningMode );
-        ImGui::DragFloat( "Factor", &settings.SharpenFactor, 0.001f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp );
-        ImGui::EndDisabled();
-    }
-    ImGui::End();
-}
-void ImGuiShim::RenderAdvancedSettingsWindow()
-{
-    IM_ASSERT( ImGui::GetCurrentContext() != NULL && "Missing Dear ImGui context!" );
-    IMGUI_CHECKVERSION();
-
-    auto windowSize = CurrentResolution;
-    int numCols = 2;
-    auto columnWidth = static_cast<float>(windowSize.x) / numCols;
-    auto columnOffset = 0.0f;
-    auto columnHeight = std::max( 400.0f, static_cast<float>(windowSize.y) / 2.f );
-
-    GothicRendererSettings& settings = Engine::GAPI->GetRendererState().RendererSettings;
-    FixupSettings(settings);
-
-    ImGui::SetNextWindowPos( ImVec2( columnOffset, 0.0f ), ImGuiCond_Appearing, ImVec2( 0, 0 ) );
-    ImGui::SetNextWindowSize( ImVec2( columnWidth, columnHeight ), ImGuiCond_Appearing );
-    RenderAdvancedColumn2( settings, Engine::GAPI );
-    columnOffset += columnWidth;
-
-    ImGui::SetNextWindowPos( ImVec2( columnOffset, 0.0f ), ImGuiCond_Appearing, ImVec2( 0, 0 ) );
-    ImGui::SetNextWindowSize( ImVec2( columnWidth, columnHeight ), ImGuiCond_Appearing );
-    RenderAdvancedColumn4( settings, Engine::GAPI );
 }

@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // PostFX Composition Uber Shader
-// Merges SAO, HeightFog, and GodRays into a single full-screen pass.
-// Permutation macros: COMPOSE_SAO, COMPOSE_HEIGHTFOG, COMPOSE_GODRAYS
+// Merges atmospheric and screen-space lighting effects into a single full-screen pass.
+// Permutation macros select HeightFog, GodRays, contact shadows and SSGI.
 //--------------------------------------------------------------------------------------
 
 #if COMPOSE_HEIGHTFOG || COMPOSE_CONTACT_SHADOWS || COMPOSE_SSGI
@@ -42,16 +42,12 @@ SamplerState SS_Linear : register( s0 );
 
 Texture2D TX_Backbuffer : register( t0 );
 
-#if COMPOSE_SAO
-Texture2D TX_SAO : register( t1 );
-#endif
-
 #if COMPOSE_GODRAYS
-Texture2D TX_GodRays : register( t2 );
+Texture2D TX_GodRays : register( t1 );
 #endif
 
 #if COMPOSE_HEIGHTFOG || COMPOSE_CONTACT_SHADOWS || COMPOSE_SSGI
-Texture2D TX_Depth : register( t3 );
+Texture2D TX_Depth : register( t2 );
 #endif
 
 //--------------------------------------------------------------------------------------
@@ -255,12 +251,7 @@ float4 PSMain( PS_INPUT Input ) : SV_TARGET
 {
     float4 color = TX_Backbuffer.Sample( SS_Linear, Input.vTexcoord );
 
-    // Composition order: SAO (multiply) -> HeightFog (alpha blend) -> GodRays (additive)
-
-#if COMPOSE_SAO
-    float ao = TX_SAO.Sample( SS_Linear, Input.vTexcoord ).r;
-    color.rgb *= ao;
-#endif
+    // Composition order: HeightFog and screen-space lighting, then GodRays.
 
 #if COMPOSE_CONTACT_SHADOWS || COMPOSE_SSGI
     float compositionDepth = GetDepthRaw(Input.vTexcoord);

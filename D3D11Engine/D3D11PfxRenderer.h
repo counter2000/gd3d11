@@ -14,10 +14,7 @@ class D3D11PFX_HDR;
 class D3D11PFX_SMAA;
 class D3D11PFX_GodRays;
 class D3D11PFX_DepthOfField;
-class D3D11NVHBAO;
-class D3D11PFX_SAO;
 class D3D11PFX_SimpleSharpen;
-class D3D11PFX_ASSAO;
 class D3D11PFX_XeGTAO;
 
 class D3D11PfxRenderer {
@@ -69,41 +66,20 @@ public:
     /** Draws a fullscreenquad */
     XRESULT DrawFullScreenQuad();
 
-    /** Draws the HBAO-Effect to the given buffer */
-    XRESULT DrawHBAO(const ComPtr<ID3D11RenderTargetView>& rtv, const ComPtr<ID3D11ShaderResourceView>& pFullResDepthTexSRV, const ComPtr<
-                     ID3D11ShaderResourceView>& pFullResNormalTexSRV);
-
-    /** Renders the SAO effect */
-    XRESULT RenderSAO( ID3D11ShaderResourceView* depthSRV,
-                       ID3D11ShaderResourceView* normalsSRV,
-                       ID3D11RenderTargetView* outputRTV );
-
-    /** Computes SAO into internal buffer, skipping the final modulate blit */
-    XRESULT RenderSAOCompute( ID3D11ShaderResourceView* depthSRV,
-                              ID3D11ShaderResourceView* normalsSRV );
-
-    /** Returns the SRV of the last computed SAO result (R8_UNORM) */
-    ID3D11ShaderResourceView* GetSAOResultSRV() const;
-
     /** Renders godrays mask+zoom to a pool texture, skipping the final additive blit */
     XRESULT RenderGodRaysToTexture( ID3D11ShaderResourceView* backbuffer,
                                     ID3D11ShaderResourceView* normals,
                                     ID3D11ShaderResourceView** outGodRaysSRV );
 
-    /** Renders the PostFX composition uber pass (SAO + HeightFog + GodRays) */
+    /** Renders the PostFX composition pass. */
     XRESULT RenderPostFXComposition( ID3D11RenderTargetView* outputRTV,
                                      ID3D11ShaderResourceView* backbufferSRV,
-                                     ID3D11ShaderResourceView* saoSRV,
                                      ID3D11ShaderResourceView* godraysSRV,
                                      ID3D11ShaderResourceView* depthSRV );
 
     XRESULT RenderXeGTAO( ID3D11ShaderResourceView* depthSRV,
                             ID3D11ShaderResourceView* normalsSRV,
                             ID3D11RenderTargetView* outputRTV );
-
-    XRESULT RenderASSAO( ID3D11RenderTargetView* outputRTV,
-                            ID3D11ShaderResourceView* depthCopy,
-                            ID3D11ShaderResourceView* normals );
 
     /** Accessors */
     TextureHandle GetTempBuffer();
@@ -135,18 +111,11 @@ private:
     std::unique_ptr<D3D11PFX_GodRays> FX_GodRays;
     std::unique_ptr<D3D11PFX_DepthOfField> FX_DepthOfField;
 
-    /** SAO effect (FL11+ only) */
-    std::unique_ptr<D3D11PFX_SAO> FX_SAO;
-
-    /** Nivida HBAO+ */
-    std::unique_ptr<D3D11NVHBAO> NvHBAO;
-
     std::unique_ptr<D3D11PFX_TAA> FX_TAA;
 
     std::unique_ptr<D3D11PFX_CAS> PFX_CAS;
     std::unique_ptr<D3D11PFX_SimpleSharpen> PFX_SimpleSharpen;
     std::unique_ptr<D3D11PFX_FSR3> PFX_FSR3;
-    std::unique_ptr<D3D11PFX_ASSAO> PFX_ASSAO;
     std::unique_ptr<D3D11PFX_XeGTAO> PFX_XeGTAO;
     std::unique_ptr<TexturePool> m_texturePool;
     std::unique_ptr<DepthStencilPool> m_depthStencilPool;

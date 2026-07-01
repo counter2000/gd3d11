@@ -137,7 +137,6 @@ if(WIN32)
     assimp-vc143-mt.lib
     ffx_backend_dx11_x86.lib
     ffx_fsr3upscaler_x86.lib
-    GFSDK_SSAO_D3D11.win32.lib
   )
 endif()
 

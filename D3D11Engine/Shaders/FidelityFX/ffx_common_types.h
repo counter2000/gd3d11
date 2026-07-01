@@ -37,7 +37,7 @@
 #define FFX_PARAMETER_IN        in
 #define FFX_PARAMETER_OUT       out
 #define FFX_PARAMETER_INOUT     inout
-#define FFX_PARAMETER_UNIFORM const //[cacao_placeholder] until a better fit is found!
+#define FFX_PARAMETER_UNIFORM const
 #endif // #if defined(FFX_CPU)
 
 #if defined(FFX_CPU)
@@ -194,7 +194,7 @@ typedef float32_t3  FfxFloat32x3;
 /// @ingroup HLSL62Types
 typedef float32_t4  FfxFloat32x4;
 
-/// A [cacao_placeholder] typedef for matrix type until confirmed.
+/// Matrix typedef used by FidelityFX shader headers.
 typedef float4x4 FfxFloat32x4x4;
 typedef float3x4 FfxFloat32x3x4;
 typedef float3x3 FfxFloat32x3x3;
@@ -252,7 +252,7 @@ typedef int32_t4    FfxInt32x4;
 #define FfxFloat32x3 float3
 #define FfxFloat32x4 float4
 
-/// A [cacao_placeholder] typedef for matrix type until confirmed.
+/// Matrix typedef used by FidelityFX shader headers.
 #define FfxFloat32x4x4 float4x4
 #define FfxFloat32x3x4 float3x4
 #define FfxFloat32x3x3 float3x3
@@ -346,7 +346,7 @@ typedef min16int4   FfxInt16x4;
 #define FfxInt32x3   ivec3
 #define FfxInt32x4   ivec4
 
-/// A [cacao_placeholder] typedef for matrix type until confirmed.
+/// Matrix typedef used by FidelityFX shader headers.
 #define FfxFloat32x4x4 mat4
 #define FfxFloat32x3x4 mat4x3
 #define FfxFloat32x3x3 mat3

@@ -9,7 +9,6 @@
 #include "D3D11PFX_Blur.h"
 #include "D3D11PFX_HeightFog.h"
 #include "D3D11PFX_DistanceBlur.h"
-#include "D3D11NVHBAO.h"
 #include "D3D11PFX_HDR.h"
 #include "D3D11PFX_SMAA.h"
 #include "D3D11PFX_GodRays.h"
@@ -18,8 +17,6 @@
 #include "D3D11PFX_SimpleSharpen.h"
 #include "D3D11PFX_CAS.h"
 #include "D3D11PFX_FSR3.h"
-#include "D3D11PFX_SAO.h"
-#include "D3D11PFX_ASSAO.h"
 #include "D3D11PFX_XeGTAO.h"
 #include "D3D11Effect.h"
 #include "D3D11ShadowMap.h"
@@ -44,15 +41,8 @@ D3D11PfxRenderer::D3D11PfxRenderer() {
     if ( !FeatureLevel10Compatibility ) {
         FX_SMAA = std::make_unique<D3D11PFX_SMAA>( this );
         FX_TAA = std::make_unique<D3D11PFX_TAA>( this );
-        NvHBAO = std::make_unique<D3D11NVHBAO>();
-        FX_SAO = std::make_unique<D3D11PFX_SAO>( this );
         PFX_XeGTAO = std::make_unique<D3D11PFX_XeGTAO>( this );
         PFX_FSR3 = std::make_unique<D3D11PFX_FSR3>( this );
-        PFX_ASSAO = std::make_unique<D3D11PFX_ASSAO>(
-            engine->GetDevice().Get(),
-            engine->GetContext().Get() );
-
-        PFX_ASSAO->Init();
     }
 
     PFX_CAS = std::make_unique<D3D11PFX_CAS>( this );
@@ -349,34 +339,6 @@ XRESULT D3D11PfxRenderer::OnResize( const INT2& newResolution ) {
     return XR_SUCCESS;
 }
 
-/** Draws the HBAO-Effect to the given buffer */
-XRESULT D3D11PfxRenderer::DrawHBAO(
-    const Microsoft::WRL::ComPtr<ID3D11RenderTargetView>& rtv,
-    const Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& pFullResDepthTexSRV,
-    const Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& pFullResNormalTexSRV) {
-    return NvHBAO->Render( rtv.Get(), pFullResDepthTexSRV, pFullResNormalTexSRV);
-}
-
-/** Renders the SAO effect */
-XRESULT D3D11PfxRenderer::RenderSAO(
-    ID3D11ShaderResourceView* depthSRV,
-    ID3D11ShaderResourceView* normalsSRV,
-    ID3D11RenderTargetView* outputRTV ) {
-    if ( !FX_SAO ) return XR_FAILED;
-    return FX_SAO->Render( depthSRV, normalsSRV, outputRTV );
-}
-
-XRESULT D3D11PfxRenderer::RenderSAOCompute(
-    ID3D11ShaderResourceView* depthSRV,
-    ID3D11ShaderResourceView* normalsSRV ) {
-    if ( !FX_SAO ) return XR_FAILED;
-    return FX_SAO->RenderAO( depthSRV, normalsSRV );
-}
-
-ID3D11ShaderResourceView* D3D11PfxRenderer::GetSAOResultSRV() const {
-    return FX_SAO ? FX_SAO->GetAOResultSRV() : nullptr;
-}
-
 XRESULT D3D11PfxRenderer::RenderGodRaysToTexture(
     ID3D11ShaderResourceView* backbuffer,
     ID3D11ShaderResourceView* depthCopy,
@@ -387,7 +349,6 @@ XRESULT D3D11PfxRenderer::RenderGodRaysToTexture(
 XRESULT D3D11PfxRenderer::RenderPostFXComposition(
     ID3D11RenderTargetView* outputRTV,
     ID3D11ShaderResourceView* backbufferSRV,
-    ID3D11ShaderResourceView* saoSRV,
     ID3D11ShaderResourceView* godraysSRV,
     ID3D11ShaderResourceView* depthSRV ) {
 
@@ -483,9 +444,9 @@ XRESULT D3D11PfxRenderer::RenderPostFXComposition(
     // Bind output RTV (no depth)
     context->OMSetRenderTargets( 1, &outputRTV, nullptr );
 
-    // Bind SRVs: t0=backbuffer, t1=SAO, t2=GodRays, t3=Depth
-    ID3D11ShaderResourceView* srvs[4] = { backbufferSRV, saoSRV, godraysSRV, depthSRV };
-    context->PSSetShaderResources( 0, 4, srvs );
+    // Bind SRVs: t0=backbuffer, t1=GodRays, t2=Depth
+    ID3D11ShaderResourceView* srvs[3] = { backbufferSRV, godraysSRV, depthSRV };
+    context->PSSetShaderResources( 0, 3, srvs );
 
     // No blending - direct overwrite
     Engine::GAPI->GetRendererState().BlendState.SetDefault();
@@ -498,8 +459,8 @@ XRESULT D3D11PfxRenderer::RenderPostFXComposition(
     DrawFullScreenQuad();
 
     // Unbind SRVs
-    ID3D11ShaderResourceView* nullSRVs[4] = { nullptr, nullptr, nullptr, nullptr };
-    context->PSSetShaderResources( 0, 4, nullSRVs );
+    ID3D11ShaderResourceView* nullSRVs[3] = { nullptr, nullptr, nullptr };
+    context->PSSetShaderResources( 0, 3, nullSRVs );
 
     // Restore default states
     Engine::GAPI->GetRendererState().DepthState.DepthBufferCompareFunc =
@@ -515,16 +476,6 @@ XRESULT D3D11PfxRenderer::RenderXeGTAO( ID3D11ShaderResourceView* depthSRV,
                                         ID3D11RenderTargetView* outputRTV ) {
     if ( !PFX_XeGTAO ) return XR_FAILED;
     return PFX_XeGTAO->Render( depthSRV, normalsSRV, outputRTV );
-}
-
-XRESULT D3D11PfxRenderer::RenderASSAO( ID3D11RenderTargetView* outputRTV, ID3D11ShaderResourceView* depthCopy, ID3D11ShaderResourceView* normals )
-{
-    if ( !PFX_ASSAO ) {
-        return XR_FAILED;
-    }
-
-    PFX_ASSAO->Render( depthCopy, normals, outputRTV );
-    return XR_SUCCESS;
 }
 
 TextureHandle D3D11PfxRenderer::GetTempBuffer()
@@ -563,11 +514,5 @@ void D3D11PfxRenderer::FreeResources()
     if ( this->FX_TAA 
         && settings.AntiAliasingMode != GothicRendererSettings::AA_TAA ) {
         this->FX_TAA->ReleaseResources();
-    }
-
-
-    if ( this->NvHBAO 
-        && settings.AoMode != AOMode::AO_HBAO ) {
-        this->NvHBAO->ReleaseResources();
     }
 }

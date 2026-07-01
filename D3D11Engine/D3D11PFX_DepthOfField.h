@@ -32,6 +32,11 @@ private:
     float m_AutoFocusBlend;
     float m_AutoFocusTransitionStart;
     float m_AutoFocusTransitionElapsed;
-    float m_AutoFocusHoldElapsed;
+    float m_NpcFocusHoldElapsed;
+    float m_CameraStationaryElapsed;
+    DirectX::XMFLOAT3 m_PreviousCameraPosition;
+    DirectX::XMFLOAT3 m_PreviousCameraForward;
+    bool m_HasPreviousCameraPose;
+    bool m_NpcFocusSuppressed;
     bool m_AutoFocusSuppressed;
 };

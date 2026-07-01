@@ -106,16 +106,18 @@ static DepthOfFieldConstantBuffer BuildDepthOfFieldConstants( float adaptiveFocu
     cb.DoF_FocusDistance = settings.DoFFocusDistance;
     cb.DoF_FocusRange = settings.DoFFocusRange;
     const float strengthScale = std::clamp( settings.DoFBokehRadius / 8.0f, 0.004375f, 4.0f );
-    const float blurBlend = std::clamp( adaptiveFocusBlend, 0.0f, 1.0f );
-    cb.DoF_BokehRadius = 8.0f * strengthScale * blurBlend;
-    cb.DoF_MaxBlur = 12.0f * strengthScale * blurBlend;
+    const float nearBlurBlend = std::clamp( adaptiveFocusBlend, 0.0f, 1.0f );
+    // Adaptive focusing affects only the near field. The configured far blur
+    // and its focus distance remain untouched at all times.
+    cb.DoF_BokehRadius = 8.0f * strengthScale;
+    cb.DoF_MaxBlur = 12.0f * strengthScale;
 
     auto& proj = Engine::GAPI->GetProjectionMatrix();
     cb.DoF_ProjParams = float4( 1.0f / proj._11, 1.0f / proj._22, proj._34, proj._33 );
     cb.DoF_NearPlane = Engine::GAPI->GetRendererState().RendererInfo.NearPlane;
     cb.DoF_FarPlane = Engine::GAPI->GetRendererState().RendererInfo.FarPlane;
-    cb.DoF_NearBlurDistance = settings.DoFNearBlurDistance * blurBlend;
-    cb.DoF_NearBlurStrength = settings.DoFNearBlurStrength * blurBlend;
+    cb.DoF_NearBlurDistance = settings.DoFNearBlurDistance * nearBlurBlend;
+    cb.DoF_NearBlurStrength = settings.DoFNearBlurStrength * nearBlurBlend;
     return cb;
 }
 
@@ -125,7 +127,12 @@ D3D11PFX_DepthOfField::D3D11PFX_DepthOfField( D3D11PfxRenderer* rnd )
     , m_AutoFocusBlend( 1.0f )
     , m_AutoFocusTransitionStart( 1.0f )
     , m_AutoFocusTransitionElapsed( 0.0f )
-    , m_AutoFocusHoldElapsed( 0.0f )
+    , m_NpcFocusHoldElapsed( 0.0f )
+    , m_CameraStationaryElapsed( 0.0f )
+    , m_PreviousCameraPosition( 0.0f, 0.0f, 0.0f )
+    , m_PreviousCameraForward( 0.0f, 0.0f, 1.0f )
+    , m_HasPreviousCameraPose( false )
+    , m_NpcFocusSuppressed( false )
     , m_AutoFocusSuppressed( false ) {
     auto* engine = reinterpret_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
 
@@ -167,21 +174,52 @@ void D3D11PFX_DepthOfField::UpdateAdaptiveFocus( float configuredNearDistance ) 
         return;
     }
 
-    const bool relaxedCenter = m_AutoFocusSuppressed || m_AutoFocusBlend < 0.999f;
+    // Preserve the existing NPC-centre recognition and its enter/exit debounce.
+    const bool relaxedCenter = m_NpcFocusSuppressed || m_AutoFocusBlend < 0.999f;
     const bool characterCentered = HasCenteredNearbyNpc(
         std::max( configuredNearDistance, 0.0f ), relaxedCenter );
-
-    if ( characterCentered != m_AutoFocusSuppressed ) {
-        m_AutoFocusHoldElapsed += deltaTime;
+    if ( characterCentered != m_NpcFocusSuppressed ) {
+        m_NpcFocusHoldElapsed += deltaTime;
         const float requiredHold = characterCentered ? 1.0f : 0.5f;
-        if ( m_AutoFocusHoldElapsed >= requiredHold ) {
-            m_AutoFocusSuppressed = characterCentered;
-            m_AutoFocusHoldElapsed = 0.0f;
-            m_AutoFocusTransitionStart = m_AutoFocusBlend;
-            m_AutoFocusTransitionElapsed = 0.0f;
+        if ( m_NpcFocusHoldElapsed >= requiredHold ) {
+            m_NpcFocusSuppressed = characterCentered;
+            m_NpcFocusHoldElapsed = 0.0f;
         }
     } else {
-        m_AutoFocusHoldElapsed = 0.0f;
+        m_NpcFocusHoldElapsed = 0.0f;
+    }
+
+    XMFLOAT3 cameraPosition;
+    XMStoreFloat3( &cameraPosition, Engine::GAPI->GetCameraPositionXM() );
+    XMFLOAT3 cameraForward;
+    const XMMATRIX inverseView = XMMatrixInverse( nullptr, Engine::GAPI->GetViewMatrixXM() );
+    XMStoreFloat3( &cameraForward, XMVector3Normalize( inverseView.r[2] ) );
+
+    bool cameraStill = false;
+    if ( m_HasPreviousCameraPose ) {
+        const XMVECTOR positionDelta = XMLoadFloat3( &cameraPosition ) - XMLoadFloat3( &m_PreviousCameraPosition );
+        const float movedDistance = XMVectorGetX( XMVector3Length( positionDelta ) );
+        const float forwardDot = XMVectorGetX( XMVector3Dot(
+            XMLoadFloat3( &cameraForward ), XMLoadFloat3( &m_PreviousCameraForward ) ) );
+        cameraStill = movedDistance <= 2.0f && forwardDot >= 0.99998f;
+    }
+    m_PreviousCameraPosition = cameraPosition;
+    m_PreviousCameraForward = cameraForward;
+    m_HasPreviousCameraPose = true;
+
+    const bool dialogActive = !Engine::GAPI->DialogFinished();
+    if ( !dialogActive && cameraStill ) {
+        m_CameraStationaryElapsed = std::min( m_CameraStationaryElapsed + deltaTime, 1.0f );
+    } else {
+        m_CameraStationaryElapsed = 0.0f;
+    }
+    const bool cameraStationaryFocus = !dialogActive && m_CameraStationaryElapsed >= 0.75f;
+    const bool suppressNearBlur = m_NpcFocusSuppressed || cameraStationaryFocus;
+
+    if ( suppressNearBlur != m_AutoFocusSuppressed ) {
+        m_AutoFocusSuppressed = suppressNearBlur;
+        m_AutoFocusTransitionStart = m_AutoFocusBlend;
+        m_AutoFocusTransitionElapsed = 0.0f;
     }
 
     const float targetBlend = m_AutoFocusSuppressed ? 0.0f : 1.0f;
@@ -197,7 +235,6 @@ void D3D11PFX_DepthOfField::UpdateAdaptiveFocus( float configuredNearDistance ) 
     m_AutoFocusBlend = m_AutoFocusTransitionStart
         + (targetBlend - m_AutoFocusTransitionStart) * smoothTransition;
 }
-
 XRESULT D3D11PFX_DepthOfField::Render( ID3D11ShaderResourceView* backbuffer ) {
     D3D11GraphicsEngine* engine = reinterpret_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
 

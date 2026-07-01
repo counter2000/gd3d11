@@ -25,6 +25,7 @@
 #define DIRECTINPUT_VERSION 0x0700
 #include <charconv>
 #include <numeric>
+#include <cmath>
 #include <dinput.h>
 #include "ImGuiShim.h"
 #include "zCInput.h"
@@ -4090,11 +4091,7 @@ LRESULT GothicAPI::OnWindowMessage( HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
        
 #endif
         case VK_F11:
-            if ( ( GetAsyncKeyState( VK_CONTROL ) & 0x8000 ) && !GMPModeActive ) {
-                Engine::GraphicsEngine->OnUIEvent( BaseGraphicsEngine::EUIEvent::UI_ToggleAdvancedSettings );
-            } else {
-                Engine::GraphicsEngine->OnUIEvent( BaseGraphicsEngine::EUIEvent::UI_OpenSettings );
-            }
+            Engine::GraphicsEngine->OnUIEvent( BaseGraphicsEngine::EUIEvent::UI_OpenSettings );
             break;
 
         case VK_ESCAPE:
@@ -5404,27 +5401,11 @@ XRESULT GothicAPI::SaveMenuSettings( const std::string& file ) {
     WritePrivateProfileStringA( "SMAA", "SharpenFactor", std::to_string( s.SharpenFactor ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "General", "SharpeningMode", std::to_string( static_cast<int>(s.SharpeningMode) ).c_str(), ini.c_str() );
 
-    WritePrivateProfileStringA( "HBAO", "Enabled", std::to_string( s.HbaoSettings.Enabled ? TRUE : FALSE ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "HBAO", "Bias", std::to_string( s.HbaoSettings.Bias ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "HBAO", "Radius", std::to_string( s.HbaoSettings.Radius ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "HBAO", "PowerExponent", std::to_string( s.HbaoSettings.PowerExponent ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "HBAO", "BlurSharpness", std::to_string( s.HbaoSettings.BlurSharpness ).c_str(), ini.c_str() );
-    //WritePrivateProfileStringA( "HBAO", "EnableDualLayerAO", std::to_string( s.HbaoSettings.EnableDualLayerAO ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "HBAO", "EnableBlur", std::to_string( s.HbaoSettings.EnableBlur ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "HBAO", "SsaoBlurRadius", std::to_string( s.HbaoSettings.SsaoBlurRadius ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "HBAO", "SsaoStepCount", std::to_string( s.HbaoSettings.SsaoStepCount ).c_str(), ini.c_str() );
-
     WritePrivateProfileStringA( "AO", "Mode", std::to_string( static_cast<int>(s.AoMode) ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "AO", "Strength", float_to_string( s.AOStrength, 2 ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "XeGTAO", "Quality", std::to_string( s.XegtaoSettings.QualityLevel ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "XeGTAO", "DenoisePasses", std::to_string( s.XegtaoSettings.DenoisePasses ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "XeGTAO", "Radius", std::to_string( s.XegtaoSettings.Radius ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "SAO", "Radius", std::to_string( s.SaoSettings.Radius ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "SAO", "Bias", std::to_string( s.SaoSettings.Bias ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "SAO", "Intensity", std::to_string( s.SaoSettings.Intensity ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "SAO", "NumSamples", std::to_string( s.SaoSettings.NumSamples ).c_str(), ini.c_str() );
-    WritePrivateProfileStringA( "SAO", "BlurSharpness", std::to_string( s.SaoSettings.BlurSharpness ).c_str(), ini.c_str() );
-
     WritePrivateProfileStringA( "FontRendering", "Enable", std::to_string( s.EnableCustomFontRendering ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Debug", "UseShadowAtlas", std::to_string( s.DebugSettings.FeatureSet.UseShadowAtlas ? TRUE : FALSE ).c_str(), ini.c_str() );
     WritePrivateProfileStringA( "Debug", "UseScreenSpaceShadowMask", std::to_string( s.DebugSettings.FeatureSet.UseScreenSpaceShadowMask ? TRUE : FALSE ).c_str(), ini.c_str() );
@@ -5542,9 +5523,11 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.Upscaler = (GothicRendererSettings::E_Upscaler)std::clamp<int>( GetPrivateProfileIntA( "Display", "Upscaler", ds.Upscaler, ini.c_str() ), 0, GothicRendererSettings::E_Upscaler::_UPSCALER_NUM_MODES - 1 );
         s.EnableVSync = GetPrivateProfileBoolA( "Display", "VSync", ds.EnableVSync, ini );
         s.EnableFrameGeneration = GetPrivateProfileBoolA( "Display", "FrameGeneration", ds.EnableFrameGeneration, ini );
-        s.ForceFOV = GetPrivateProfileBoolA( "Display", "ForceFOV", ds.ForceFOV, ini );
-        s.FOVHoriz = GetPrivateProfileIntA( "Display", "FOVHoriz", 90, ini.c_str() );
-        s.FOVVert = GetPrivateProfileIntA( "Display", "FOVVert", 90, ini.c_str() );
+        // Migrate the former horizontal/vertical/force trio to one public FOV.
+        s.FOVHoriz = std::clamp( static_cast<float>(GetPrivateProfileIntA( "Display", "FOVHoriz", 90, ini.c_str() )), 70.0f, 110.0f );
+        s.FOVHoriz = static_cast<float>( std::round( s.FOVHoriz / 5.0f ) * 5.0f );
+        s.FOVVert = s.FOVHoriz;
+        s.ForceFOV = true;
         s.GammaValue = GetPrivateProfileFloatA( "Display", "DisplayContrast", 1.0f, ini );
         s.BrightnessValue = GetPrivateProfileFloatA( "Display", "DisplayBrightness", 1.0f, ini );
         s.DisplayFlip = GetPrivateProfileBoolA( "Display", "DisplayFlip", ds.DisplayFlip, ini );
@@ -5581,36 +5564,18 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
             static_cast<int>(GothicRendererSettings::SHARPEN_CAS) );
         s.SharpeningMode = static_cast<GothicRendererSettings::E_SharpeningMode>(sharpeningMode);
 
-        const HBAOSettings& defaultHBAOSettings = ds.HbaoSettings;
-        s.HbaoSettings.Enabled = GetPrivateProfileBoolA( "HBAO", "Enabled", defaultHBAOSettings.Enabled, ini );
-        s.HbaoSettings.Bias = GetPrivateProfileFloatA( "HBAO", "Bias", defaultHBAOSettings.Bias, ini );
-        s.HbaoSettings.Radius = GetPrivateProfileFloatA( "HBAO", "Radius", defaultHBAOSettings.Radius, ini );
-        s.HbaoSettings.PowerExponent = GetPrivateProfileFloatA( "HBAO", "PowerExponent", defaultHBAOSettings.PowerExponent, ini );
-        s.HbaoSettings.BlurSharpness = GetPrivateProfileFloatA( "HBAO", "BlurSharpness", defaultHBAOSettings.BlurSharpness, ini );
-        //s.HbaoSettings.EnableDualLayerAO = GetPrivateProfileIntA( "HBAO", "EnableDualLayerAO", defaultHBAOSettings.EnableDualLayerAO, ini.c_str() );
-        s.HbaoSettings.EnableBlur = GetPrivateProfileBoolA( "HBAO", "EnableBlur", defaultHBAOSettings.EnableBlur, ini );
-        s.HbaoSettings.SsaoBlurRadius = GetPrivateProfileIntA( "HBAO", "SsaoBlurRadius", defaultHBAOSettings.SsaoBlurRadius, ini.c_str() );
-        s.HbaoSettings.SsaoStepCount = GetPrivateProfileIntA( "HBAO", "SsaoStepCount", defaultHBAOSettings.SsaoStepCount, ini.c_str() );
-
-        // Use ASSAO as default when no AO mode is stored.
         const int defaultAoMode = static_cast<int>(ds.AoMode);
         const int storedAoMode = static_cast<int>(GetPrivateProfileIntA( "AO", "Mode", defaultAoMode, ini.c_str() ));
-        const int aoMode = std::clamp( storedAoMode,
-            static_cast<int>(AOMode::AO_NONE), static_cast<int>(AOMode::AO_XEGTAO) );
-        s.AoMode = static_cast<AOMode>(aoMode);
+        // Legacy AO selections migrate to the sole supported implementation.
+        s.AoMode = storedAoMode == static_cast<int>(AOMode::AO_NONE)
+            ? AOMode::AO_NONE
+            : AOMode::AO_XEGTAO;
         s.AOStrength = std::clamp( GetPrivateProfileFloatA( "AO", "Strength", ds.AOStrength, ini ), 0.01f, 2.0f );
         const int xegtaoQuality = static_cast<int>(GetPrivateProfileIntA( "XeGTAO", "Quality", ds.XegtaoSettings.QualityLevel, ini.c_str() ));
         const int xegtaoDenoise = static_cast<int>(GetPrivateProfileIntA( "XeGTAO", "DenoisePasses", ds.XegtaoSettings.DenoisePasses, ini.c_str() ));
         s.XegtaoSettings.QualityLevel = std::clamp( xegtaoQuality, 0, 3 );
         s.XegtaoSettings.DenoisePasses = std::clamp( xegtaoDenoise, 1, 3 );
         s.XegtaoSettings.Radius = std::clamp( GetPrivateProfileFloatA( "XeGTAO", "Radius", ds.XegtaoSettings.Radius, ini ), 1.0f, 500.0f );
-
-        const SAOSettings& defaultSAOSettings = ds.SaoSettings;
-        s.SaoSettings.Radius = GetPrivateProfileFloatA( "SAO", "Radius", defaultSAOSettings.Radius, ini );
-        s.SaoSettings.Bias = GetPrivateProfileFloatA( "SAO", "Bias", defaultSAOSettings.Bias, ini );
-        s.SaoSettings.Intensity = GetPrivateProfileFloatA( "SAO", "Intensity", defaultSAOSettings.Intensity, ini );
-        s.SaoSettings.NumSamples = GetPrivateProfileIntA( "SAO", "NumSamples", defaultSAOSettings.NumSamples, ini.c_str() );
-        s.SaoSettings.BlurSharpness = GetPrivateProfileFloatA( "SAO", "BlurSharpness", defaultSAOSettings.BlurSharpness, ini );
 
         s.EnableCustomFontRendering = GetPrivateProfileBoolA( "FontRendering", "Enable", ds.EnableCustomFontRendering, ini );
         s.DebugSettings.FeatureSet.UseShadowAtlas = GetPrivateProfileBoolA( "Debug", "UseShadowAtlas", ds.DebugSettings.FeatureSet.UseShadowAtlas, ini );

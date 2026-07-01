@@ -8,7 +8,7 @@ The new renderer is able to utilize more of the current GPU generation's power. 
 * Cascaded Shadow Maps, more than 1 Cascade produces much better shadows.
 * Increased draw distance
 * Increased Performance
-* HBAO+
+* XeGTAO ambient occlusion
 * Water refractions
 * Atmospheric Scattering
 * Heightfog
@@ -151,7 +151,7 @@ When using a Release target, those same exceptions will very likely stop the exe
 
 ### Dependencies
 
-- HBAO+ files from [dboleslawski/VVVV.HBAOPlus](https://github.com/dboleslawski/VVVV.HBAOPlus/tree/master/Dependencies/NVIDIA-HBAOPlus)
+- [Intel XeGTAO](https://github.com/GameTechDev/XeGTAO)
 - [AMD FidelityFX SDK](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK)
 - [AntTweakBar](https://sourceforge.net/projects/anttweakbar/)
 - [Dear ImGui](https://github.com/ocornut/imgui)
@@ -173,4 +173,4 @@ When using a Release target, those same exceptions will very likely stop the exe
 
 ## License
 
-- HBAO+ is licensed under [GameWorks Binary SDK EULA](https://developer.nvidia.com/gameworks-sdk-eula)
+- XeGTAO is licensed under the MIT License; its license text is distributed with the shaders.
