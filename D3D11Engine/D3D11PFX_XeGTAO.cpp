@@ -171,6 +171,20 @@ XRESULT D3D11PFX_XeGTAO::Render( ID3D11ShaderResourceView* depthSRV,
     gtaoSettings.DenoisePasses = std::clamp( settings.DenoisePasses, 1, 3 );
     gtaoSettings.Radius = std::max( 1.0f, settings.Radius );
 
+    const CShaderID qualityShaders[] = {
+        CShaderID::CS_PFX_XeGTAO_Low,
+        CShaderID::CS_PFX_XeGTAO_Medium,
+        CShaderID::CS_PFX_XeGTAO_High,
+        CShaderID::CS_PFX_XeGTAO_Ultra
+    };
+    auto prefilter = engine->GetShaderManager().GetCShader( CShaderID::CS_PFX_XeGTAO_Prefilter );
+    auto mainPass = engine->GetShaderManager().GetCShader( qualityShaders[gtaoSettings.QualityLevel] );
+    auto denoisePass = engine->GetShaderManager().GetCShader( CShaderID::CS_PFX_XeGTAO_Denoise );
+    auto denoiseLastPass = engine->GetShaderManager().GetCShader( CShaderID::CS_PFX_XeGTAO_DenoiseLast );
+    auto fullscreenVS = engine->GetShaderManager().GetVShader( VShaderID::VS_PFX );
+    auto composite = engine->GetShaderManager().GetPShader( PShaderID::PS_PFX_AOComposite );
+    if ( !prefilter || !mainPass || !denoisePass || !denoiseLastPass || !fullscreenVS || !composite ) return XR_FAILED;
+
     XeGTAO::GTAOConstants constants = {};
     XeGTAO::GTAOUpdateConstants( constants, resolution.x, resolution.y, gtaoSettings,
         reinterpret_cast<const float*>(&projection), true, m_frameIndex );
@@ -184,7 +198,6 @@ XRESULT D3D11PFX_XeGTAO::Render( ID3D11ShaderResourceView* depthSRV,
     context->CSSetShaderResources( 0, 8, nullSRVs );
     context->CSSetSamplers( 0, 1, m_pointClampSampler.GetAddressOf() );
 
-    auto prefilter = engine->GetShaderManager().GetCShader( CShaderID::CS_PFX_XeGTAO_Prefilter );
     prefilter->Apply();
     prefilter->GetBuffer( "GTAOConstantBuffer" ).Update( &constants ).Bind();
     context->CSSetShaderResources( 0, 1, &depthSRV );
@@ -195,13 +208,6 @@ XRESULT D3D11PFX_XeGTAO::Render( ID3D11ShaderResourceView* depthSRV,
     context->CSSetUnorderedAccessViews( 0, XeGTAODepthMipCount, nullUAVs, nullptr );
     context->CSSetShaderResources( 0, 8, nullSRVs );
 
-    const CShaderID qualityShaders[] = {
-        CShaderID::CS_PFX_XeGTAO_Low,
-        CShaderID::CS_PFX_XeGTAO_Medium,
-        CShaderID::CS_PFX_XeGTAO_High,
-        CShaderID::CS_PFX_XeGTAO_Ultra
-    };
-    auto mainPass = engine->GetShaderManager().GetCShader( qualityShaders[gtaoSettings.QualityLevel] );
     mainPass->Apply();
     mainPass->GetBuffer( "GTAOConstantBuffer" ).Update( &constants ).Bind();
     ID3D11ShaderResourceView* mainSRVs[6] = { m_workingDepthSRV.Get(), normalsSRV, nullptr, nullptr, nullptr, m_hilbertLUTSRV.Get() };
@@ -216,7 +222,7 @@ XRESULT D3D11PFX_XeGTAO::Render( ID3D11ShaderResourceView* depthSRV,
     AOTermTexture* destination = &m_aoTermB;
     for ( int pass = 0; pass < gtaoSettings.DenoisePasses; ++pass ) {
         const bool lastPass = pass == gtaoSettings.DenoisePasses - 1;
-        auto denoise = engine->GetShaderManager().GetCShader( lastPass ? CShaderID::CS_PFX_XeGTAO_DenoiseLast : CShaderID::CS_PFX_XeGTAO_Denoise );
+        auto denoise = lastPass ? denoiseLastPass : denoisePass;
         denoise->Apply();
         denoise->GetBuffer( "GTAOConstantBuffer" ).Update( &constants ).Bind();
         ID3D11ShaderResourceView* denoiseSRVs[2] = { source->uintSRV.Get(), m_edgesSRV.Get() };
@@ -236,8 +242,7 @@ XRESULT D3D11PFX_XeGTAO::Render( ID3D11ShaderResourceView* depthSRV,
     Engine::GAPI->GetRendererState().DepthState.DepthWriteEnabled = false;
     Engine::GAPI->GetRendererState().DepthState.SetDirty();
 
-    engine->GetShaderManager().GetVShader( VShaderID::VS_PFX )->Apply();
-    auto composite = engine->GetShaderManager().GetPShader( PShaderID::PS_PFX_AOComposite );
+    fullscreenVS->Apply();
     composite->Apply();
     // UI-normalized XeGTAO strength: 1.0 maps to the selected 60% composite strength.
     constexpr float XeGTAONormalizedStrength = 0.6f;

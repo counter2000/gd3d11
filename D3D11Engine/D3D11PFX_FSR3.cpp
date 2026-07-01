@@ -107,6 +107,7 @@ D3D11PFX_FSR3::D3D11PFX_FSR3( D3D11PfxRenderer* renderer )
     , ContextFrameGenerationEnabled( false )
     , FrameGenerationPrepared( false )
     , HudlessCaptured( false )
+    , FrameGenerationConfigured( false )
     , ForceFrameGenerationReset( true )
     , PreparedFrameCount( 0 )
     , FrameId( 0 )
@@ -270,6 +271,7 @@ void D3D11PFX_FSR3::Destroy() {
     ContextFrameGenerationEnabled = false;
     FrameGenerationPrepared = false;
     HudlessCaptured = false;
+    FrameGenerationConfigured = false;
     ForceFrameGenerationReset = true;
     PreparedFrameCount = 0;
     FrameId = 0;
@@ -458,24 +460,27 @@ ID3D11ShaderResourceView* D3D11PFX_FSR3::GenerateInterpolatedFrame(
         PresentColor->GetRenderTargetView(),
         MaxOutputSize );
 
-    FfxFrameGenerationConfig config = {};
-    config.frameGenerationEnabled = true;
-    config.allowAsyncWorkloads = false;
-    config.frameGenerationCallback = &ffxFsr3DispatchFrameGeneration;
-    config.HUDLessColor = WrapResource(
-        HudlessColor->GetTexture().Get(),
-        L"FSR3 HUD-less Color" );
+    if ( !FrameGenerationConfigured ) {
+        FfxFrameGenerationConfig config = {};
+        config.frameGenerationEnabled = true;
+        config.allowAsyncWorkloads = false;
+        config.frameGenerationCallback = &ffxFsr3DispatchFrameGeneration;
+        config.HUDLessColor = WrapResource(
+            HudlessColor->GetTexture().Get(),
+            L"FSR3 HUD-less Color" );
 
-    FfxErrorCode configResult = FFX_ERROR_BACKEND_API_ERROR;
-    try {
-        configResult = ffxFsr3ConfigureFrameGeneration( Context, &config );
-    } catch ( ... ) {
-        LogError() << "FSR3: DX11 backend exception during frame-generation configuration.";
-    }
-    if ( configResult != FFX_OK ) {
-        LogError() << "FSR3: Frame-generation configuration failed (" << configResult << ").";
-        ResetFrameGenerationHistory();
-        return nullptr;
+        FfxErrorCode configResult = FFX_ERROR_BACKEND_API_ERROR;
+        try {
+            configResult = ffxFsr3ConfigureFrameGeneration( Context, &config );
+        } catch ( ... ) {
+            LogError() << "FSR3: DX11 backend exception during frame-generation configuration.";
+        }
+        if ( configResult != FFX_OK ) {
+            LogError() << "FSR3: Frame-generation configuration failed (" << configResult << ").";
+            ResetFrameGenerationHistory();
+            return nullptr;
+        }
+        FrameGenerationConfigured = true;
     }
 
     ID3D11RenderTargetView* nullRtvs[8] = {};
@@ -540,6 +545,7 @@ ID3D11ShaderResourceView* D3D11PFX_FSR3::GenerateInterpolatedFrame(
 void D3D11PFX_FSR3::ResetFrameGenerationHistory() {
     FrameGenerationPrepared = false;
     HudlessCaptured = false;
+    FrameGenerationConfigured = false;
     ForceFrameGenerationReset = true;
     PreparedFrameCount = 0;
 }

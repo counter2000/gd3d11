@@ -1946,20 +1946,11 @@ XRESULT D3D11GraphicsEngine::Present() {
         fsr3->ResetFrameGenerationHistory();
     }
 
-    // With VSync, DXGI paces the generated/real pair. Without VSync, pace
-    // both presentations evenly. An explicit FPS limit describes rendered
-    // Gothic frames, so the presentation rate is twice that value.
-    if ( frameGenerationActive && !vsync ) {
-        int outputFps = settings.FpsLimit > 0 ? settings.FpsLimit * 2 : 0;
-        if ( outputFps <= 0 ) {
-            outputFps = 60;
-            if ( CachedRefreshRate.Numerator > 0 && CachedRefreshRate.Denominator > 0 ) {
-                outputFps = static_cast<int>(std::lround(
-                    static_cast<double>(CachedRefreshRate.Numerator)
-                    / static_cast<double>(CachedRefreshRate.Denominator) ));
-            }
-        }
-        outputFps = std::clamp( outputFps, 30, 1000 );
+    // Frame generation should not invent its own refresh-rate limiter. If the
+    // user explicitly enabled the FPS limiter, pace the output pair at twice
+    // the rendered Gothic frame limit; otherwise present as fast as DXGI allows.
+    if ( frameGenerationActive && !vsync && settings.FpsLimit > 0 ) {
+        const int outputFps = std::clamp( settings.FpsLimit * 2, 30, 1000 );
         if ( outputFps != m_FrameGenerationLimit ) {
             m_FrameGenerationLimiter->Reset();
             m_FrameGenerationLimiter->SetLimit( outputFps );
@@ -1972,7 +1963,7 @@ XRESULT D3D11GraphicsEngine::Present() {
     }
 
     auto paceFrameGenerationPresent = [&]() {
-        if ( frameGenerationActive && !vsync ) {
+        if ( frameGenerationActive && !vsync && settings.FpsLimit > 0 ) {
             m_FrameGenerationLimiter->Wait();
         }
     };
@@ -3014,33 +3005,6 @@ void D3D11GraphicsEngine::DrawSkeletalMeshVobs(
     packedPrevBoneTransforms.clear();
 
     GothicGraphicsState& graphicsState = Engine::GAPI->GetRendererState().GraphicsState;
-
-    struct ScopedSkeletalShadowBias {
-        D3D11GraphicsEngine* Engine;
-        GothicRasterizerStateInfo& RasterizerState;
-        int PreviousZBias;
-        bool Active;
-
-        ScopedSkeletalShadowBias( D3D11GraphicsEngine* engine, GothicRasterizerStateInfo& rasterizerState, bool active )
-            : Engine( engine )
-            , RasterizerState( rasterizerState )
-            , PreviousZBias( rasterizerState.ZBias )
-            , Active( active ) {
-            if ( Active ) {
-                RasterizerState.ZBias = std::max( RasterizerState.ZBias, 96 );
-                RasterizerState.SetDirty();
-                Engine->UpdateRenderStates();
-            }
-        }
-
-        ~ScopedSkeletalShadowBias() {
-            if ( Active ) {
-                RasterizerState.ZBias = PreviousZBias;
-                RasterizerState.SetDirty();
-                Engine->UpdateRenderStates();
-            }
-        }
-    } skeletalShadowBias( this, Engine::GAPI->GetRendererState().RasterizerState, GetRenderingStage() == DES_SHADOWMAP );
 
     const bool isZPrepass = GetRenderingStage() == DES_Z_PRE_PASS;
     const bool isMainStage = GetRenderingStage() == DES_MAIN;
@@ -4854,6 +4818,16 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         GetContext()->ClearDepthStencilView( DepthStencilBuffer->GetDepthStencilView().Get(), D3D11_CLEAR_DEPTH, 0, 0 );
         GetContext()->ClearDepthStencilView( m_SwapchainDepthStencilBuffer->GetDepthStencilView().Get(), D3D11_CLEAR_DEPTH, 0, 0 );
         SetDefaultStates();
+
+        // Temporal AA/FSR3 jitter belongs to world rendering only. Gothic's HUD
+        // and 3D inventory are drawn after upscaling at output resolution and
+        // must use an unjittered projection to avoid subpixel shimmer.
+        if ( requireJitter ) {
+            auto hudProjection = rendererState.TransformState.TransformProj;
+            hudProjection._13 = 0.0f;
+            hudProjection._23 = 0.0f;
+            rendererState.TransformState.TransformProj = hudProjection;
+        }
 
         // Below this, we assume UI/HUD rendering
         rendererState.RendererInfo.RenderStage = STAGE_DRAW_HUD;

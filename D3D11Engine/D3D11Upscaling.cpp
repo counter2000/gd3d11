@@ -37,11 +37,24 @@ namespace {
                 auto reactiveMask = graph.GetPhysicalTexture( reactiveMaskResource );
                 auto transparencyAndCompositionMask = graph.GetPhysicalTexture( transparencyAndCompositionMaskResource );
 
-                auto jitter = engine.GetPfxRenderer()->GetTAAEffect()->GetJitterOffsetUnscaled();
+                auto* pfxRenderer = engine.GetPfxRenderer();
+                auto* fsr3 = pfxRenderer ? pfxRenderer->GetFSR3() : nullptr;
+                auto* taa = pfxRenderer ? pfxRenderer->GetTAAEffect() : nullptr;
+                if ( !fsr3 || !taa || !backbufferTex || !velocityBufferTex || !depth || !outputRTV ) {
+                    LogError() << "FSR3: Upscaling pass skipped because required resources are missing.";
+                    return;
+                }
+
+                auto jitter = taa->GetJitterOffsetUnscaled();
                 const auto inputSize = engine.GetResolution();
 
                 float fovY, fovX;
-                auto cam = ((zCCamera*)oCGame::GetGame()->_zCSession_camera);
+                auto* game = oCGame::GetGame();
+                auto cam = game ? ((zCCamera*)game->_zCSession_camera) : nullptr;
+                if ( !cam ) {
+                    LogError() << "FSR3: Upscaling pass skipped because Gothic camera is missing.";
+                    return;
+                }
                 cam->GetFOV( fovY, fovX );
 
                 // With ENABLE_DEPTH_INVERTED | ENABLE_DEPTH_INFINITE flags,
@@ -58,7 +71,7 @@ namespace {
                 ID3D11Buffer* nullCBs[5]{};
                 engine.GetContext()->CSSetConstantBuffers( 0, std::size( nullCBs ), nullCBs );
 
-                engine.GetPfxRenderer()->GetFSR3()->Apply(
+                fsr3->Apply(
                     backbufferTex->GetShaderResView().Get(),
                     depth,
                     velocityBufferTex->GetShaderResView().Get(),
@@ -122,9 +135,13 @@ bool D3D11Upscaling::AddUpscalingPass( RenderGraph& graph,
         return false;
     }
 
+    auto* pfxRenderer = engine.GetPfxRenderer();
     if ( settings.Upscaler == GothicRendererSettings::E_Upscaler::UPSCALER_FSR_3
             && (settings.ResolutionScalePercent <= 100)
-            && settings.AntiAliasingMode == GothicRendererSettings::AA_FSR ) {
+            && settings.AntiAliasingMode == GothicRendererSettings::AA_FSR
+            && pfxRenderer
+            && pfxRenderer->GetFSR3()
+            && pfxRenderer->GetTAAEffect() ) {
 
         AddFSR3Pass( graph, engine, outputRTV, color, depth, motionVectors, reactiveMask,
             transparencyAndCompositionMask );

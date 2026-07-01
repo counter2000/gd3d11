@@ -88,8 +88,8 @@ FORWARD_PLUS_PS_OUTPUT PSMain( PS_INPUT Input )
 	FORWARD_PLUS_PS_OUTPUT output;
 	const bool fsr3DialogReactive = (FF_GSwitches & GSWITCH_FSR3_DIALOG_REACTIVE) != 0;
 	const bool fsr3ActorReactive = (FF_GSwitches & GSWITCH_FSR3_REACTIVE) != 0;
-	float fsr3ReactiveValue = fsr3DialogReactive ? 1.0f : (fsr3ActorReactive ? 0.75f : 0.0f);
-	output.vTransparencyAndCompositionMask = fsr3DialogReactive ? 1.0f : 0.0f;
+	float fsr3ReactiveValue = fsr3DialogReactive ? 0.75f : (fsr3ActorReactive ? 0.25f : 0.0f);
+	output.vTransparencyAndCompositionMask = fsr3DialogReactive ? 0.25f : 0.0f;
 	output.vReactiveMask = fsr3ReactiveValue;
 
 	float2 materialUV = Input.vTexcoord;
@@ -208,8 +208,8 @@ DEFERRED_PS_OUTPUT PSMain( PS_INPUT Input ) : SV_TARGET
 	DEFERRED_PS_OUTPUT output;
 	const bool fsr3DialogReactive = (FF_GSwitches & GSWITCH_FSR3_DIALOG_REACTIVE) != 0;
 	const bool fsr3ActorReactive = (FF_GSwitches & GSWITCH_FSR3_REACTIVE) != 0;
-	float fsr3ReactiveValue = fsr3DialogReactive ? 1.0f : (fsr3ActorReactive ? 0.75f : 0.0f);
-	output.vTransparencyAndCompositionMask = fsr3DialogReactive ? 1.0f : 0.0f;
+	float fsr3ReactiveValue = fsr3DialogReactive ? 0.75f : (fsr3ActorReactive ? 0.25f : 0.0f);
+	output.vTransparencyAndCompositionMask = fsr3DialogReactive ? 0.25f : 0.0f;
 	output.vReactiveMask = fsr3ReactiveValue;
 
 	float2 materialUV = Input.vTexcoord;

@@ -68,6 +68,7 @@ private:
     bool ContextFrameGenerationEnabled;
     bool FrameGenerationPrepared;
     bool HudlessCaptured;
+    bool FrameGenerationConfigured;
     bool ForceFrameGenerationReset;
     uint32_t PreparedFrameCount;
     uint64_t FrameId;
