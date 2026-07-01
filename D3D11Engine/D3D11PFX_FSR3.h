@@ -9,6 +9,15 @@
 class D3D11PfxRenderer;
 struct RenderToTextureBuffer;
 
+struct FSR3FrameGenerationDiagnostics {
+    float RenderedFps = 0.0f;
+    float PreparedFps = 0.0f;
+    float GeneratedFps = 0.0f;
+    float PresentedFps = 0.0f;
+    uint64_t TotalResets = 0;
+    uint64_t TotalErrors = 0;
+};
+
 class D3D11PFX_FSR3 {
 public:
     explicit D3D11PFX_FSR3( D3D11PfxRenderer* renderer );
@@ -51,7 +60,15 @@ public:
         return Initialized && ContextFrameGenerationEnabled;
     }
 
+    const FSR3FrameGenerationDiagnostics& GetFrameGenerationDiagnostics() const {
+        return Diagnostics;
+    }
+
+    void NotifyPresent( bool generatedFrame, bool succeeded );
+
 private:
+    void UpdateDiagnosticsWindow();
+
     D3D11PfxRenderer* Renderer;
 
     FfxInterface Backends[3];
@@ -73,4 +90,11 @@ private:
     uint32_t PreparedFrameCount;
     uint64_t FrameId;
     uint64_t PreparedFrameId;
+
+    FSR3FrameGenerationDiagnostics Diagnostics;
+    uint64_t DiagnosticsWindowStartMs;
+    uint32_t DiagnosticsRenderedFrames;
+    uint32_t DiagnosticsPreparedFrames;
+    uint32_t DiagnosticsGeneratedFrames;
+    uint32_t DiagnosticsPresentedFrames;
 };

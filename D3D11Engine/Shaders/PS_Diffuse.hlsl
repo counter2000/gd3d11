@@ -105,7 +105,7 @@ FORWARD_PLUS_PS_OUTPUT PSMain( PS_INPUT Input )
 #if ALPHATEST == 1
 	DoAlphaTest(color.a);
 	if (!fsr3DialogReactive && !fsr3ActorReactive)
-		output.vReactiveMask = 0.04f;
+		output.vReactiveMask = 0.10f;
 #endif
 
 #if NORMALMAPPING == 1
@@ -227,7 +227,7 @@ DEFERRED_PS_OUTPUT PSMain( PS_INPUT Input ) : SV_TARGET
 	// WorldMesh can always do the alphatest
 	DoAlphaTest(color.a);
 	if (!fsr3DialogReactive && !fsr3ActorReactive)
-		output.vReactiveMask = 0.04f; // low value keeps distant alpha-tested vegetation stable without forcing temporal composition rejection
+		output.vReactiveMask = 0.10f; // Kirides baseline for stable alpha-tested vegetation reconstruction
 #endif
 	
 	// Apply normalmapping if wanted

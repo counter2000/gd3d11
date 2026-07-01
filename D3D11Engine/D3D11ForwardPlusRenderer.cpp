@@ -227,6 +227,7 @@ void D3D11ForwardPlusRenderer::AddGeometryPasses(
                 specular ? specular->GetRenderTargetView().Get() : nullptr,
                 velocityBuffer ? velocityBuffer->GetRenderTargetView().Get() : nullptr,
                 transparencyAndCompositionMask ? transparencyAndCompositionMask->GetRenderTargetView().Get() : nullptr,
+                reactiveMask ? reactiveMask->GetRenderTargetView().Get() : nullptr,
             };
 
             constexpr float black[] { 0.f, 0.f, 0.f, 0.f };
@@ -249,7 +250,7 @@ void D3D11ForwardPlusRenderer::AddGeometryPasses(
             if ( rtvs[4] )
                 context->ClearRenderTargetView( rtvs[4], skyTransparencyAndComposition );
 
-            context->OMSetRenderTargets( 5, rtvs, engine.GetDepthBuffer()->GetDepthStencilView().Get() );
+            context->OMSetRenderTargets( static_cast<UINT>(std::size( rtvs )), rtvs, engine.GetDepthBuffer()->GetDepthStencilView().Get() );
 
             // Use LESS_EQUAL depth test to leverage the depth prepass
             auto& depthState = Engine::GAPI->GetRendererState().DepthState;

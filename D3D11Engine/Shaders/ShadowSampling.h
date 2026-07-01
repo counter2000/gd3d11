@@ -184,16 +184,20 @@ float GetShadowBlueNoise(float2 screenPos, int cascadeIndex, int sampleOffset)
                   (channel == 2u) ? noise.z : noise.w;
     return frac(value + (float)((framePhase + samplePhase * 3u) & 63u) * 0.6180339887f);
 #else
-    float temporalOffset = (float)(SQ_FrameIndex % 8) * 0.6180339887f;
+    // Deterministic fallback: never animate an undersampled shadow kernel.
     float2 seed = screenPos + float2((float)sampleOffset * 13.17f, (float)cascadeIndex * 7.31f);
-    return frac(52.9829189f * frac(dot(seed, float2(0.06711056f, 0.00583715f)) + temporalOffset));
+    return frac(52.9829189f * frac(dot(seed, float2(0.06711056f, 0.00583715f))));
 #endif
 }
 
 int GetBlueNoiseStartIndex(float2 screenPos, int cascadeIndex, int patternSize, int sampleOffset)
 {
     int size = max(patternSize, 1);
+#if SHD_BLUE_NOISE
     return (int)(GetShadowBlueNoise(screenPos, cascadeIndex, sampleOffset) * (float)size) % size;
+#else
+    return sampleOffset % size;
+#endif
 }
 
 float2x2 RotationMatrixFromNoise(float rawNoise)
@@ -207,13 +211,11 @@ float2x2 RotationMatrixFromNoise(float rawNoise)
 
 float2x2 GetPoissonRotationMatrixForCascade(float2 screenPos, int cascadeIndex)
 {
-	// If TAA is disabled return an identity matrix to get standard PCF instead of noise.
-    if (SQ_FrameIndex == 0)
-	{
-			return float2x2(1.0f, 0.0f, 0.0f, 1.0f);
-	}
-
+#if SHD_BLUE_NOISE
     return RotationMatrixFromNoise(GetShadowBlueNoise(screenPos, cascadeIndex, 0));
+#else
+    return float2x2(1.0f, 0.0f, 0.0f, 1.0f);
+#endif
 }
 
 float2x2 GetPoissonRotationMatrix(float2 screenPos)
@@ -223,15 +225,13 @@ float2x2 GetPoissonRotationMatrix(float2 screenPos)
 
 float2x2 GetPoissonRotationMatrixRForCascade(float2 screenPos, int cascadeIndex, out float rawNoise)
 {
-    // If TAA is disabled return an identity matrix to get standard PCF instead of noise.
-    if (SQ_FrameIndex == 0)
-	{
-        rawNoise = 0.5f;
-        return float2x2(1.0f, 0.0f, 0.0f, 1.0f);
-	}
-
+#if SHD_BLUE_NOISE
     rawNoise = GetShadowBlueNoise(screenPos, cascadeIndex, 0);
     return RotationMatrixFromNoise(rawNoise);
+#else
+    rawNoise = 0.5f;
+    return float2x2(1.0f, 0.0f, 0.0f, 1.0f);
+#endif
 }
 
 float2x2 GetPoissonRotationMatrixR(float2 screenPos, out float rawNoise)

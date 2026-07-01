@@ -2009,6 +2009,10 @@ XRESULT D3D11GraphicsEngine::Present() {
             result = SwapChain->Present( syncInterval, 0 );
         }
 
+        if ( frameGenerationActive && fsr3 ) {
+            fsr3->NotifyPresent( generatedFrame, SUCCEEDED( result ) );
+        }
+
         // The two FSR3 Present calls already provide DXGI pacing. Waiting on
         // the frame-latency object after each one serializes both frames and
         // cuts Gothic's rendered frame rate roughly in half a second time.

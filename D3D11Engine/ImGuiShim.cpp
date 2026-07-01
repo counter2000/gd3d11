@@ -1,5 +1,7 @@
 #include "ImGuiShim.h"
 #include "GSky.h"
+#include "D3D11PfxRenderer.h"
+#include "D3D11PFX_FSR3.h"
 #include <VersionHelpers.h>
 #include <ShellScalingApi.h>
 
@@ -591,7 +593,7 @@ void ApplyGraphicsPresets( GothicRendererSettings& s ) {
     s.EnableGodRays = true;
     s.EnableRain = true;
     s.LimitLightIntesity = true;
-    s.EnableFrameGeneration = false;
+    // Frame Generation is a personal experimental option and is not changed by presets.
 
     // Reset all visible effect strengths to their normalized UI defaults.
     s.AOStrength = 1.0f;
@@ -727,10 +729,11 @@ namespace
             s.EnableFrameGeneration = false;
         }
 
-        // One public aspect-ratio-aware FOV control replaces the legacy pair.
+        // The centre position preserves Gothic's original camera projection.
+        // Only values deliberately chosen away from 90 degrees override it.
         s.FOVHoriz = std::clamp( static_cast<float>( std::round( s.FOVHoriz / 5.0f ) * 5.0f ), 70.0f, 110.0f );
         s.FOVVert = s.FOVHoriz;
-        s.ForceFOV = true;
+        s.ForceFOV = std::abs( s.FOVHoriz - 90.0f ) > 0.1f;
     }
 }
 
@@ -877,14 +880,7 @@ void ImGuiShim::RenderSettingsWindow()
                 ImGui::SetItemTooltip( "Selects the anti-aliasing method." );
                 ImGui::PopID();
             }
-            const bool frameGenerationAvailable = FrameGenerationAvailable( settings );
-            ImText( "Frame Generation", buttonWidth ); ImGui::SameLine();
-            ImGui::BeginDisabled( !frameGenerationAvailable );
-            ImGui::Checkbox( "##Enable Frame Generation", &settings.EnableFrameGeneration );
-            ImGui::EndDisabled();
-            ImGui::SetItemTooltip( frameGenerationAvailable
-                ? "Generates intermediate frames for smoother motion."
-                : "Frame Generation requires FSR 3." );
+
             ImText( "Render Scale", buttonWidth ); ImGui::SameLine();
             if ( settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3 ) {
                 settings.ResolutionScalePercent = std::clamp( settings.ResolutionScalePercent, 33, 100 );
@@ -968,13 +964,17 @@ void ImGuiShim::RenderSettingsWindow()
             };
             int fieldOfViewIndex = FindNearestStepIndex(
                 settings.FOVHoriz, fieldOfViewLevels.data(), static_cast<int>(fieldOfViewLevels.size()) );
-            char fieldOfViewText[16] = {};
-            snprintf( fieldOfViewText, sizeof( fieldOfViewText ), "%.0f deg", fieldOfViewLevels[fieldOfViewIndex] );
+            char fieldOfViewText[24] = {};
+            if ( fieldOfViewIndex == 4 ) {
+                snprintf( fieldOfViewText, sizeof( fieldOfViewText ), "Original" );
+            } else {
+                snprintf( fieldOfViewText, sizeof( fieldOfViewText ), "%.0f deg", fieldOfViewLevels[fieldOfViewIndex] );
+            }
             ImText( "Field of View", buttonWidth ); ImGui::SameLine();
             if ( SliderSteppedIndex( "##FieldOfView", &fieldOfViewIndex, 8, true, 4, fieldOfViewText ) ) {
                 settings.FOVHoriz = fieldOfViewLevels[fieldOfViewIndex];
                 settings.FOVVert = settings.FOVHoriz;
-                settings.ForceFOV = true;
+                settings.ForceFOV = fieldOfViewIndex != 4;
             }
             ImGui::SetItemTooltip( "Controls how much of the game world is visible through the camera." );
 
@@ -1264,6 +1264,39 @@ void ImGuiShim::RenderSettingsWindow()
             ImGui::SetItemTooltip( "Lets grass and wheat bend around nearby characters." );
 #endif //BUILD_GOTHIC_2_6_fix
 
+            const bool frameGenerationAvailable = FrameGenerationAvailable( settings );
+            ImText( "Frame Generation", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
+            ImGui::BeginDisabled( !frameGenerationAvailable );
+            ImGui::Checkbox( "##Enable Frame Generation", &settings.EnableFrameGeneration );
+            ImGui::EndDisabled();
+            if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) ) {
+                ImGui::BeginTooltip();
+                ImGui::TextUnformatted( "Generates intermediate frames for smoother motion. Requires FSR 3." );
+                if ( !frameGenerationAvailable ) {
+                    ImGui::TextUnformatted( "Select FSR 3 under Anti Aliasing to enable it." );
+                } else if ( settings.EnableFrameGeneration ) {
+                    auto* graphicsEngine = static_cast<D3D11GraphicsEngine*>( Engine::GraphicsEngine );
+                    auto* fsr3 = graphicsEngine && graphicsEngine->GetPfxRenderer()
+                        ? graphicsEngine->GetPfxRenderer()->GetFSR3()
+                        : nullptr;
+                    if ( fsr3 ) {
+                        const auto& diagnostics = fsr3->GetFrameGenerationDiagnostics();
+                        ImGui::Separator();
+                        ImGui::Text( "Rendered: %.1f FPS", diagnostics.RenderedFps );
+                        ImGui::Text( "Prepared: %.1f FPS", diagnostics.PreparedFps );
+                        ImGui::Text( "Generated: %.1f FPS", diagnostics.GeneratedFps );
+                        ImGui::Text( "Presented: %.1f FPS", diagnostics.PresentedFps );
+                        ImGui::Text( "Resets: %llu   Errors: %llu",
+                            static_cast<unsigned long long>( diagnostics.TotalResets ),
+                            static_cast<unsigned long long>( diagnostics.TotalErrors ) );
+                        if ( diagnostics.RenderedFps > 0.0f && diagnostics.RenderedFps < 30.0f ) {
+                            ImGui::Separator();
+                            ImGui::TextUnformatted( "Warning: Below 30 rendered FPS, frame generation is diagnostic only." );
+                        }
+                    }
+                }
+                ImGui::EndTooltip();
+            }
             ImText( "Enable Rain", { buttonWidth.x - ImGui::GetFrameHeight() - style.ItemSpacing.x, buttonWidth.y } ); ImGui::SameLine();
             ImGui::Checkbox( "##Enable Rain", &settings.EnableRain );
             ImGui::SetItemTooltip( "Enables rain particles and wet-ground effects." );

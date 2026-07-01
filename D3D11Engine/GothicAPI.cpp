@@ -5523,11 +5523,11 @@ XRESULT GothicAPI::LoadMenuSettings( const std::string& file ) {
         s.Upscaler = (GothicRendererSettings::E_Upscaler)std::clamp<int>( GetPrivateProfileIntA( "Display", "Upscaler", ds.Upscaler, ini.c_str() ), 0, GothicRendererSettings::E_Upscaler::_UPSCALER_NUM_MODES - 1 );
         s.EnableVSync = GetPrivateProfileBoolA( "Display", "VSync", ds.EnableVSync, ini );
         s.EnableFrameGeneration = GetPrivateProfileBoolA( "Display", "FrameGeneration", ds.EnableFrameGeneration, ini );
-        // Migrate the former horizontal/vertical/force trio to one public FOV.
+        // The public centre position means "use Gothic's original camera".
         s.FOVHoriz = std::clamp( static_cast<float>(GetPrivateProfileIntA( "Display", "FOVHoriz", 90, ini.c_str() )), 70.0f, 110.0f );
         s.FOVHoriz = static_cast<float>( std::round( s.FOVHoriz / 5.0f ) * 5.0f );
         s.FOVVert = s.FOVHoriz;
-        s.ForceFOV = true;
+        s.ForceFOV = std::abs( s.FOVHoriz - 90.0f ) > 0.1f;
         s.GammaValue = GetPrivateProfileFloatA( "Display", "DisplayContrast", 1.0f, ini );
         s.BrightnessValue = GetPrivateProfileFloatA( "Display", "DisplayBrightness", 1.0f, ini );
         s.DisplayFlip = GetPrivateProfileBoolA( "Display", "DisplayFlip", ds.DisplayFlip, ini );

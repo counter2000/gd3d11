@@ -760,7 +760,7 @@ struct GothicRendererSettings {
         EnableDebugLog = true;
         EnableCustomFontRendering = true;
 
-        ForceFOV = true;
+        ForceFOV = false;
 
         ChangeWindowPreset = 2; // WINDOW_MODE_FULLSCREEN_BORDERLESS;
         StretchWindow = true;

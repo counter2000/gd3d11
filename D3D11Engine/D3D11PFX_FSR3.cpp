@@ -112,6 +112,11 @@ D3D11PFX_FSR3::D3D11PFX_FSR3( D3D11PfxRenderer* renderer )
     , PreparedFrameCount( 0 )
     , FrameId( 0 )
     , PreparedFrameId( 0 )
+    , DiagnosticsWindowStartMs( 0 )
+    , DiagnosticsRenderedFrames( 0 )
+    , DiagnosticsPreparedFrames( 0 )
+    , DiagnosticsGeneratedFrames( 0 )
+    , DiagnosticsPresentedFrames( 0 )
 {
     std::fill( std::begin( Backends ), std::end( Backends ), FfxInterface{} );
     std::fill( std::begin( ScratchMemory ), std::end( ScratchMemory ), nullptr );
@@ -405,9 +410,12 @@ XRESULT D3D11PFX_FSR3::Apply(
             LogError() << "FSR3: DX11 backend exception during frame-generation prepare.";
         }
         if ( prepareResult == FFX_OK ) {
+            UpdateDiagnosticsWindow();
+            ++DiagnosticsPreparedFrames;
             PreparedFrameId = FrameId;
             FrameGenerationPrepared = true;
         } else {
+            ++Diagnostics.TotalErrors;
             LogError() << "FSR3: Frame-generation prepare failed (" << prepareResult << ").";
             ResetFrameGenerationHistory();
         }
@@ -451,6 +459,8 @@ ID3D11ShaderResourceView* D3D11PFX_FSR3::GenerateInterpolatedFrame(
         return nullptr;
     }
 
+    UpdateDiagnosticsWindow();
+
     auto* engine = static_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
     ID3D11DeviceContext* context = engine->GetContext().Get();
     UnbindFrameGenerationInputs( context );
@@ -476,6 +486,7 @@ ID3D11ShaderResourceView* D3D11PFX_FSR3::GenerateInterpolatedFrame(
             LogError() << "FSR3: DX11 backend exception during frame-generation configuration.";
         }
         if ( configResult != FFX_OK ) {
+            ++Diagnostics.TotalErrors;
             LogError() << "FSR3: Frame-generation configuration failed (" << configResult << ").";
             ResetFrameGenerationHistory();
             return nullptr;
@@ -527,6 +538,7 @@ ID3D11ShaderResourceView* D3D11PFX_FSR3::GenerateInterpolatedFrame(
     HudlessCaptured = false;
 
     if ( result != FFX_OK ) {
+        ++Diagnostics.TotalErrors;
         LogError() << "FSR3: Optical Flow / Frame Interpolation dispatch failed (" << result << ").";
         ForceFrameGenerationReset = true;
         PreparedFrameCount = 0;
@@ -536,13 +548,69 @@ ID3D11ShaderResourceView* D3D11PFX_FSR3::GenerateInterpolatedFrame(
     const bool canPresentInterpolatedFrame = !reset && PreparedFrameCount > 0;
     PreparedFrameCount = std::min<uint32_t>( PreparedFrameCount + 1, 2 );
     ForceFrameGenerationReset = false;
+    if ( canPresentInterpolatedFrame ) {
+        ++DiagnosticsGeneratedFrames;
+    }
 
     return canPresentInterpolatedFrame
         ? InterpolatedOutput->GetShaderResView().Get()
         : nullptr;
 }
 
+void D3D11PFX_FSR3::UpdateDiagnosticsWindow() {
+    const uint64_t now = GetTickCount64();
+    if ( DiagnosticsWindowStartMs == 0 ) {
+        DiagnosticsWindowStartMs = now;
+        return;
+    }
+
+    const uint64_t elapsedMs = now - DiagnosticsWindowStartMs;
+    if ( elapsedMs < 1000 ) {
+        return;
+    }
+
+    const float scale = 1000.0f / static_cast<float>( std::max<uint64_t>( elapsedMs, 1 ) );
+    Diagnostics.RenderedFps = DiagnosticsRenderedFrames * scale;
+    Diagnostics.PreparedFps = DiagnosticsPreparedFrames * scale;
+    Diagnostics.GeneratedFps = DiagnosticsGeneratedFrames * scale;
+    Diagnostics.PresentedFps = DiagnosticsPresentedFrames * scale;
+
+    if ( ContextFrameGenerationEnabled ) {
+        LogInfo() << "FSR3 FG diagnostics: rendered=" << Diagnostics.RenderedFps
+            << " prepared=" << Diagnostics.PreparedFps
+            << " generated=" << Diagnostics.GeneratedFps
+            << " presented=" << Diagnostics.PresentedFps
+            << " resets=" << Diagnostics.TotalResets
+            << " errors=" << Diagnostics.TotalErrors;
+    }
+
+    DiagnosticsRenderedFrames = 0;
+    DiagnosticsPreparedFrames = 0;
+    DiagnosticsGeneratedFrames = 0;
+    DiagnosticsPresentedFrames = 0;
+    DiagnosticsWindowStartMs = now;
+}
+
+void D3D11PFX_FSR3::NotifyPresent( bool generatedFrame, bool succeeded ) {
+    UpdateDiagnosticsWindow();
+    if ( succeeded ) {
+        ++DiagnosticsPresentedFrames;
+        if ( !generatedFrame ) {
+            ++DiagnosticsRenderedFrames;
+        }
+    } else {
+        ++Diagnostics.TotalErrors;
+    }
+}
+
 void D3D11PFX_FSR3::ResetFrameGenerationHistory() {
+    const bool hadActiveHistory = FrameGenerationConfigured
+        || FrameGenerationPrepared
+        || HudlessCaptured
+        || PreparedFrameCount > 0;
+    if ( hadActiveHistory ) {
+        ++Diagnostics.TotalResets;
+    }
     FrameGenerationPrepared = false;
     HudlessCaptured = false;
     FrameGenerationConfigured = false;
