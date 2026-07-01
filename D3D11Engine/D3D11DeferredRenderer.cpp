@@ -116,20 +116,23 @@ void D3D11DeferredRenderer::AddLightingPasses( RenderGraph& graph,
     RGResourceHandle colorResource,
     RGResourceHandle normalsResource,
     RGResourceHandle specularResource,
+    RGResourceHandle reactiveMaskResource,
     RGResourceHandle backBufferHandle,
     std::vector<VobLightInfo*>& frameLights ) {
 
-    graph.AddPass( RG_PASS_NAME("Draw Lighting"), [&, colorResource, normalsResource, specularResource, backBufferHandle]( RGBuilder& builder, RenderPass& pass ) {
+    graph.AddPass( RG_PASS_NAME("Draw Lighting"), [&, colorResource, normalsResource, specularResource, reactiveMaskResource, backBufferHandle]( RGBuilder& builder, RenderPass& pass ) {
         builder.Read( colorResource );
         builder.Read( normalsResource );
         builder.Read( specularResource );
+        builder.Read( reactiveMaskResource );
         builder.Write( backBufferHandle );
 
-        pass.m_executeCallback = [&engine, &frameLights, colorResource, normalsResource, specularResource]( const RenderGraph& graph ) -> void {
+        pass.m_executeCallback = [&engine, &frameLights, colorResource, normalsResource, specularResource, reactiveMaskResource]( const RenderGraph& graph ) -> void {
             TracyD3D11ZoneCGX( "D3D11DeferredRenderer::Draw Lighting" );
             auto colorTexture = graph.GetPhysicalTexture( colorResource );
             auto normalsTexture = graph.GetPhysicalTexture( normalsResource );
             auto specularTexture = graph.GetPhysicalTexture( specularResource );
+            auto reactiveMaskTexture = graph.GetPhysicalTexture( reactiveMaskResource );
 
             engine.CopyDepthStencil(); // always needed due to depth testing!
 
@@ -137,6 +140,7 @@ void D3D11DeferredRenderer::AddLightingPasses( RenderGraph& graph,
                 *colorTexture,
                 *normalsTexture,
                 *specularTexture,
+                *reactiveMaskTexture,
                 *engine.GetDepthBufferCopy() );
 
             if ( !Engine::GAPI->GetRendererState().RendererSettings.FixViewFrustum ) {

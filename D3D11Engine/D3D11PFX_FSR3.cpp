@@ -6,6 +6,7 @@
 #include "D3D11GraphicsEngine.h"
 #include "Engine.h"
 #include "GothicAPI.h"
+#include "ImGuiShim.h"
 #include "RenderToTextureBuffer.h"
 #include <FidelityFX/host/backends/dx11/ffx_dx11.h>
 #include <algorithm>
@@ -303,13 +304,22 @@ XRESULT D3D11PFX_FSR3::Apply(
     float sharpness )
 {
     auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
-    const bool frameGenerationRequested = settings.EnableFrameGeneration
+    const bool rendererMenuActive = Engine::ImGuiHandle && Engine::ImGuiHandle->GetIsActive();
+    const bool frameGenerationContextRequested = settings.EnableFrameGeneration
         && settings.AntiAliasingMode == GothicRendererSettings::AA_FSR
         && settings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3
         && !FeatureLevel10Compatibility;
+    const bool frameGenerationRuntimeActive = frameGenerationContextRequested
+        && !settings.BinkVideoRunning
+        && !Engine::GAPI->IsInSavingLoadingState()
+        && !Engine::GAPI->IsGamePaused()
+        && !rendererMenuActive;
 
-    if ( !Init( inputSize, outputSize, frameGenerationRequested ) ) {
-        if ( frameGenerationRequested ) {
+    // Transient menus, loading screens and pauses only suspend dispatch. Keep the
+    // expensive combined FSR3 context alive so opening F11 does not destroy and
+    // recreate Optical Flow / Frame Interpolation resources twice.
+    if ( !Init( inputSize, outputSize, frameGenerationContextRequested ) ) {
+        if ( frameGenerationContextRequested ) {
             LogError() << "FSR3: Frame Generation initialization failed; falling back to FSR3 upscaling only.";
             settings.EnableFrameGeneration = false;
             if ( !Init( inputSize, outputSize, false ) ) {
@@ -388,7 +398,7 @@ XRESULT D3D11PFX_FSR3::Apply(
     FrameGenerationPrepared = false;
     HudlessCaptured = false;
 
-    if ( ContextFrameGenerationEnabled ) {
+    if ( ContextFrameGenerationEnabled && frameGenerationRuntimeActive ) {
         FfxFsr3DispatchFrameGenerationPrepareDescription prepare = {};
         prepare.commandList = dispatch.commandList;
         prepare.depth = dispatch.depth;

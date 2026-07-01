@@ -56,6 +56,7 @@ TextureCube TX_ReflectionCube : register(t5);
 Texture2D TX_Distortion : register(t6);
 Texture2D TX_SI_SP : register(t7);
 Texture2D TX_ShadowBlueNoise : register(t8);
+Texture2D TX_ReactiveMask : register(t9);
 
 #include "ShadowSampling.h"
 
@@ -286,7 +287,9 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
         float3 biasedWsPosition = wsPosition + wsNormal * (slopeScale * texelWorldSize * normalBiasMultiplier);
 
         // Use screen position for per-pixel rotation (TAA-friendly)
-        shadow = ComputeCascadedShadowValueSoft(biasedWsPosition, vsPosition.z, vertLighting, 0.0f, Input.vPosition.xy);
+        const float actorMarker = TX_ReactiveMask.Load(int3(int2(Input.vPosition.xy), 0)).r;
+        const float actorShadowSoftness = actorMarker >= 0.20f ? 1.5f : 1.0f;
+        shadow = ComputeCascadedShadowValueSoft(biasedWsPosition, vsPosition.z, vertLighting, 0.0f, Input.vPosition.xy, actorShadowSoftness);
 	} else {
         // Night-time sky ambient:
         // saturate(wsNormal.y) restricts the value to [0, 1].

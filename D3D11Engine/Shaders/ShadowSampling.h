@@ -424,7 +424,7 @@ float SampleCascadeShadowSoft(float4 vShadowSamplingPos, float2 projectedTexCoor
         
         float pcssRadius = EstimatePCSSFilterRadius(projectedTexCoords.xy, zReceiver,
             cascadeIndex, SQ_LightSize, rotMat, texelSize, screenPos);
-        pcssRadius *= SQ_ShadowSoftness;
+        pcssRadius *= SQ_ShadowSoftness * localSoftnessScale;
 
         if (pcssRadius < 0.0f)
         {
@@ -588,13 +588,13 @@ float ComputeShadowValue(float2 uv, float3 wsPosition, Texture2D shadowmap, Samp
 // CSM: Shadow-Sampling with soft shadows and cascade blending
 // Uses SQ_ShadowSoftness for configurable shadow edge softness
 //--------------------------------------------------------------------------------------
-float ComputeCascadedShadowValueSoft(float3 wsPosition, float viewSpaceZ, float vertLighting, float bias, float2 screenPos)
+float ComputeCascadedShadowValueSoft(float3 wsPosition, float viewSpaceZ, float vertLighting, float bias, float2 screenPos, float localSoftnessScale)
 {
     float shadow = vertLighting;
     // Apply distance-based softness scaling
     // Shadows get slightly softer with distance (simulating penumbra growth)
     float distanceFactor = saturate(abs(viewSpaceZ) / 5000.0f);
-    float softness = SQ_ShadowSoftness * (1.0f + distanceFactor * 0.5f);
+    float softness = SQ_ShadowSoftness * (1.0f + distanceFactor * 0.5f) * localSoftnessScale;
 
     int selectedCascade = -1;
     float4 vShadowPos;

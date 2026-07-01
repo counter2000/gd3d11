@@ -347,6 +347,7 @@ void D3D11ForwardPlusRenderer::AddLightingPasses(
     RGResourceHandle colorResource,
     RGResourceHandle normalsResource,
     RGResourceHandle specularResource,
+    RGResourceHandle reactiveMaskResource,
     RGResourceHandle backBufferHandle,
     std::vector<VobLightInfo*>& frameLights ) {
     // Forward+ performs lighting in the geometry pass — no separate lighting pass needed.

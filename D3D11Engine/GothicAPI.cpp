@@ -1514,6 +1514,11 @@ void GothicAPI::DrawWorldMeshNaive() {
 
     static float setfovH = RendererState.RendererSettings.FOVHoriz;
     static float setfovV = RendererState.RendererSettings.FOVVert;
+    static zCCamera* nativeFovCamera = nullptr;
+    static float nativeFovH = 90.0f;
+    static float nativeFovV = 90.0f;
+    static bool nativeFovValid = false;
+    static bool fovWasForced = false;
 
 /*
 #ifdef BUILD_GOTHIC_1_08k
@@ -1529,8 +1534,17 @@ void GothicAPI::DrawWorldMeshNaive() {
 #else
 */
 #if defined(BUILD_GOTHIC_1_08k) || defined(BUILD_1_12F) || defined(BUILD_GOTHIC_2_6_fix)
+    zCCamera* camera = zCCamera::GetCamera();
     if ( RendererState.RendererSettings.ForceFOV ) {
-        zCCamera* camera = zCCamera::GetCamera();
+        // Preserve the projection Gothic selected before the renderer overrides it.
+        // This must be captured only when entering forced-FOV mode; otherwise a
+        // subsequent slider step would accidentally store the previous override.
+        if ( camera && (!fovWasForced || nativeFovCamera != camera) ) {
+            camera->GetFOV( nativeFovH, nativeFovV );
+            nativeFovCamera = camera;
+            nativeFovValid = true;
+        }
+
         if ( camera )
             camera->GetFOV( setfovH, setfovV );
 
@@ -1549,8 +1563,19 @@ void GothicAPI::DrawWorldMeshNaive() {
 
                 CurrentCamera = camera;
             }
-
         }
+        fovWasForced = true;
+    } else {
+        // Disabling ForceFOV alone leaves the last renderer projection installed.
+        // Restore the exact horizontal and vertical values Gothic used beforehand.
+        if ( fovWasForced && nativeFovValid && camera && camera == nativeFovCamera ) {
+            camera->SetFOV( nativeFovH, nativeFovV );
+            camera->Activate();
+            CurrentCamera = nullptr;
+        }
+        fovWasForced = false;
+        nativeFovValid = false;
+        nativeFovCamera = nullptr;
     }
 #endif
 //#endif
@@ -5748,11 +5773,11 @@ void GothicAPI::DrawMorphMesh( zCMorphMesh* msh, std::map<zCMaterial*, std::vect
     const bool bindShader = g->GetRenderingStage() == DES_MAIN || isZPrepass;
     auto& graphicsState = RendererState.GraphicsState;
     const unsigned int oldSwitches = graphicsState.FF_GSwitches;
-    if ( bindShader && !isZPrepass
-        && RendererState.RendererSettings.AntiAliasingMode == GothicRendererSettings::AA_FSR
-        && RendererState.RendererSettings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3 ) {
+    if ( bindShader && !isZPrepass ) {
         graphicsState.FF_GSwitches |= GSWITCH_FSR3_REACTIVE;
-        if ( !Engine::GAPI->DialogFinished() ) {
+        if ( RendererState.RendererSettings.AntiAliasingMode == GothicRendererSettings::AA_FSR
+            && RendererState.RendererSettings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3
+            && !Engine::GAPI->DialogFinished() ) {
             graphicsState.FF_GSwitches |= GSWITCH_FSR3_DIALOG_REACTIVE;
         }
     }

@@ -114,5 +114,5 @@ float PSMain( PS_INPUT Input ) : SV_TARGET
     // ComputeCascadedShadowValueSoft is defined in ShadowSampling.h.
     // Pass 1.0 for vertLighting (the shadow mask carries only the cascade shadow;
     // vertex-AO is applied separately in FP_ComputeSunLighting).
-    return ComputeCascadedShadowValueSoft( biasedWsPosition, vsPosition.z, 1.0f, 0.0f, Input.vPosition.xy );
+    return ComputeCascadedShadowValueSoft( biasedWsPosition, vsPosition.z, 1.0f, 0.0f, Input.vPosition.xy, 1.0f );
 }

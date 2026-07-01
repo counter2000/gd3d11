@@ -147,7 +147,7 @@ public:
     XRESULT DrawWorldLights();
     DS_ScreenQuadConstantBuffer FillSunCSMConstantBuffer() const;
     XRESULT DrawLighting(std::vector<VobLightInfo*>& lights, RenderToTextureBuffer& color, RenderToTextureBuffer& normals, RenderToTextureBuffer
-                         & specular, RenderToTextureBuffer& depthCopy);
+                         & specular, RenderToTextureBuffer& reactiveMask, RenderToTextureBuffer& depthCopy);
 
     D3D11TiledDeferredShading* GetTiledDeferred() const { return m_TiledDeferred.get(); }
 

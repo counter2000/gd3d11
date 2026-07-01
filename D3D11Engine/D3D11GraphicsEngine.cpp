@@ -405,7 +405,6 @@ void ConstantBufferPool::EndFrame( ) {
 
 D3D11GraphicsEngine::D3D11GraphicsEngine() :
     DebugPointlight(nullptr),
-    m_FrameGenerationLimit(0),
     m_LastFrameLimit(0),
     RenderingStage(DES_MAIN),
     InverseUnitSphereMesh(nullptr),
@@ -427,7 +426,6 @@ D3D11GraphicsEngine::D3D11GraphicsEngine() :
     Occlusion = std::make_unique<D3D11OcclusionQuerry>();
 
     m_FrameLimiter = std::make_unique<FpsLimiter>();
-    m_FrameGenerationLimiter = std::make_unique<FpsLimiter>();
 
     // Initialize previous view-proj matrix to identity for motion vectors
     XMStoreFloat4x4(&m_PrevViewProjMatrix, XMMatrixIdentity());
@@ -1946,28 +1944,6 @@ XRESULT D3D11GraphicsEngine::Present() {
         fsr3->ResetFrameGenerationHistory();
     }
 
-    // Frame generation should not invent its own refresh-rate limiter. If the
-    // user explicitly enabled the FPS limiter, pace the output pair at twice
-    // the rendered Gothic frame limit; otherwise present as fast as DXGI allows.
-    if ( frameGenerationActive && !vsync && settings.FpsLimit > 0 ) {
-        const int outputFps = std::clamp( settings.FpsLimit * 2, 30, 1000 );
-        if ( outputFps != m_FrameGenerationLimit ) {
-            m_FrameGenerationLimiter->Reset();
-            m_FrameGenerationLimiter->SetLimit( outputFps );
-            m_FrameGenerationLimiter->Start();
-            m_FrameGenerationLimit = outputFps;
-        }
-    } else {
-        m_FrameGenerationLimiter->Reset();
-        m_FrameGenerationLimit = 0;
-    }
-
-    auto paceFrameGenerationPresent = [&]() {
-        if ( frameGenerationActive && !vsync && settings.FpsLimit > 0 ) {
-            m_FrameGenerationLimiter->Wait();
-        }
-    };
-
     auto blitToSwapchain = [&]( ID3D11ShaderResourceView* source, bool renderDebugOverlay ) {
         SetViewport( ViewportInfo( 0, 0, GetBackbufferResolution() ) );
         SetDefaultStates();
@@ -2002,11 +1978,25 @@ XRESULT D3D11GraphicsEngine::Present() {
     auto presentSwapchain = [&]( bool generatedFrame ) -> HRESULT {
         const UINT syncInterval = ( vsync && !generatedFrame ) ? 1u : 0u;
         HRESULT result = S_OK;
-        if ( m_flipWithTearing ) {
-            const UINT presentFlags = ( !vsync && syncInterval == 0u ) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
-            result = SwapChain->Present( syncInterval, presentFlags );
-        } else {
-            result = SwapChain->Present( syncInterval, 0 );
+        UINT presentFlags = 0u;
+        if ( m_flipWithTearing && !vsync && syncInterval == 0u ) {
+            presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+        }
+        // Never let the optional interpolated frame stall Gothic's real frame.
+        // A full DX12/Vulkan proxy swapchain schedules this asynchronously; the
+        // manual DX11 path must explicitly drop it when the queue is still busy.
+        if ( generatedFrame ) {
+            presentFlags |= DXGI_PRESENT_DO_NOT_WAIT;
+        }
+        result = SwapChain->Present( syncInterval, presentFlags );
+
+        if ( generatedFrame && FAILED( result ) ) {
+            // The generated frame is optional. A busy/unsupported non-blocking
+            // Present must never prevent the following real frame from showing.
+            if ( result != DXGI_ERROR_WAS_STILL_DRAWING && frameGenerationActive && fsr3 ) {
+                fsr3->NotifyPresent( true, false );
+            }
+            return S_OK;
         }
 
         if ( frameGenerationActive && fsr3 ) {
@@ -2029,7 +2019,6 @@ XRESULT D3D11GraphicsEngine::Present() {
     // frame already contains the stable Gothic HUD reconstructed by FSR3.
     if ( interpolatedFrame ) {
         blitToSwapchain( interpolatedFrame, false );
-        paceFrameGenerationPresent();
         hr = presentSwapchain( true );
     }
 
@@ -2046,7 +2035,6 @@ XRESULT D3D11GraphicsEngine::Present() {
             }
         }
 
-        paceFrameGenerationPresent();
         hr = presentSwapchain( false );
     }
 
@@ -3019,11 +3007,13 @@ void D3D11GraphicsEngine::DrawSkeletalMeshVobs(
         ~ScopedGraphicsSwitchRestore() { Value = Previous; }
     } graphicsSwitchRestore { graphicsState.FF_GSwitches, graphicsState.FF_GSwitches };
     const auto& rendererSettings = Engine::GAPI->GetRendererState().RendererSettings;
-    if ( isMainStage
-        && rendererSettings.AntiAliasingMode == GothicRendererSettings::AA_FSR
-        && rendererSettings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3 ) {
+    if ( isMainStage ) {
+        // Keep an actor marker in the G-buffer for actor-specific shadow filtering.
+        // FSR3 also consumes the same marker as its reactive mask when active.
         graphicsState.FF_GSwitches |= GSWITCH_FSR3_REACTIVE;
-        if ( !Engine::GAPI->DialogFinished() ) {
+        if ( rendererSettings.AntiAliasingMode == GothicRendererSettings::AA_FSR
+            && rendererSettings.Upscaler == GothicRendererSettings::UPSCALER_FSR_3
+            && !Engine::GAPI->DialogFinished() ) {
             graphicsState.FF_GSwitches |= GSWITCH_FSR3_DIALOG_REACTIVE;
         }
     }
@@ -4181,7 +4171,7 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
 
     ActiveSceneRenderer->AddLightingPasses( graph, *this,
         colorResource, normalsResource, specularResource,
-        backBufferHandle, m_FrameLights );
+        reactiveMaskResource, backBufferHandle, m_FrameLights );
 
     // XeGTAO is composited before transparent alpha meshes so particles, fire and
     // other translucent effects are not darkened by opaque-world AO.

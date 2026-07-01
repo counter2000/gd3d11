@@ -1215,7 +1215,8 @@ XRESULT D3D11ShadowMap::DrawLighting(
     std::vector<VobLightInfo*>& lights,
     RenderToTextureBuffer& color,
     RenderToTextureBuffer& normals,
-    RenderToTextureBuffer& specular,    
+    RenderToTextureBuffer& specular,
+    RenderToTextureBuffer& reactiveMask,
     RenderToTextureBuffer& depthCopy) {
     auto graphicsEngine = reinterpret_cast<D3D11GraphicsEngine*>(Engine::GraphicsEngine);
     auto& settings = Engine::GAPI->GetRendererState().RendererSettings;
@@ -1250,7 +1251,15 @@ XRESULT D3D11ShadowMap::DrawLighting(
     srvs[0] = specular.GetShaderResView().Get();
     m_context->PSSetShaderResources( 7, 1, srvs );
 
+    // Geometry writes 0.25 or more for actors. The deferred sun-light pass
+    // uses that marker only to soften character self-shadow transitions.
+    srvs[0] = reactiveMask.GetShaderResView().Get();
+    m_context->PSSetShaderResources( 9, 1, srvs );
+
     DrawWorldLights();
+
+    ID3D11ShaderResourceView* nullActorMask = nullptr;
+    m_context->PSSetShaderResources( 9, 1, &nullActorMask );
 
     m_context->OMSetRenderTargets( 1, graphicsEngine->GetHDRBackBuffer().GetRenderTargetView().GetAddressOf(),
         graphicsEngine->GetDepthBuffer()->GetDepthStencilView().Get() );

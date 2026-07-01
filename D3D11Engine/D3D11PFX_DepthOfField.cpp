@@ -127,6 +127,7 @@ D3D11PFX_DepthOfField::D3D11PFX_DepthOfField( D3D11PfxRenderer* rnd )
     , m_AutoFocusBlend( 1.0f )
     , m_AutoFocusTransitionStart( 1.0f )
     , m_AutoFocusTransitionElapsed( 0.0f )
+    , m_AutoFocusTransitionDuration( 2.0f )
     , m_NpcFocusHoldElapsed( 0.0f )
     , m_CameraStationaryElapsed( 0.0f )
     , m_PreviousCameraPosition( 0.0f, 0.0f, 0.0f )
@@ -213,13 +214,18 @@ void D3D11PFX_DepthOfField::UpdateAdaptiveFocus( float configuredNearDistance ) 
     } else {
         m_CameraStationaryElapsed = 0.0f;
     }
-    const bool cameraStationaryFocus = !dialogActive && m_CameraStationaryElapsed >= 0.75f;
+    const bool cameraStationaryFocus = !dialogActive && m_CameraStationaryElapsed >= 0.5f;
     const bool suppressNearBlur = m_NpcFocusSuppressed || cameraStationaryFocus;
 
     if ( suppressNearBlur != m_AutoFocusSuppressed ) {
         m_AutoFocusSuppressed = suppressNearBlur;
         m_AutoFocusTransitionStart = m_AutoFocusBlend;
         m_AutoFocusTransitionElapsed = 0.0f;
+        // Camera-stationary autofocus reacts quickly; NPC focus and every
+        // return to configured blur retain their deliberately slower timing.
+        const bool cameraOnlySuppression = suppressNearBlur
+            && cameraStationaryFocus && !m_NpcFocusSuppressed;
+        m_AutoFocusTransitionDuration = cameraOnlySuppression ? 0.5f : 2.0f;
     }
 
     const float targetBlend = m_AutoFocusSuppressed ? 0.0f : 1.0f;
@@ -228,9 +234,8 @@ void D3D11PFX_DepthOfField::UpdateAdaptiveFocus( float configuredNearDistance ) 
         return;
     }
 
-    const float transitionDuration = 2.0f;
     m_AutoFocusTransitionElapsed += deltaTime;
-    const float transition = std::clamp( m_AutoFocusTransitionElapsed / transitionDuration, 0.0f, 1.0f );
+    const float transition = std::clamp( m_AutoFocusTransitionElapsed / m_AutoFocusTransitionDuration, 0.0f, 1.0f );
     const float smoothTransition = transition * transition * (3.0f - 2.0f * transition);
     m_AutoFocusBlend = m_AutoFocusTransitionStart
         + (targetBlend - m_AutoFocusTransitionStart) * smoothTransition;

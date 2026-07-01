@@ -105,7 +105,7 @@ FORWARD_PLUS_PS_OUTPUT PSMain( PS_INPUT Input )
 #if ALPHATEST == 1
 	DoAlphaTest(color.a);
 	if (!fsr3DialogReactive && !fsr3ActorReactive)
-		output.vReactiveMask = 0.10f;
+		output.vReactiveMask = 0.0f; // Preserve temporal accumulation for fine alpha-tested vegetation.
 #endif
 
 #if NORMALMAPPING == 1
@@ -152,7 +152,7 @@ FORWARD_PLUS_PS_OUTPUT PSMain( PS_INPUT Input )
 
 			float3 biasedWsPosition = wsPosition + wsNormal * (slopeScale * texelWorldSize * normalBiasMultiplier);
 
-			shadow = ComputeCascadedShadowValueSoft(biasedWsPosition, vsPosition.z, vertLighting, 0.0f, Input.vPosition.xy);
+			shadow = ComputeCascadedShadowValueSoft(biasedWsPosition, vsPosition.z, vertLighting, 0.0f, Input.vPosition.xy, fsr3ActorReactive ? 1.5f : 1.0f);
 		#endif
 	} else {
 		float3 wsNormal = normalize(mul(float4(nrm, 0.0f), SQ_InvView).xyz);
@@ -227,7 +227,7 @@ DEFERRED_PS_OUTPUT PSMain( PS_INPUT Input ) : SV_TARGET
 	// WorldMesh can always do the alphatest
 	DoAlphaTest(color.a);
 	if (!fsr3DialogReactive && !fsr3ActorReactive)
-		output.vReactiveMask = 0.10f; // Kirides baseline for stable alpha-tested vegetation reconstruction
+		output.vReactiveMask = 0.0f; // Preserve temporal accumulation for fine alpha-tested vegetation.
 #endif
 	
 	// Apply normalmapping if wanted
