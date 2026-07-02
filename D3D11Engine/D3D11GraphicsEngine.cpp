@@ -1976,7 +1976,12 @@ XRESULT D3D11GraphicsEngine::Present() {
     };
 
     auto presentSwapchain = [&]( bool generatedFrame ) -> HRESULT {
-        const UINT syncInterval = ( vsync && !generatedFrame ) ? 1u : 0u;
+        // A generated/real pair must share one presentation cadence. Waiting a
+        // full VSync interval on the real image after already queuing the generated
+        // image consumes two refresh intervals and halves Gothic's rendered FPS.
+        // Borderless mode remains synchronized by DWM; tearing is still forbidden
+        // below whenever the user enabled VSync.
+        const UINT syncInterval = ( vsync && !frameGenerationActive ) ? 1u : 0u;
         HRESULT result = S_OK;
         UINT presentFlags = 0u;
         if ( m_flipWithTearing && !vsync && syncInterval == 0u ) {
@@ -4817,10 +4822,10 @@ XRESULT D3D11GraphicsEngine::OnStartWorldRendering() {
         // and 3D inventory are drawn after upscaling at output resolution and
         // must use an unjittered projection to avoid subpixel shimmer.
         if ( requireJitter ) {
-            auto hudProjection = rendererState.TransformState.TransformProj;
-            hudProjection._13 = 0.0f;
-            hudProjection._23 = 0.0f;
-            rendererState.TransformState.TransformProj = hudProjection;
+            // Restore the exact unjittered projection supplied by Gothic. Merely
+            // clearing two offsets can retain a stale forced-FOV projection.
+            rendererState.TransformState.TransformProj =
+                rendererState.TransformState.TransformProjUnjittered;
         }
 
         // Below this, we assume UI/HUD rendering

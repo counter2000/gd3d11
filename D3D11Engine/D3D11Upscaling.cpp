@@ -48,14 +48,14 @@ namespace {
                 auto jitter = taa->GetJitterOffsetUnscaled();
                 const auto inputSize = engine.GetResolution();
 
-                float fovY, fovX;
+                float fovHorizontal, fovVertical;
                 auto* game = oCGame::GetGame();
                 auto cam = game ? ((zCCamera*)game->_zCSession_camera) : nullptr;
                 if ( !cam ) {
                     LogError() << "FSR3: Upscaling pass skipped because Gothic camera is missing.";
                     return;
                 }
-                cam->GetFOV( fovY, fovX );
+                cam->GetFOV( fovHorizontal, fovVertical );
 
                 // With ENABLE_DEPTH_INVERTED | ENABLE_DEPTH_INFINITE flags,
                 // FSR expects inverted metrics: cameraNear=FLT_MAX (infinity),
@@ -84,7 +84,7 @@ namespace {
                     jitter,
                     float2( static_cast<float>(inputSize.x), static_cast<float>(inputSize.y) ),
                     false,
-                    fovY,
+                    fovVertical,
                     nearZ,
                     farZ,
                     sharpenFactor >= 0.001f,

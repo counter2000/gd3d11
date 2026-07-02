@@ -288,7 +288,7 @@ float4 PSMain(PS_INPUT Input) : SV_TARGET
 
         // Use screen position for per-pixel rotation (TAA-friendly)
         const float actorMarker = TX_ReactiveMask.Load(int3(int2(Input.vPosition.xy), 0)).r;
-        const float actorShadowSoftness = actorMarker >= 0.20f ? 1.5f : 1.0f;
+        const float actorShadowSoftness = actorMarker >= 0.20f ? 2.5f : 1.0f;
         shadow = ComputeCascadedShadowValueSoft(biasedWsPosition, vsPosition.z, vertLighting, 0.0f, Input.vPosition.xy, actorShadowSoftness);
 	} else {
         // Night-time sky ambient:

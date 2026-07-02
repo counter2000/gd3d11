@@ -1548,17 +1548,18 @@ void GothicAPI::DrawWorldMeshNaive() {
         if ( camera )
             camera->GetFOV( setfovH, setfovV );
 
+        const float targetFovV = nativeFovValid ? nativeFovV : setfovV;
         if ( camera
             // FIXME: This is being reset after a dialog!
-            && (camera != CurrentCamera || setfovH != RendererState.RendererSettings.FOVHoriz || setfovV != RendererState.RendererSettings.FOVVert || (setfovH == 90.0f && setfovV == 90.0f)) ) {
+            && (camera != CurrentCamera || setfovH != RendererState.RendererSettings.FOVHoriz || setfovV != targetFovV) ) {
             // if player is in a dialog state with a npc, we do not change FOV, or create an option for it in F11 menu
             if ( DialogFinished() ) {
                 setfovH = RendererState.RendererSettings.FOVHoriz;
-                setfovV = RendererState.RendererSettings.FOVVert;
+                setfovV = targetFovV;
 
-                // Fixing camera FOV-Bug, set it with DX11 settings
-                camera->SetFOV( RendererState.RendererSettings.FOVHoriz,
-                    (Engine::GraphicsEngine->GetResolution().y / static_cast<float>(Engine::GraphicsEngine->GetResolution().x)) * RendererState.RendererSettings.FOVVert );
+                // Widen or narrow only the horizontal view. Keeping Gothic's
+                // native vertical FOV prevents the third-person camera from jumping.
+                camera->SetFOV( setfovH, setfovV );
                 camera->Activate();
 
                 CurrentCamera = camera;

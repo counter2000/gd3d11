@@ -973,10 +973,11 @@ void ImGuiShim::RenderSettingsWindow()
             ImText( "Field of View", buttonWidth ); ImGui::SameLine();
             if ( SliderSteppedIndex( "##FieldOfView", &fieldOfViewIndex, 8, true, 4, fieldOfViewText ) ) {
                 settings.FOVHoriz = fieldOfViewLevels[fieldOfViewIndex];
-                settings.FOVVert = settings.FOVHoriz;
+                // Change only the horizontal viewing angle. Gothic's original
+                // vertical FOV controls the third-person camera composition.
                 settings.ForceFOV = fieldOfViewIndex != 4;
             }
-            ImGui::SetItemTooltip( "Controls how much of the game world is visible through the camera." );
+            ImGui::SetItemTooltip( "Adjusts horizontal view width without moving the third-person camera." );
 
             const static std::vector<std::pair<const char*, int>> shadowMapSizesMax = {
                 {"very low", 512},

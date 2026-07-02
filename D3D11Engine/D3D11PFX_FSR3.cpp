@@ -201,7 +201,7 @@ bool D3D11PFX_FSR3::Init(
         static_cast<uint32_t>(maxOutputSize.y)
     };
     desc.displaySize = desc.maxUpscaleSize;
-    desc.backBufferFormat = FFX_SURFACE_FORMAT_R16G16B16A16_FLOAT;
+    desc.backBufferFormat = FFX_SURFACE_FORMAT_R8G8B8A8_UNORM;
     desc.backendInterfaceSharedResources = Backends[BACKEND_SHARED_RESOURCES];
     desc.backendInterfaceUpscaling = Backends[BACKEND_UPSCALING];
     desc.backendInterfaceFrameInterpolation = Backends[BACKEND_FRAME_INTERPOLATION];
@@ -221,15 +221,15 @@ bool D3D11PFX_FSR3::Init(
             | D3D11_BIND_UNORDERED_ACCESS;
 
         HudlessColor = std::make_unique<RenderToTextureBuffer>(
-            device, maxOutputSize.x, maxOutputSize.y, DXGI_FORMAT_R16G16B16A16_FLOAT,
+            device, maxOutputSize.x, maxOutputSize.y, DXGI_FORMAT_R8G8B8A8_UNORM,
             nullptr, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN, 1, 1,
             D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE );
         PresentColor = std::make_unique<RenderToTextureBuffer>(
-            device, maxOutputSize.x, maxOutputSize.y, DXGI_FORMAT_R16G16B16A16_FLOAT,
+            device, maxOutputSize.x, maxOutputSize.y, DXGI_FORMAT_R8G8B8A8_UNORM,
             nullptr, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN, 1, 1,
             D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE );
         InterpolatedOutput = std::make_unique<RenderToTextureBuffer>(
-            device, maxOutputSize.x, maxOutputSize.y, DXGI_FORMAT_R16G16B16A16_FLOAT,
+            device, maxOutputSize.x, maxOutputSize.y, DXGI_FORMAT_R8G8B8A8_UNORM,
             nullptr, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN, 1, 1, bindFlags );
 
         if ( !HudlessColor->GetShaderResView()

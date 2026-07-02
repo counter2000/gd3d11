@@ -214,7 +214,7 @@ void D3D11PFX_DepthOfField::UpdateAdaptiveFocus( float configuredNearDistance ) 
     } else {
         m_CameraStationaryElapsed = 0.0f;
     }
-    const bool cameraStationaryFocus = !dialogActive && m_CameraStationaryElapsed >= 0.5f;
+    const bool cameraStationaryFocus = !dialogActive && m_CameraStationaryElapsed >= 0.25f;
     const bool suppressNearBlur = m_NpcFocusSuppressed || cameraStationaryFocus;
 
     if ( suppressNearBlur != m_AutoFocusSuppressed ) {
@@ -225,7 +225,7 @@ void D3D11PFX_DepthOfField::UpdateAdaptiveFocus( float configuredNearDistance ) 
         // return to configured blur retain their deliberately slower timing.
         const bool cameraOnlySuppression = suppressNearBlur
             && cameraStationaryFocus && !m_NpcFocusSuppressed;
-        m_AutoFocusTransitionDuration = cameraOnlySuppression ? 0.5f : 2.0f;
+        m_AutoFocusTransitionDuration = cameraOnlySuppression ? 1.0f : 2.0f;
     }
 
     const float targetBlend = m_AutoFocusSuppressed ? 0.0f : 1.0f;
